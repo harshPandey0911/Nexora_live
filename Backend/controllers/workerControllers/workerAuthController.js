@@ -89,6 +89,13 @@ const verifyLogin = async (req, res) => {
         return res.status(403).json({ success: false, message: 'Account deactivated.' });
       }
 
+      if (worker.approvalStatus !== 'approved') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Your account is pending admin approval. You can start working once approved.' 
+        });
+      }
+
       // SINGLE DEVICE LOGIN: Update Session ID & Clear OLD FCM tokens
       const loginSessionId = Date.now().toString();
       await Worker.findByIdAndUpdate(worker._id, { 

@@ -57,6 +57,7 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
     { id: 'product-orders', label: 'Product Orders', icon: FiPackage, path: '/vendor/product-orders' },
     { id: 'services', label: 'Manage Services', icon: FiBox, path: '/vendor/my-services' },
     { id: 'manage-products', label: 'Manage Products', icon: FiPackage, path: '/vendor/my-products' },
+    { id: 'workers', label: 'Manage Workers', icon: FiUsers, path: '/vendor/workers' },
     { id: 'earnings', label: 'Earnings', icon: FiDollarSign, path: '/vendor/earnings' },
     { id: 'wallet', label: 'Wallet & Payouts', icon: FiCreditCard, path: '/vendor/wallet' },
     { id: 'reviews', label: 'My Ratings', icon: FiStar, path: '/vendor/my-ratings' },

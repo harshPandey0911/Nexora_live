@@ -9,6 +9,7 @@ import Login from '../pages/login';
 const Dashboard = lazy(() => import('../pages/Dashboard'));
 const Users = lazy(() => import('../pages/Users'));
 const Vendors = lazy(() => import('../pages/Vendors'));
+const Workers = lazy(() => import('../pages/Workers'));
 const UserCategories = lazy(() => import('../pages/UserCategories'));
 const Bookings = lazy(() => import('../pages/Bookings'));
 const ScrapItems = lazy(() => import('../pages/Scrap'));
@@ -72,9 +73,9 @@ const AdminRoutes = () => {
             <Route path="brands" element={<BrandsPage />} />
           </Route>
           
-          {/* Management Routes */}
           <Route path="users/*" element={<Users />} />
           <Route path="vendors/*" element={<Vendors />} />
+          <Route path="workers/*" element={<Workers />} />
           <Route path="bookings/*" element={<Bookings />} />
           <Route path="scrap" element={<ScrapItems />} />
           <Route path="payments/*" element={<Payments />} />

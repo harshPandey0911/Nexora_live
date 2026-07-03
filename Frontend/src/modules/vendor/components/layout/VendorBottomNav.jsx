@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiShoppingBag, FiDollarSign, FiUser } from 'react-icons/fi';
+import { FiHome, FiShoppingBag, FiDollarSign, FiUser, FiUsers } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 
 const VendorBottomNav = () => {
@@ -32,6 +32,7 @@ const VendorBottomNav = () => {
   const navItems = [
     { id: 'dashboard', label: 'Home', icon: FiHome, path: '/vendor/dashboard' },
     { id: 'orders', label: 'Bookings', icon: FiShoppingBag, path: '/vendor/jobs', badge: stats.inProgressBookings || 0 },
+    { id: 'workers', label: 'Workers', icon: FiUsers, path: '/vendor/workers' },
     { id: 'earnings', label: 'Earnings', icon: FiDollarSign, path: '/vendor/earnings' },
     { id: 'profile', label: 'Profile', icon: FiUser, path: '/vendor/profile' },
   ];

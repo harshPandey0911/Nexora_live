@@ -64,6 +64,8 @@ const TicketDetails = lazyLoad(() => import('../pages/Support/TicketDetails'));
 const MyServices = lazyLoad(() => import('../pages/MyServices'));
 const MyProducts = lazyLoad(() => import('../pages/MyProducts'));
 const AddCustomContent = lazyLoad(() => import('../pages/AddCustomContent'));
+const WorkersList = lazyLoad(() => import('../pages/WorkersList'));
+const AddEditWorker = lazyLoad(() => import('../pages/AddEditWorker'));
 
 const LoadingFallback = () => (
   <LogoLoader />
@@ -113,6 +115,12 @@ const VendorRoutes = () => {
                 <Route path="/add-custom-content" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
                 <Route path="/product/edit/:id" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
                 <Route path="/service/edit/:id" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
+                
+                {/* Worker Management Routes */}
+                <Route path="/workers" element={<ProtectedRoute userType="vendor"><WorkersList /></ProtectedRoute>} />
+                <Route path="/workers/new" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
+                <Route path="/workers/edit/:id" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
+
                 <Route path="/support" element={<ProtectedRoute userType="vendor"><SupportList /></ProtectedRoute>} />
                 <Route path="/support/:id" element={<ProtectedRoute userType="vendor"><TicketDetails /></ProtectedRoute>} />
               </Routes>

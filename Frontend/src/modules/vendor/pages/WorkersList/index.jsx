@@ -80,7 +80,7 @@ const WorkersList = () => {
         </div>
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate('/vendor/workers/add')}
+          onClick={() => navigate('/vendor/workers/new')}
           className="px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-normal hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
         >
           <FiPlus className="w-5 h-5" />
@@ -141,7 +141,7 @@ const WorkersList = () => {
             You haven't authorized any team members for field deployments yet.
           </p>
           <button
-            onClick={() => navigate('/vendor/workers/add')}
+            onClick={() => navigate('/vendor/workers/new')}
             className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-normal text-xs capitalize tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700"
           >
             Register Operative
@@ -152,13 +152,13 @@ const WorkersList = () => {
           {filteredWorkers.map((worker) => {
             const statusRaw = (worker.status || 'OFFLINE').toUpperCase();
             const isOnline = statusRaw === 'ONLINE';
+            const approval = worker.approvalStatus || 'pending';
 
             return (
               <motion.div
                 key={worker.id}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate(`/vendor/workers/${worker.id}/edit`)}
-                className="bg-white border border-gray-100 rounded-[32px] p-6 flex flex-col gap-6 relative group hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden shadow-sm"
+                className="bg-white border border-gray-100 rounded-[32px] p-6 flex flex-col gap-6 relative group hover:shadow-md transition-all duration-300 overflow-hidden shadow-sm"
               >
                 {/* Status indicator bar */}
                 <div className={`absolute top-0 left-0 w-full h-1 ${isOnline ? 'bg-emerald-500' : 'bg-gray-200'}`} />
@@ -182,12 +182,25 @@ const WorkersList = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="text-lg font-normal text-gray-800 truncate tracking-tight">{worker.name}</h3>
-                      <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
+                      <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 shrink-0">
                         <FiStar className="w-3 h-3 text-amber-500 fill-amber-500" />
                         <span className="text-[11px] font-normal text-amber-600">{worker.rating || '4.5'}</span>
                       </div>
                     </div>
-                    <p className="text-xs font-normal text-gray-400 capitalize tracking-wider">{worker.phone}</p>
+                    <p className="text-xs font-normal text-gray-400 capitalize tracking-wider mb-2">{worker.phone}</p>
+                    
+                    {/* Approval Status Badge */}
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                        approval === 'approved' 
+                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                          : approval === 'rejected'
+                          ? 'bg-rose-50 border-rose-100 text-rose-700'
+                          : 'bg-amber-50 border-amber-100 text-amber-700'
+                      }`}>
+                        {approval === 'approved' ? 'Approved' : approval === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -201,8 +214,27 @@ const WorkersList = () => {
                       {isOnline ? 'Active' : 'Standby'}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-300 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                    <FiChevronRight className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+
+                  {/* Actions (Edit / Delete) */}
+                  <div className="flex items-center gap-2 z-10">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/vendor/workers/edit/${worker.id}`);
+                      }}
+                      className="px-3 py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-700 rounded-lg text-[11px] font-medium border border-gray-100 transition-all"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(worker.id);
+                      }}
+                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-lg text-[11px] font-medium border border-rose-100 transition-all"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
               </motion.div>

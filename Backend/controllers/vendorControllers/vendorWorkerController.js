@@ -71,7 +71,8 @@ const addWorker = async (req, res) => {
       phone,
       aadhar,
       serviceCategories,
-      address
+      address,
+      profilePhoto
     } = req.body;
 
     // Upload Aadhar document to Cloudinary if it's a base64 string
@@ -90,6 +91,7 @@ const addWorker = async (req, res) => {
         worker.vendorId = vendorId;
         worker.name = name;
         worker.email = email;
+        if (profilePhoto) worker.profilePhoto = profilePhoto;
         if (aadhar) {
           worker.aadhar = {
             number: aadhar.number,
@@ -120,6 +122,7 @@ const addWorker = async (req, res) => {
       name,
       email: email || null, // Handle empty string as null for sparse index
       phone,
+      profilePhoto: profilePhoto || null,
       aadhar: {
         number: aadhar.number,
         document: aadharUrl
@@ -127,7 +130,8 @@ const addWorker = async (req, res) => {
       vendorId,
       serviceCategories: serviceCategories || [],
       address: address || {},
-      status: WORKER_STATUS.ACTIVE
+      approvalStatus: 'pending',
+      status: WORKER_STATUS.OFFLINE
     });
 
     res.status(201).json({

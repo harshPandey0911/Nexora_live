@@ -780,6 +780,21 @@ const respondToJob = async (req, res) => {
         pushData: { type: 'worker_accepted', bookingId: booking._id.toString(), link: `/user/booking/${booking._id}` }
       });
 
+      // Real-time socket emissions
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`vendor_${booking.vendorId}`).emit('worker_job_accepted', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          workerId: workerId
+        });
+        io.to(`user_${booking.userId}`).emit('booking_updated', {
+          bookingId: booking._id,
+          status: booking.status,
+          message: 'Worker has accepted assignment'
+        });
+      }
+
     } else if (status === 'REJECTED') {
       booking.workerId = null;
       booking.status = BOOKING_STATUS.CONFIRMED; // Revert to unassigned state
@@ -793,6 +808,21 @@ const respondToJob = async (req, res) => {
         relatedId: booking._id,
         relatedType: 'booking'
       });
+
+      // Real-time socket emissions
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`vendor_${booking.vendorId}`).emit('worker_job_rejected', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          workerId: workerId
+        });
+        io.to(`user_${booking.userId}`).emit('booking_updated', {
+          bookingId: booking._id,
+          status: booking.status,
+          message: 'Worker declined assignment'
+        });
+      }
     }
 
     await booking.save();

@@ -150,7 +150,25 @@ const WorkerLogin = () => {
       }
     } catch (error) {
       setIsLoading(false);
-      toast.error(error.response?.data?.message || 'Verification failed');
+      const errMsg = error.response?.data?.message || 'Verification failed';
+      if (errMsg.includes('pending admin approval')) {
+        toast(
+          <div className="flex flex-col text-amber-800">
+            <span className="font-bold text-sm">Approval Pending</span>
+            <span className="text-xs mt-0.5">{errMsg}</span>
+          </div>,
+          {
+            icon: '⚠️',
+            style: {
+              background: '#FFFBEB',
+              border: '1px solid #FDE68A',
+            },
+            duration: 5000
+          }
+        );
+      } else {
+        toast.error(errMsg);
+      }
     }
   };
 
@@ -312,12 +330,7 @@ const WorkerLogin = () => {
           )}
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-500 animate-fade-in animate-stagger-5">
-          Want to join the fleet?{' '}
-          <Link to="/worker/signup" className="font-semibold text-[#347989] hover:text-[#D68F35] transition-colors duration-300">
-            Register as Xpert
-          </Link>
-        </p>
+        {/* Register link removed since workers can only be registered by vendors */}
       </div>
     </div>
   );

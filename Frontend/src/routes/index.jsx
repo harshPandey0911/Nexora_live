@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import UserRoutes from '../modules/user/routes';
 import VendorRoutes from '../modules/vendor/routes';
 import AdminRoutes from '../modules/admin/routes';
+import WorkerRoutes from '../modules/worker/routes';
 
 import LandingPage from '../modules/landing/pages/LandingPage';
 
@@ -23,6 +24,8 @@ const AppRoutes = () => {
       {/* Vendor Routes */}
       <Route path="/vendor/*" element={<VendorRoutes />} />
 
+      {/* Worker Routes */}
+      <Route path="/worker/*" element={<WorkerRoutes />} />
 
       {/* Admin Routes */}
       <Route path="/admin/*" element={<AdminRoutes />} />

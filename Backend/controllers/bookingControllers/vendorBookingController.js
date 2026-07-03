@@ -616,6 +616,14 @@ const assignWorker = async (req, res) => {
       });
     }
 
+    // Check admin approval
+    if (worker.approvalStatus !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'This worker has not been approved by the Admin yet.'
+      });
+    }
+
     // Check if worker is active and online
     if (worker.status !== 'ONLINE') {
       return res.status(400).json({

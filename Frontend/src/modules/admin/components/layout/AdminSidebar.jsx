@@ -29,6 +29,7 @@ const iconMap = {
   Dashboard: FiHome,
   Users: FiUsers,
   Vendors: FiBriefcase,
+  Workers: FiUsers,
   Bookings: FiShoppingBag,
   "Manage User App": FiGrid,
   "Vendor Services": FiGrid,
@@ -61,6 +62,11 @@ const getChildRoute = (parentRoute, childName) => {
       "Vendor Bookings": "/admin/vendors/bookings",
       "Vendor Analytics": "/admin/vendors/analytics",
       "Vendor Payments": "/admin/vendors/payments",
+    },
+    "/admin/workers": {
+      "All Workers": "/admin/workers/all",
+      "Worker Jobs": "/admin/workers/jobs",
+      "Worker Analytics": "/admin/workers/analytics",
     },
     "/admin/bookings": {
       "All Bookings": "/admin/bookings/all",

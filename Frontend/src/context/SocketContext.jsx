@@ -444,6 +444,19 @@ export const SocketProvider = ({ children }) => {
         window.dispatchEvent(new Event('vendorJobsUpdated'));
         window.dispatchEvent(new Event('vendorStatsUpdated'));
       });
+
+      // Listen for worker responses to assignments
+      newSocket.on('worker_job_accepted', (data) => {
+        toast.success(`Worker accepted job #${data.bookingNumber || ''}`);
+        window.dispatchEvent(new CustomEvent('workerJobStatusChanged', { detail: { bookingId: data.bookingId, status: 'ACCEPTED' } }));
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+      });
+
+      newSocket.on('worker_job_rejected', (data) => {
+        toast.error(`Worker declined job #${data.bookingNumber || ''}`);
+        window.dispatchEvent(new CustomEvent('workerJobStatusChanged', { detail: { bookingId: data.bookingId, status: 'REJECTED' } }));
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+      });
     }
 
     // Listen for special Worker Job Assignments
