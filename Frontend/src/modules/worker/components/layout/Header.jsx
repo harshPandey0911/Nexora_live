@@ -21,6 +21,17 @@ const Header = ({
   const bellButtonRef = useRef(null);
   const [count, setCount] = useState(notificationCount);
 
+  const [dummyState, setDummyState] = useState(false);
+
+  // Listen for global worker status changes to force re-render
+  useEffect(() => {
+    const handleStatusUpdate = () => {
+      setDummyState(prev => !prev);
+    };
+    window.addEventListener('workerStatusUpdated', handleStatusUpdate);
+    return () => window.removeEventListener('workerStatusUpdated', handleStatusUpdate);
+  }, []);
+
   // Sync prop changes
   useEffect(() => {
     if (typeof notificationCount !== 'undefined') {
@@ -137,8 +148,8 @@ const Header = ({
           {showBack && <h1 className="text-lg font-bold text-gray-800">{title || 'Worker'}</h1>}
         </div>
 
-        {/* Right: Search and Notifications */}
-        <div className="flex items-center gap-2">
+        {/* Right: Search, Status Toggle and Notifications */}
+        <div className="flex items-center gap-4">
           {showSearch && (
             <button
               className="p-2 rounded-full hover:bg-white/30 transition-colors active:scale-95"
@@ -147,6 +158,28 @@ const Header = ({
               <FiSearch className="w-5 h-5" style={{ color: themeColors.button }} />
             </button>
           )}
+
+          {/* Header Status Toggle */}
+          {!showBack && (
+            <div
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (window.handleWorkerToggleGlobally) {
+                  await window.handleWorkerToggleGlobally();
+                }
+              }}
+              className={`relative w-12 h-6.5 rounded-full cursor-pointer transition-all duration-300 shrink-0 ${
+                window.isWorkerOnlineGlobally ? 'bg-emerald-500 shadow-sm' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5.5 h-5.5 bg-white rounded-full transition-all duration-300 shadow-sm ${
+                  window.isWorkerOnlineGlobally ? 'left-6' : 'left-0.5'
+                }`}
+              />
+            </div>
+          )}
+
           {showNotifications && (
             <div
               ref={bellButtonRef}

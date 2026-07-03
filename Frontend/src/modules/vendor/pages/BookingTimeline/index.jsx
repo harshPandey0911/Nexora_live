@@ -64,6 +64,8 @@ const BookingTimeline = () => {
             lng: apiData.address?.lng || apiData.location?.lng
           },
           status: apiData.status,
+          finalAmount: apiData.finalAmount || apiData.price || 0,
+          vendorEarnings: apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0),
           // Timeline mapping if backend supports it, otherwise derived from status/timestamps
           timeline: [
             { stage: 1, timestamp: apiData.createdAt },
@@ -392,7 +394,7 @@ const BookingTimeline = () => {
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
       <Header title="Booking Timeline" />
 
-      <main className="px-4 py-6">
+      <main className="px-4 pt-24 pb-6">
         <div
           className="bg-white rounded-xl p-6 shadow-md"
           style={{

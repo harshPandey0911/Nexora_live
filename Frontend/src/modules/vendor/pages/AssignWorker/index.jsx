@@ -122,7 +122,7 @@ const AssignWorker = () => {
     <div className="min-h-screen pb-20 bg-white">
       <Header title="Assign Worker" />
 
-      <main className="px-4 py-6">
+      <main className="px-4 pt-24 pb-6">
         {/* Booking Summary (Black Theme) */}
         <div className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-gray-100">
           <p className="text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1">Active Booking</p>
@@ -280,8 +280,6 @@ const AssignWorker = () => {
           </button>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 };

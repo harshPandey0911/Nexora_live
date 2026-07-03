@@ -621,9 +621,13 @@ export default function BookingDetails() {
             <span className="text-[9px] md:text-[10px] font-medium text-blue-600 capitalize tracking-widest mt-1 md:mt-1.5">Deployment ID: {id?.slice(-6).toUpperCase()}</span>
           </div>
         </div>
-        <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-lg md:rounded-xl border border-blue-100 flex items-center justify-center">
+        <motion.button 
+          whileTap={{ scale: 0.9 }}
+          onClick={handleViewTimeline}
+          className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-lg md:rounded-xl border border-blue-100 flex items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
+        >
           <FiBriefcase className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
-        </div>
+        </motion.button>
       </header>
 
       <main className="px-4 pt-4 pb-16 md:px-6 md:pt-8 md:pb-20 relative z-10 max-w-7xl mx-auto">

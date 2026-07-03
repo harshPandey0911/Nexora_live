@@ -406,9 +406,9 @@ const JobDetails = () => {
           )}
 
           {job.status === 'completed' && (
-            <div className="bg-green-100 border-2 border-green-500 rounded-2xl p-4 text-center text-green-700 font-bold shadow-md">
-              <FiCheckCircle className="w-8 h-8 mx-auto mb-2" />
-              JOB COMPLETED & SETTLED
+            <div className="bg-green-100 border border-green-500 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-center text-green-700 font-bold text-xs shadow-sm">
+              <FiCheckCircle className="w-5 h-5 shrink-0" />
+              <span>JOB COMPLETED & SETTLED</span>
             </div>
           )}
         </div>
@@ -477,10 +477,10 @@ const JobDetails = () => {
 
               <button
                 onClick={() => navigate(`/worker/job/${id}/map`)}
-                className="w-full py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                className="w-full py-1.5 rounded-lg font-bold text-white text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-transform"
                 style={{ background: themeColors.button }}
               >
-                <FiNavigation className="w-4 h-4" />
+                <FiNavigation className="w-3.5 h-3.5" />
                 View Route
               </button>
             </div>

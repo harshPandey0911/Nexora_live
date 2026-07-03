@@ -157,15 +157,15 @@ const Profile = () => {
         <div
           className="rounded-2xl p-5 mb-4 shadow-xl relative overflow-hidden"
           style={{
-            background: vendorTheme.button,
-            border: `2px solid ${vendorTheme.button}`,
+            background: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)',
+            border: '1.5px solid #99F6E4',
           }}
         >
           {/* Decorative Pattern */}
           <div
             className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10"
             style={{
-              background: `radial-gradient(circle, ${vendorTheme.button} 0%, transparent 70%)`,
+              background: `radial-gradient(circle, ${themeColors.button} 0%, transparent 70%)`,
               transform: 'translate(30px, -30px)',
             }}
           />
@@ -175,9 +175,9 @@ const Profile = () => {
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center flex-shrink-0"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.3)',
-                  border: '3px solid white',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.8)',
+                  border: '3px solid #CCFBF1',
+                  boxShadow: '0 4px 12px rgba(13, 148, 136, 0.1)',
                 }}
               >
                 {profile.photo ? (
@@ -187,17 +187,17 @@ const Profile = () => {
                     className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <FiUser className="w-10 h-10 text-white" />
+                  <FiUser className="w-10 h-10 text-teal-700" />
                 )}
               </div>
               <div className="flex-1 pr-12">
-                <h2 className="text-xl font-bold text-white mb-0.5">{profile.name}</h2>
+                <h2 className="text-xl font-bold text-teal-950 mb-0.5">{profile.name}</h2>
                 <div className="mb-2"></div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-lg backdrop-blur-sm">
-                    <FiStar className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-                    <span className="text-white text-sm font-bold">{profile.rating}</span>
+                  <div className="flex items-center gap-1 bg-teal-800/10 px-2.5 py-0.5 rounded-lg border border-teal-850/15">
+                    <FiStar className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    <span className="text-teal-900 text-sm font-bold">{profile.rating}</span>
                   </div>
                 </div>
               </div>
@@ -206,15 +206,15 @@ const Profile = () => {
             {/* Edit Profile Button - Absolute Positioned */}
             <button
               onClick={() => navigate('/worker/profile/edit')}
-              className="absolute top-0 right-0 p-2.5 rounded-lg transition-all active:scale-95"
+              className="absolute top-0 right-0 p-2.5 rounded-lg transition-all active:scale-95 text-teal-750"
               style={{
-                background: 'rgba(255, 255, 255, 0.25)',
+                background: 'rgba(255, 255, 255, 0.7)',
                 backdropFilter: 'blur(10px)',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 2px 8px rgba(13, 148, 136, 0.1)',
+                border: '1.5px solid #99F6E4',
               }}
             >
-              <FiEdit2 className="w-5 h-5 text-white" />
+              <FiEdit2 className="w-5 h-5 text-teal-700" />
             </button>
           </div>
         </div>

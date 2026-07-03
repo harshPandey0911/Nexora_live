@@ -66,6 +66,7 @@ const MyProducts = lazyLoad(() => import('../pages/MyProducts'));
 const AddCustomContent = lazyLoad(() => import('../pages/AddCustomContent'));
 const WorkersList = lazyLoad(() => import('../pages/WorkersList'));
 const AddEditWorker = lazyLoad(() => import('../pages/AddEditWorker'));
+const AssignWorker = lazyLoad(() => import('../pages/AssignWorker'));
 
 const LoadingFallback = () => (
   <LogoLoader />
@@ -92,6 +93,7 @@ const VendorRoutes = () => {
                 <Route path="/booking-alerts" element={<ProtectedRoute userType="vendor"><BookingAlerts /></ProtectedRoute>} />
                 <Route path="/booking-alert/:id" element={<ProtectedRoute userType="vendor"><BookingAlert /></ProtectedRoute>} />
                 <Route path="/booking/:id" element={<ProtectedRoute userType="vendor"><BookingDetails /></ProtectedRoute>} />
+                <Route path="/booking/:id/assign-worker" element={<ProtectedRoute userType="vendor"><AssignWorker /></ProtectedRoute>} />
                 <Route path="/booking/:id/map" element={<ProtectedRoute userType="vendor"><BookingMap /></ProtectedRoute>} />
                 <Route path="/booking/:id/billing" element={<ProtectedRoute userType="vendor"><BillingPage /></ProtectedRoute>} />
                 <Route path="/booking/:id/timeline" element={<ProtectedRoute userType="vendor"><BookingTimeline /></ProtectedRoute>} />
