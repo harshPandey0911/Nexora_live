@@ -57,6 +57,19 @@ const bookingSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  isEscalatedToAdmin: {
+    type: Boolean,
+    default: false
+  },
+  assignedByAdmin: {
+    type: Boolean,
+    default: false
+  },
+  adminAssignmentStatus: {
+    type: String,
+    enum: ['NONE', 'PENDING', 'ACCEPTED', 'DECLINED'],
+    default: 'NONE'
+  },
 
   // ==========================================
   // 2. SERVICE INFORMATION

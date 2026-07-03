@@ -117,30 +117,65 @@ export const playSingleBeep = () => {
   }
 };
 
-// Play urgent ring for booking alerts
-let currentAudio = null; // Global variable to track current playing audio
+// Play urgent ring for booking alerts — uses Web Audio API (no MP3 file needed)
+let alertRingInterval = null;
+let alertRingActive = false;
+
+const playAlertRingOnce = () => {
+  try {
+    initAudio();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {});
+    }
+
+    const now = audioContext.currentTime;
+
+    // Urgent "ding-dong" pattern using triangle waves
+    const pattern = [
+      { freq: 880, start: 0,    dur: 0.18, vol: 0.3 },
+      { freq: 660, start: 0.2,  dur: 0.18, vol: 0.25 },
+      { freq: 880, start: 0.45, dur: 0.18, vol: 0.3 },
+      { freq: 660, start: 0.65, dur: 0.18, vol: 0.25 },
+    ];
+
+    pattern.forEach(({ freq, start, dur, vol }) => {
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + start);
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(vol, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.05);
+    });
+  } catch (e) {
+    // Silent fail — audio not critical
+  }
+};
 
 export const playAlertRing = (loop = false) => {
   try {
-    // If audio is already playing, do nothing if we want to sustain it, or restart ??
-    // Actually, proper behavior: if playing, stop previous and start new to ensure fresh start
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
+    // Stop any previous ring first
+    stopAlertRing();
+
+    alertRingActive = true;
+    // Play immediately
+    playAlertRingOnce();
+
+    // If looping, repeat every 1.2 seconds
+    if (loop) {
+      alertRingInterval = setInterval(() => {
+        if (alertRingActive) {
+          playAlertRingOnce();
+        } else {
+          clearInterval(alertRingInterval);
+          alertRingInterval = null;
+        }
+      }, 1200);
     }
-
-    const audio = new Audio('/booking-alert.mp3');
-    if (loop) audio.loop = true;
-    currentAudio = audio; // Track the new audio instance
-
-    audio.play().catch(e => console.error('Error playing alert file:', e));
-
-    // Cleanup when audio finishes (if not looping)
-    audio.onended = () => {
-      if (currentAudio === audio) {
-        currentAudio = null;
-      }
-    };
 
     return true;
   } catch (error) {
@@ -150,10 +185,10 @@ export const playAlertRing = (loop = false) => {
 };
 
 export const stopAlertRing = () => {
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
-    currentAudio = null;
+  alertRingActive = false;
+  if (alertRingInterval) {
+    clearInterval(alertRingInterval);
+    alertRingInterval = null;
   }
 };
 

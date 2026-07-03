@@ -52,7 +52,9 @@ exports.updateSettings = async (req, res, next) => {
       // Payment Control
       isOnlinePaymentEnabled,
       // Commission & Platform Fees
-      commissionRates, platformFeeRates
+      commissionRates, platformFeeRates,
+      // Slots Config
+      slotConfig
     } = req.body;
 
     let settings = await Settings.findOne({ type: 'global' });
@@ -106,6 +108,9 @@ exports.updateSettings = async (req, res, next) => {
     if (commissionRates !== undefined) settings.commissionRates = commissionRates;
     if (platformFeeRates !== undefined) settings.platformFeeRates = platformFeeRates;
 
+    // Slots Config update
+    if (slotConfig !== undefined) settings.slotConfig = slotConfig;
+
     await settings.save();
 
     // Propagate vendorCashLimit to all existing vendors if it was changed
@@ -142,7 +147,7 @@ exports.updateSettings = async (req, res, next) => {
 // Get Public Settings (Visited Charges, GST)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled');
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig');
 
     // Default if not found (fallback values)
     if (!settings) {

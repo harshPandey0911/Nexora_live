@@ -39,5 +39,15 @@ export const adminBookingService = {
     } catch (error) {
       throw error.response?.data || { message: 'Failed to cancel booking' };
     }
+  },
+
+  // Assign vendor manually
+  assignVendor: async (id, vendorId) => {
+    try {
+      const response = await api.post(`/admin/bookings/${id}/assign`, { vendorId });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to assign vendor' };
+    }
   }
 };

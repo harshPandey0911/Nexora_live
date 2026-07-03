@@ -59,16 +59,26 @@ export default function GlobalBookingAlert() {
 
         const validJobs = pendingJobs.filter(job => {
           if (!job.expiresAt) return true;
-          return new Date(job.expiresAt).getTime() > now;
+          const isValid = new Date(job.expiresAt).getTime() > now;
+          if (!isValid) {
+            console.log(`[GlobalAlert] Filtered out expired job ${job.id || job._id}. Expires at: ${job.expiresAt}, Now: ${new Date(now).toISOString()}`);
+          }
+          return isValid;
         });
+
+        console.log('[GlobalAlert] pendingJobs:', pendingJobs.length, 'validJobs:', validJobs.length);
 
         if (validJobs.length > 0) {
           setActiveAlertBookings(prev => {
             const currentIds = new Set(prev.map(b => String(b.id || b._id)));
             const newJobsToAdd = validJobs.filter(v => !currentIds.has(String(v.id || v._id)));
             if (newJobsToAdd.length === 0) return prev;
+            console.log('[GlobalAlert] Adding new active alert bookings:', newJobsToAdd);
             return [...newJobsToAdd, ...prev];
           });
+        } else {
+          // If validJobs is 0, make sure we clear the modal
+          setActiveAlertBookings([]);
         }
       } catch (err) {
         console.error('[GlobalAlert] Sync error:', err);
@@ -107,10 +117,12 @@ export default function GlobalBookingAlert() {
 
     // Listen for custom dashboard events from SocketContext
     const handleShowAlert = (e) => {
+      console.log('[GlobalAlert] showDashboardBookingAlert custom event caught:', e.detail);
       if (e.detail) {
         setActiveAlertBookings(prev => {
           const bId = String(e.detail.id || e.detail._id);
           if (prev.find(b => String(b.id || b._id) === bId)) return prev;
+          console.log('[GlobalAlert] Adding alert booking to active state:', e.detail);
           return [e.detail, ...prev];
         });
       }
@@ -155,22 +167,29 @@ export default function GlobalBookingAlert() {
       onAccept={async (id) => {
         try {
           await acceptBooking(id);
-          await assignWorker(id, 'SELF');
 
-          // Remove from local storage
+          // ✅ IMMEDIATELY clear from localStorage and dismiss modal
+          // Do this right after accept, NOT after assignWorker
           const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
           const updated = pendingJobs.filter(b => String(b.id || b._id) !== String(id));
           localStorage.setItem('vendorPendingJobs', JSON.stringify(updated));
 
-          // Dispatch remove event
+          // Dispatch remove event to immediately close this modal card
           window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id } }));
           setActiveAlertBookings(prev => prev.filter(b => String(b.id || b._id) !== String(id)));
 
           window.dispatchEvent(new Event('vendorJobsUpdated'));
           window.dispatchEvent(new Event('vendorStatsUpdated'));
-          toast.success('Job claimed successfully! Assigned to you.');
+          toast.success('Job accepted! Assigning to you...');
+
+          // Run assignWorker separately — failure should not bring back the modal
+          assignWorker(id, 'SELF').catch(err => {
+            console.warn('[GlobalAlert] assignWorker SELF failed (non-critical):', err?.message);
+          });
+
         } catch (e) {
-          toast.error('Failed to claim job');
+          console.error('[GlobalAlert] Accept booking failed:', e);
+          toast.error('Failed to accept job. Please try again.');
         }
       }}
       onAssign={async (id) => {

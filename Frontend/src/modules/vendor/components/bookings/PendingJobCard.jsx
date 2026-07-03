@@ -71,9 +71,9 @@ const PendingJobCard = ({ booking, onAccept, onReject, onClick, loadingAction, s
       {/* Urgency header */}
       {showTimer && (
         <div className="px-6 py-3 bg-gray-50/50 border-b border-gray-50 flex justify-between items-center">
-          <span className={`text-[9px] font-medium capitalize tracking-[0.2em] flex items-center gap-2 ${booking.bookingType === 'instant' ? 'text-blue-600' : 'text-gray-400'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${booking.bookingType === 'instant' ? 'bg-blue-600 animate-ping' : 'bg-gray-300'}`} />
-            {booking.bookingType === 'instant' ? '⚡ CRITICAL INSTANT' : 'NEW SIGNAL'}
+          <span className={`text-[9px] font-medium capitalize tracking-[0.2em] flex items-center gap-2 ${booking.assignedByAdmin ? 'text-amber-600' : booking.bookingType === 'instant' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${booking.assignedByAdmin ? 'bg-amber-500 animate-pulse' : booking.bookingType === 'instant' ? 'bg-blue-600 animate-ping' : 'bg-gray-300'}`} />
+            {booking.assignedByAdmin ? '🛡️ ADMIN ASSIGNED' : booking.bookingType === 'instant' ? '⚡ CRITICAL INSTANT' : 'NEW SIGNAL'}
           </span>
           <CountdownTimer
             durationSeconds={maxSearchTimeMins * 60}

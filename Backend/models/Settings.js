@@ -82,6 +82,11 @@ const settingsSchema = new mongoose.Schema({
     default: 10, // 10 km default search radius
     min: 1
   },
+  slotConfig: {
+    startTime: { type: String, default: '09:00 AM' },
+    endTime: { type: String, default: '09:00 PM' },
+    gapInMinutes: { type: Number, default: 60 }
+  },
   // Razorpay Settings
   razorpayKeyId: {
     type: String,

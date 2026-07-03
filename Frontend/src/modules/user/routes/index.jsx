@@ -148,6 +148,7 @@ const UserRoutes = () => {
                 <Route path="/cart" element={<ProtectedRoute userType="user"><Cart /></ProtectedRoute>} />
                 <Route path="/checkout" element={<ProtectedRoute userType="user"><Checkout /></ProtectedRoute>} />
                 <Route path="/my-bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
+                <Route path="/bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
                 <Route path="/booking/:id" element={<ProtectedRoute userType="user"><BookingDetails /></ProtectedRoute>} />
                 <Route path="/booking/:id/track" element={<ProtectedRoute userType="user"><BookingTrack /></ProtectedRoute>} />
                 <Route path="/booking-confirmation/:id" element={<ProtectedRoute userType="user"><BookingConfirmation /></ProtectedRoute>} />

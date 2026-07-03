@@ -32,7 +32,19 @@ const Footer = () => {
     };
     const fetchLogo = async () => {
       try {
-        const currentCity = JSON.parse(localStorage.getItem('currentCity') || '{}');
+        let currentCity = {};
+        try {
+          const stored = localStorage.getItem('currentCity');
+          if (stored) {
+            if (stored.trim().startsWith('{') || stored.trim().startsWith('[')) {
+              currentCity = JSON.parse(stored);
+            } else {
+              currentCity = { name: stored };
+            }
+          }
+        } catch (e) {
+          currentCity = {};
+        }
         const cityId = currentCity?._id || currentCity?.id || '';
         const response = await publicCatalogService.getHomeData(cityId);
         if (response?.success && response?.homeContent?.siteIdentity?.logoUrl) {

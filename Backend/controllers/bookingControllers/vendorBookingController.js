@@ -11,7 +11,7 @@ const { sendNotificationToUser, sendNotificationToVendor, sendNotificationToWork
  */
 const getVendorBookings = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { status, q, page = 1, limit = 50 } = req.query;
 
     // ── Get vendor categories from req.user (set in auth middleware) ──
@@ -171,7 +171,7 @@ const getVendorBookings = async (req, res) => {
  */
 const getBookingById = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
 
     const booking = await Booking.findOne({
@@ -212,12 +212,24 @@ const getBookingById = async (req, res) => {
  */
 const acceptBooking = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
 
-    // Check if already assigned to THIS vendor (e.g. for Products)
+    // Only skip if already in a post-acceptance state for this vendor.
+    // Admin-assigned bookings already have vendorId set but status is still REQUESTED —
+    // do NOT return early for those; they still need to go through the accept flow.
+    const POST_ACCEPT_STATUSES = [
+      BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACCEPTED,
+      BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.JOURNEY_STARTED,
+      BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.WORK_DONE
+    ];
     const current = await Booking.findById(id);
-    if (current && current.vendorId && current.vendorId.toString() === vendorId.toString()) {
+    if (
+      current &&
+      current.vendorId &&
+      current.vendorId.toString() === vendorId.toString() &&
+      POST_ACCEPT_STATUSES.includes(current.status)
+    ) {
       return res.status(200).json({
         success: true,
         message: 'Order already accepted by you',
@@ -231,14 +243,18 @@ const acceptBooking = async (req, res) => {
       {
         _id: id,
         status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] },
-        vendorId: null // Crucial: Ensures another request didn't just take it
+        $or: [
+          { vendorId: null },
+          { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true }
+        ]
       },
       {
         $set: {
           vendorId: vendorId,
           acceptedAt: new Date(),
           // Check payment method for optimized status update logic
-          status: BOOKING_STATUS.CONFIRMED // Default to confirmed
+          status: BOOKING_STATUS.CONFIRMED, // Default to confirmed
+          adminAssignmentStatus: 'ACCEPTED'
         }
       },
       { new: true } // Return updated doc
@@ -308,6 +324,16 @@ const acceptBooking = async (req, res) => {
 
     // Emit real-time updates to USER
     if (io) {
+      if (booking.assignedByAdmin) {
+        io.emit('adminBookingAccept', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          vendorId: vendorId,
+          vendorName: req.user.businessName || req.user.name,
+          message: `Vendor ${req.user.businessName || req.user.name} accepted manual booking assignment: ${booking.bookingNumber}`
+        });
+      }
+
       const message = 'Vendor has accepted your request. Your booking is confirmed!';
 
       io.to(`user_${booking.userId}`).emit('booking_accepted', {
@@ -378,7 +404,7 @@ const rejectBooking = async (req, res) => {
       });
     }
 
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { reason } = req.body;
 
@@ -387,7 +413,9 @@ const rejectBooking = async (req, res) => {
       _id: id,
       $or: [
         { notifiedVendors: vendorId },
-        { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] } }
+        { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] } },
+        // Allow admin-assigned vendor to reject
+        { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true, status: BOOKING_STATUS.REQUESTED }
       ]
     });
 
@@ -403,6 +431,30 @@ const rejectBooking = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Cannot reject booking with status: ${booking.status}`
+      });
+    }
+
+    // If this booking was admin-assigned directly to this vendor, handle immediately
+    const isAdminAssigned = booking.assignedByAdmin && booking.vendorId?.toString() === vendorId.toString();
+    if (isAdminAssigned) {
+      booking.adminAssignmentStatus = 'DECLINED';
+      booking.vendorId = null;
+      booking.status = BOOKING_STATUS.ESCALATED;
+      await booking.save();
+
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('adminBookingDecline', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          vendorId: vendorId,
+          message: `Vendor declined manual booking assignment: ${booking.bookingNumber}`
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Booking rejected and admin notified for reassignment'
       });
     }
 
@@ -436,41 +488,35 @@ const rejectBooking = async (req, res) => {
     const remainingPotential = booking.potentialVendors.length;
 
     if (pendingRequests === 0 && remainingPotential === 0) {
-      // No vendors left - mark booking as rejected/failed
-      booking.status = BOOKING_STATUS.REJECTED;
-      booking.cancelledAt = new Date();
-      booking.cancelledBy = 'system';
-      booking.cancellationReason = 'No vendors available';
+      if (booking.assignedByAdmin) {
+        booking.adminAssignmentStatus = 'DECLINED';
+        booking.status = BOOKING_STATUS.ESCALATED; // remains escalated so admin can reassign
 
-      // Notify user that no vendors are available
-      await createNotification({
-        userId: booking.userId,
-        type: 'booking_rejected',
-        title: 'No Vendors Available',
-        message: `Sorry, no vendors are available for booking ${booking.bookingNumber}. Please try again later.`,
-        relatedId: booking._id,
-        relatedType: 'booking',
-        pushData: {
-          type: 'booking_rejected',
-          bookingId: booking._id.toString(),
-          link: `/user/booking/${booking._id}`
+        // Notify admin about the decline
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('adminBookingDecline', {
+            bookingId: booking._id,
+            bookingNumber: booking.bookingNumber,
+            vendorId: vendorId,
+            message: `Vendor declined manual booking assignment: ${booking.bookingNumber}`
+          });
         }
-      });
+      } else {
+        // Escalate to admin
+        booking.status = BOOKING_STATUS.ESCALATED;
+        booking.isEscalatedToAdmin = true;
 
-      // Emit real-time updates to USER to close searching modal
-      const io = req.app.get('io');
-      if (io) {
-        io.to(`user_${booking.userId}`).emit('booking_search_failed', {
-          bookingId: booking._id,
-          bookingNumber: booking.bookingNumber,
-          message: 'Sorry, no professionals are currently available for your request.'
-        });
-
-        io.to(`user_${booking.userId}`).emit('booking_updated', {
-          bookingId: booking._id,
-          status: booking.status,
-          message: 'No providers available'
-        });
+        // Notify user and admin
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
+            bookingId: booking._id,
+            bookingNumber: booking.bookingNumber,
+            message: 'Our admin team is manually assigning a professional for your service.'
+          });
+          io.emit('adminBookingEscalated', { bookingId: booking._id });
+        }
       }
     }
     // Otherwise, booking stays SEARCHING for other vendors
@@ -505,7 +551,7 @@ const assignWorker = async (req, res) => {
       });
     }
 
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { workerId } = req.body;
 
@@ -676,7 +722,7 @@ const updateBookingStatus = async (req, res) => {
       });
     }
 
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { status, workerPaymentStatus, finalSettlementStatus } = req.body;
 
@@ -834,7 +880,7 @@ const addVendorNotes = async (req, res) => {
       });
     }
 
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { notes } = req.body;
 
@@ -870,7 +916,7 @@ const addVendorNotes = async (req, res) => {
  */
 const startSelfJob = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
 
     const booking = await Booking.findOne({ _id: id, vendorId });
@@ -954,7 +1000,7 @@ const startSelfJob = async (req, res) => {
  */
 const vendorReachedLocation = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
 
     // Need visitOtp to resend it
@@ -1002,7 +1048,7 @@ const vendorReachedLocation = async (req, res) => {
  */
 const verifySelfVisit = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { otp, location } = req.body;
 
@@ -1072,7 +1118,7 @@ const verifySelfVisit = async (req, res) => {
  */
 const completeSelfJob = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { workPhotos, workDoneDetails, billDetails } = req.body;
 
@@ -1358,7 +1404,7 @@ const completeSelfJob = async (req, res) => {
  */
 const collectSelfCash = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
     const { otp } = req.body;
 
@@ -1500,7 +1546,7 @@ const collectSelfCash = async (req, res) => {
  */
 const payWorker = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
 
     const booking = await Booking.findOne({ _id: id, vendorId });
@@ -1585,7 +1631,7 @@ const payWorker = async (req, res) => {
  */
 const getVendorRatings = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const { page = 1, limit = 10 } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -1644,7 +1690,7 @@ const getVendorRatings = async (req, res) => {
  */
 const getPendingBookings = async (req, res) => {
   try {
-    const vendorId = req.user.id;
+    const vendorId = req.user._id || req.user.id;
     const BookingRequest = require('../../models/BookingRequest');
 
     // Get all pending booking requests for this vendor
@@ -1654,7 +1700,12 @@ const getPendingBookings = async (req, res) => {
     })
       .populate({
         path: 'bookingId',
-        match: { status: BOOKING_STATUS.SEARCHING, vendorId: null },
+        match: {
+          $or: [
+            { status: BOOKING_STATUS.SEARCHING, vendorId: null },
+            { status: BOOKING_STATUS.REQUESTED, assignedByAdmin: true, vendorId: vendorId }
+          ]
+        },
         populate: [
           { path: 'userId', select: 'name phone' },
           {
@@ -1691,7 +1742,8 @@ const getPendingBookings = async (req, res) => {
       brandIcon: req.bookingId.brandIcon,
       categoryIcon: req.bookingId.categoryIcon,
       createdAt: req.bookingId.createdAt,
-      expiresAt: req.bookingId.expiresAt
+      expiresAt: req.bookingId.expiresAt,
+      assignedByAdmin: req.bookingId.assignedByAdmin
     }));
 
     res.status(200).json({

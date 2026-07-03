@@ -5,7 +5,7 @@ import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { playNotificationSound, isSoundEnabled, playAlertRing } from '../utils/notificationSound';
 import { registerFCMToken } from '../services/pushNotificationService';
-import { acceptBooking, rejectBooking } from '../modules/vendor/services/bookingService';
+import { acceptBooking, rejectBooking, assignWorker } from '../modules/vendor/services/bookingService';
 
 const SwipeableNotification = ({ t, data, onClick }) => {
   const x = useMotionValue(0);
@@ -20,6 +20,13 @@ const SwipeableNotification = ({ t, data, onClick }) => {
     try {
       if (action === 'accept') {
         await acceptBooking(data.bookingId);
+        // Clear from localStorage so the modal doesn't reappear
+        const pending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+        localStorage.setItem('vendorPendingJobs', JSON.stringify(
+          pending.filter(j => String(j.id || j._id) !== String(data.bookingId))
+        ));
+        window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id: data.bookingId } }));
+        assignWorker(data.bookingId, 'SELF').catch(() => {});
         toast.success('Job Accepted!');
       } else {
         await rejectBooking(data.bookingId, 'Rejected from notification');
@@ -183,7 +190,7 @@ export const SocketProvider = ({ children }) => {
       },
       transports: ['websocket', 'polling'], // Prioritize websocket for speed
       path: '/socket.io/',
-      secure: true,
+      secure: window.location.protocol === 'https:',
       rejectUnauthorized: false,
       reconnection: true,
       reconnectionAttempts: 10,
@@ -283,7 +290,7 @@ export const SocketProvider = ({ children }) => {
     // Listen for special Vendor Booking Requests
     if (userType === 'vendor') {
       newSocket.on('new_booking_request', (data) => {
-        // console.log('🚨 New Booking Request Alert:', data);
+        console.log('🚨 New Booking Request Alert Received on Socket:', data);
 
         // Acknowledge receipt to server
         newSocket.emit('booking_alert_received', { bookingId: data.bookingId });
@@ -316,7 +323,8 @@ export const SocketProvider = ({ children }) => {
           },
           status: 'requested',
           createdAt: data.createdAt || new Date().toISOString(),
-          expiresAt: data.expiresAt
+          expiresAt: data.expiresAt,
+          assignedByAdmin: data.assignedByAdmin
         };
 
         const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
@@ -351,7 +359,15 @@ export const SocketProvider = ({ children }) => {
               {
                 label: 'Accept',
                 onClick: () => {
-                  acceptBooking(data.bookingId);
+                  acceptBooking(data.bookingId).then(() => {
+                    // Clear from localStorage so the modal doesn't reappear
+                    const pending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
+                    localStorage.setItem('vendorPendingJobs', JSON.stringify(
+                      pending.filter(j => String(j.id || j._id) !== String(data.bookingId))
+                    ));
+                    window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id: data.bookingId } }));
+                    assignWorker(data.bookingId, 'SELF').catch(() => {});
+                  }).catch(() => {});
                   toast.dismiss(t.id);
                 }
               },

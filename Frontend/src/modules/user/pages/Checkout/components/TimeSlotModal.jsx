@@ -186,15 +186,18 @@ const TimeSlotModal = ({
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Proceed Button */}
+          {/* Footer - Sticky at bottom */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 shrink-0">
             <button
               onClick={() => onSave(selectedDate, selectedTime)}
               disabled={!selectedDate || !selectedTime}
-              className="w-full py-3.5 rounded-lg text-base font-semibold transition-colors mb-4"
+              className="w-full py-3.5 rounded-xl text-base font-semibold transition-all active:scale-[0.98]"
               style={selectedDate && selectedTime ? {
                 backgroundColor: themeColors.button,
-                color: 'white'
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
               } : {
                 backgroundColor: '#e5e7eb',
                 color: '#9ca3af',

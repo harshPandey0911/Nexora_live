@@ -118,7 +118,7 @@ const BookingAlertCard = ({ booking, onAccept, onReject, onAssign, maxSearchTime
   return (
     <div className="bg-white w-full sm:w-[320px] flex-none rounded-[2rem] overflow-y-auto max-h-[85vh] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] relative scrollbar-hide snap-center">
       {/* Header Section */}
-      <div className="relative h-20 bg-gradient-to-br from-teal-600 to-emerald-700 flex flex-col items-center justify-center">
+      <div className={`relative h-20 bg-gradient-to-br ${booking.assignedByAdmin ? 'from-amber-500 to-orange-600' : 'from-teal-600 to-emerald-700'} flex flex-col items-center justify-center`}>
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
@@ -133,9 +133,11 @@ const BookingAlertCard = ({ booking, onAccept, onReject, onAssign, maxSearchTime
             <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-400 rounded-full border-2 border-white animate-pulse" />
           </div>
           <div>
-            <h2 className="text-white text-lg font-medium tracking-tight leading-none">New Order!</h2>
+            <h2 className="text-white text-lg font-medium tracking-tight leading-none">
+              {booking.assignedByAdmin ? 'Admin Assigned!' : 'New Order!'}
+            </h2>
             <div className="text-[8px] font-normal text-teal-100 capitalize tracking-widest mt-0.5">
-              Action Required Immediately
+              {booking.assignedByAdmin ? 'Manual Allocation - High Priority' : 'Action Required Immediately'}
             </div>
           </div>
         </div>
@@ -186,11 +188,19 @@ const BookingAlertCard = ({ booking, onAccept, onReject, onAssign, maxSearchTime
                 {booking.serviceCategory || booking.serviceId?.categoryId?.title || booking.serviceId?.category?.title || booking.categoryName || 'General Service'}
               </span>
             </div>
-            <div className="bg-red-50 border border-red-100 px-1.5 py-1 rounded-md">
-              <span className="text-[9px] font-medium text-red-600 tracking-widest flex items-center gap-1 capitalize">
-                <FiBell className="w-3 h-3 animate-pulse" /> Urgent
-              </span>
-            </div>
+            {booking.assignedByAdmin ? (
+              <div className="bg-amber-50 border border-amber-100 px-1.5 py-1 rounded-md">
+                <span className="text-[9px] font-bold text-amber-700 tracking-wider flex items-center gap-1 uppercase">
+                  🛡️ Admin Assigned
+                </span>
+              </div>
+            ) : (
+              <div className="bg-red-50 border border-red-100 px-1.5 py-1 rounded-md">
+                <span className="text-[9px] font-medium text-red-600 tracking-widest flex items-center gap-1 capitalize">
+                  <FiBell className="w-3 h-3 animate-pulse" /> Urgent
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Service Details Card */}

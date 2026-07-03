@@ -25,6 +25,8 @@ const LiveBookingCard = ({ hasBottomNav }) => {
   // Status mapping for UI
   const getStatusInfo = (status) => {
     switch (status?.toUpperCase()) {
+      case 'CONFIRMED':
+        return { label: 'Vendor Found! Booking Confirmed', icon: FiCheckCircle, color: 'bg-green-500', sub: 'Your booking is confirmed', pulse: false };
       case 'ASSIGNED':
         return { label: 'Worker Assigned', icon: FiCheckCircle, color: 'bg-blue-500', sub: 'Worker will start journey soon' };
       case 'STARTED':
@@ -51,6 +53,26 @@ const LiveBookingCard = ({ hasBottomNav }) => {
     if (socket) {
       socket.on('booking_updated', fetchActiveBooking);
       socket.on('notification', fetchActiveBooking);
+      // Listen to vendor accept event for immediate UI refresh
+      socket.on('booking_accepted', fetchActiveBooking);
+
+      // When no vendor found within 2 min, booking escalates to admin.
+      // Hide the "Finding Nearby Vendors" notification on the user's screen.
+      socket.on('booking_escalated_to_admin', (data) => {
+        setActiveBooking(prev => {
+          if (prev && (String(prev._id || prev.id) === String(data.bookingId))) {
+            toast(
+              '🛡️ Assigning a professional for you — our team is on it!',
+              {
+                duration: 5000,
+                style: { borderRadius: '12px', background: '#1a1a2e', color: '#fff' }
+              }
+            );
+            return null; // Clear the card
+          }
+          return prev;
+        });
+      });
     }
 
     // Poll every 30 seconds for updates
@@ -60,6 +82,8 @@ const LiveBookingCard = ({ hasBottomNav }) => {
       if (socket) {
         socket.off('booking_updated', fetchActiveBooking);
         socket.off('notification', fetchActiveBooking);
+        socket.off('booking_accepted', fetchActiveBooking);
+        socket.off('booking_escalated_to_admin');
       }
     };
   }, [socket]);
@@ -76,11 +100,14 @@ const LiveBookingCard = ({ hasBottomNav }) => {
       const res = await userBookingService.getUserBookings({ limit: 5 });
       if (res.success && res.data.length > 0) {
         // Find the first booking that is in an active state (checking both cases to be safe)
+        // ESCALATED is intentionally excluded — the notification is handled by socket event
         const ongoing = res.data.find(b => {
           const s = b.status?.toUpperCase();
-          return ['ASSIGNED', 'STARTED', 'JOURNEY_STARTED', 'VISITED', 'IN_PROGRESS', 'SEARCHING', 'REQUESTED'].includes(s);
+          return ['CONFIRMED', 'ASSIGNED', 'STARTED', 'JOURNEY_STARTED', 'VISITED', 'IN_PROGRESS', 'SEARCHING', 'REQUESTED'].includes(s);
         });
         setActiveBooking(ongoing || null);
+      } else {
+        setActiveBooking(null);
       }
     } catch (error) {
       // Failed to fetch active booking

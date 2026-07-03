@@ -27,6 +27,12 @@ const AdminSettings = () => {
     isOnlinePaymentEnabled: true
   });
 
+  const [slotConfig, setSlotConfig] = useState({
+    startTime: '09:00 AM',
+    endTime: '09:00 PM',
+    gapInMinutes: 60
+  });
+
   // Billing Configuration State
   const [billingSettings, setBillingSettings] = useState({
     companyName: 'TodayMyDream',
@@ -123,6 +129,9 @@ const AdminSettings = () => {
             searchRadius: res.settings.searchRadius || 10,
             isOnlinePaymentEnabled: res.settings.isOnlinePaymentEnabled !== undefined ? res.settings.isOnlinePaymentEnabled : true
           });
+          if (res.settings.slotConfig) {
+            setSlotConfig(res.settings.slotConfig);
+          }
           // Load billing settings
           setBillingSettings({
             companyName: res.settings.companyName || 'TodayMyDream',
@@ -211,7 +220,11 @@ const AdminSettings = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await updateSettings(financialSettings);
+      const finalSlotConfig = {
+        ...slotConfig,
+        gapInMinutes: parseInt(slotConfig.gapInMinutes, 10) || 60
+      };
+      await updateSettings({ ...financialSettings, slotConfig: finalSlotConfig });
       toast.success('Financial settings updated');
     } catch (error) {
       toast.error('Failed to update settings');
@@ -653,6 +666,29 @@ const AdminSettings = () => {
                           <input type="number" name="searchRadius" value={financialSettings.searchRadius} onChange={handleFinancialChange}
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Default distance to hunt for vendors around booking location</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-gray-100 md:col-span-2">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase mb-3">Booking Slot Configuration</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Slots Start Time</label>
+                          <input type="text" value={slotConfig.startTime} onChange={(e) => setSlotConfig(prev => ({ ...prev, startTime: e.target.value }))} placeholder="e.g. 09:00 AM"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                          <p className="text-[10px] text-gray-400 mt-1">Starting hour for generated slots (12h format, e.g. 09:00 AM)</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Slots End Time</label>
+                          <input type="text" value={slotConfig.endTime} onChange={(e) => setSlotConfig(prev => ({ ...prev, endTime: e.target.value }))} placeholder="e.g. 09:00 PM"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                          <p className="text-[10px] text-gray-400 mt-1">Ending hour for generated slots (12h format, e.g. 09:00 PM)</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Slot Interval Gap (Minutes)</label>
+                          <input type="number" value={slotConfig.gapInMinutes} onChange={(e) => setSlotConfig(prev => ({ ...prev, gapInMinutes: e.target.value === '' ? '' : parseInt(e.target.value, 10) }))} placeholder="e.g. 60"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                          <p className="text-[10px] text-gray-400 mt-1">Time duration difference in minutes between consecutive slots</p>
                         </div>
                       </div>
                     </div>

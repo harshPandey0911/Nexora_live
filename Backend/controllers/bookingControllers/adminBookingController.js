@@ -23,7 +23,24 @@ const getAllBookings = async (req, res) => {
     // Build query
     const query = {};
 
-    if (status) query.status = status;
+    if (status) {
+      if (status.toUpperCase() === 'MANUAL_ASSIGNMENT') {
+        // Show ALL admin-assigned bookings across full lifecycle (escalated → confirmed → work_done)
+        query.$or = [
+          { status: 'escalated' },                                          // Not yet assigned by admin
+          { status: 'requested', assignedByAdmin: true },                   // Assigned, vendor hasn't responded
+          { status: 'confirmed', assignedByAdmin: true },                   // Vendor accepted
+          { status: 'awaiting_payment', assignedByAdmin: true },
+          { status: 'assigned', assignedByAdmin: true },                    // Worker assigned
+          { status: 'journey_started', assignedByAdmin: true },             // Worker on way
+          { status: 'visited', assignedByAdmin: true },                     // Worker arrived
+          { status: 'in_progress', assignedByAdmin: true },                 // Work in progress
+          { status: 'work_done', assignedByAdmin: true }                    // Work done (awaiting completion)
+        ];
+      } else {
+        query.status = status.toLowerCase();
+      }
+    }
     if (paymentStatus) query.paymentStatus = paymentStatus;
     if (userId) query.userId = userId;
     if (vendorId) query.vendorId = vendorId;
@@ -298,10 +315,91 @@ const getBookingAnalytics = async (req, res) => {
   }
 };
 
+/**
+ * Manually assign a vendor to an escalated/searching booking
+ */
+const assignVendor = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vendorId } = req.body;
+
+    if (!vendorId) {
+      return res.status(400).json({ success: false, message: 'Vendor ID is required' });
+    }
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Assign vendor and update statuses
+    booking.vendorId = vendorId;
+    booking.assignedByAdmin = true;
+    booking.adminAssignmentStatus = 'PENDING';
+    booking.status = BOOKING_STATUS.REQUESTED;
+    booking.expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min window for vendor to accept
+
+    const BookingRequest = require('../../models/BookingRequest');
+    
+    // Clean up old requests
+    await BookingRequest.deleteMany({ bookingId: id });
+    
+    await BookingRequest.create({
+      bookingId: id,
+      vendorId: vendorId,
+      status: 'PENDING',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000)
+    });
+
+    await booking.save();
+
+    // Notify Vendor via sockets
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`vendor_${vendorId}`).emit('new_booking_request', {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        serviceName: booking.serviceName,
+        customerName: booking.customerName || 'Authorized Client',
+        customerPhone: booking.customerPhone || '',
+        address: { addressLine1: booking.location?.address || 'Location shared' },
+        price: booking.finalAmount,
+        vendorEarnings: booking.finalAmount * 0.9,
+        serviceCategory: booking.serviceCategory || 'Nexora Service',
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.timeSlot?.time || 'ASAP',
+        createdAt: booking.createdAt,
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min window
+        assignedByAdmin: true
+      });
+
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: booking.status,
+        message: 'Vendor has been assigned by Admin'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Vendor assigned successfully',
+      data: booking
+    });
+  } catch (error) {
+    console.error('Assign vendor error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign vendor'
+    });
+  }
+};
+
 module.exports = {
   getAllBookings,
   getBookingById,
   cancelBooking,
-  getBookingAnalytics
+  getBookingAnalytics,
+  assignVendor
 };
 

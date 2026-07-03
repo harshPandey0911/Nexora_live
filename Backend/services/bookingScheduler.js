@@ -29,7 +29,7 @@ let WAVE_CONFIG = {
   4: { count: Infinity, duration: 0 }
 };
 
-let MAX_SEARCH_TIME_MS = 1 * 60 * 1000; // 1 minute fallback
+let MAX_SEARCH_TIME_MS = 2 * 60 * 1000; // 2 minute fallback
 
 const ACTIVE_INTERVAL_MS = 5000;  // Poll every 5s when bookings exist
 const IDLE_INTERVAL_MS = 30000;   // Poll every 30s when no active bookings (circuit breaker)
@@ -101,10 +101,45 @@ class BookingScheduler {
             3: { count: 4, duration: waveDur },
             4: { count: Infinity, duration: 0 }
           };
-          MAX_SEARCH_TIME_MS = 1 * 60 * 1000; // Strictly 1 minute
+          MAX_SEARCH_TIME_MS = 2 * 60 * 1000; // Strictly 2 minutes
         }
       } catch (sErr) {
         console.error('[BookingScheduler] Settings fetch error:', sErr);
+      }
+
+      // --- HANDLE EXPIRED ADMIN-ASSIGNED BOOKINGS ---
+      // If vendor didn't accept within the 30-min window, re-escalate back to admin queue
+      try {
+        const now_check = new Date();
+        const expiredAdminBookings = await Booking.find({
+          assignedByAdmin: true,
+          adminAssignmentStatus: 'PENDING',
+          status: BOOKING_STATUS.REQUESTED,
+          expiresAt: { $lt: now_check }
+        }, '_id bookingNumber userId notifiedVendors').lean();
+
+        if (expiredAdminBookings.length > 0) {
+          console.log(`[BookingScheduler] Found ${expiredAdminBookings.length} expired admin-assigned booking(s) — re-escalating`);
+          await Promise.all(expiredAdminBookings.map(async (b) => {
+            await Booking.updateOne(
+              { _id: b._id, adminAssignmentStatus: 'PENDING', status: BOOKING_STATUS.REQUESTED },
+              {
+                $set: {
+                  status: BOOKING_STATUS.ESCALATED,
+                  isEscalatedToAdmin: true,
+                  adminAssignmentStatus: null,
+                  expiresAt: null
+                }
+              }
+            );
+            console.log(`[BookingScheduler] Re-escalated admin booking ${b.bookingNumber} — vendor did not accept in time`);
+            if (this.io) {
+              this.io.emit('adminBookingEscalated', { bookingId: b._id, reason: 'vendor_no_accept' });
+            }
+          }));
+        }
+      } catch (adminExpErr) {
+        console.error('[BookingScheduler] Error handling expired admin bookings:', adminExpErr);
       }
 
       // --- CIRCUIT BREAKER: Fast query to detect if any work is needed ---
@@ -114,7 +149,7 @@ class BookingScheduler {
           waveStartedAt: { $ne: null },
           potentialVendors: { $exists: true, $not: { $size: 0 } }
         },
-        '_id currentWave waveStartedAt potentialVendors notifiedVendors bookingNumber createdAt userId expiresAt' // Added createdAt, userId, expiresAt
+        '_id currentWave waveStartedAt potentialVendors notifiedVendors bookingNumber createdAt userId expiresAt'
       ).lean();
 
       if (activeBookings.length === 0) {
@@ -140,26 +175,27 @@ class BookingScheduler {
 
             // --- EXPIRY CHECK ---
             if (totalElapsed > MAX_SEARCH_TIME_MS) {
-              // Try atomic update to NO_VENDORS
+              // Try atomic update to ESCALATED
               const updateResult = await Booking.updateOne(
                 { _id: booking._id, status: BOOKING_STATUS.SEARCHING },
                 {
                   $set: {
-                    status: BOOKING_STATUS.NO_VENDORS,
-                    cancellationReason: 'No vendor accepted within time limit'
+                    status: BOOKING_STATUS.ESCALATED,
+                    isEscalatedToAdmin: true
                   }
                 }
               );
 
               if (updateResult.modifiedCount > 0) {
-                console.log(`[BookingScheduler] ${booking.bookingNumber}: Search timed out. Status updated to NO_VENDORS.`);
+                console.log(`[BookingScheduler] ${booking.bookingNumber}: Search timed out. Status updated to ESCALATED.`);
                 
-                // Notify User
+                // Notify User & Admin
                 if (this.io) {
-                  this.io.to(`user_${booking.userId}`).emit('booking_search_failed', {
+                  this.io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
                     bookingId: booking._id,
-                    message: 'No vendors available at the moment. Please try again later.'
+                    message: 'Our admin team is manually assigning a professional for your service.'
                   });
+                  this.io.emit('adminBookingEscalated', { bookingId: booking._id });
                 }
 
                 // Remove from all notified vendors

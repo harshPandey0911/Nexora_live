@@ -61,6 +61,7 @@ const Checkout = () => {
   const [visitedFee, setVisitedFee] = useState(0); // Convenience fee disabled
   const [gstPercentage, setGstPercentage] = useState(18);
   const [bookingType, setBookingType] = useState('instant'); // 'instant' | 'scheduled'
+  const [slotConfig, setSlotConfig] = useState({ startTime: '09:00', endTime: '21:00', gapInHours: 1 });
 
   // Check if Razorpay is loaded (defer to avoid blocking initial render)
   useEffect(() => {
@@ -125,6 +126,9 @@ const Checkout = () => {
           if (response.success) {
             setVisitedFee(0); // Convenience fee disabled
             setGstPercentage(response.settings?.serviceGstPercentage || 18);
+            if (response.settings?.slotConfig) {
+              setSlotConfig(response.settings.slotConfig);
+            }
 
             if (response.user?.addresses?.length > 0) {
               const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
@@ -147,6 +151,9 @@ const Checkout = () => {
             // Set Config
             setVisitedFee(0); // Convenience fee disabled
             setGstPercentage(response.settings?.serviceGstPercentage || 18);
+            if (response.settings?.slotConfig) {
+              setSlotConfig(response.settings.slotConfig);
+            }
 
             // Set Addresses
             if (response.user?.addresses?.length > 0) {
@@ -463,6 +470,18 @@ const Checkout = () => {
           }
         };
         handleAutoCancel();
+      }
+    });
+
+    socket.on('booking_escalated_to_admin', (data) => {
+      if (data.bookingId === bookingRequest._id) {
+        setSearchingVendors(false);
+        setCurrentStep('waiting');
+        toast.success(data.message || 'Escalated to admin for manual assignment.', { duration: 5000 });
+        setTimeout(() => {
+          setShowVendorModal(false);
+          navigate('/user/bookings', { replace: true });
+        }, 3000);
       }
     });
 
@@ -1067,20 +1086,61 @@ const Checkout = () => {
   };
 
   const getTimeSlots = () => {
-    const allSlots = [
-      { value: '09:00', end: '10:00', display: '9:00 AM' },
-      { value: '10:00', end: '11:00', display: '10:00 AM' },
-      { value: '11:00', end: '12:00', display: '11:00 AM' },
-      { value: '12:00', end: '13:00', display: '12:00 PM' },
-      { value: '13:00', end: '14:00', display: '1:00 PM' },
-      { value: '14:00', end: '15:00', display: '2:00 PM' },
-      { value: '15:00', end: '16:00', display: '3:00 PM' },
-      { value: '16:00', end: '17:00', display: '4:00 PM' },
-      { value: '17:00', end: '18:00', display: '5:00 PM' },
-      { value: '18:00', end: '19:00', display: '6:00 PM' },
-      { value: '19:00', end: '20:00', display: '7:00 PM' },
-      { value: '20:00', end: '21:00', display: '8:00 PM' },
-    ];
+    const allSlots = [];
+    try {
+      const parseTimeToMinutes = (timeStr) => {
+        if (!timeStr) return 0;
+        const parts = timeStr.trim().split(' ');
+        const time = parts[0];
+        const modifier = parts[1] || 'AM';
+        let [hours, minutes] = time.split(':').map(Number);
+        if (modifier.toUpperCase() === 'PM' && hours < 12) {
+          hours += 12;
+        }
+        if (modifier.toUpperCase() === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        return hours * 60 + (minutes || 0);
+      };
+
+      const startMinutes = parseTimeToMinutes(slotConfig.startTime || '09:00 AM');
+      const endMinutes = parseTimeToMinutes(slotConfig.endTime || '09:00 PM');
+      const gap = slotConfig.gapInMinutes || 60;
+
+      for (let min = startMinutes; min < endMinutes; min += gap) {
+        let hours = Math.floor(min / 60);
+        const minutes = min % 60;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+        
+        const padHour = String(hours).padStart(2, '0');
+        const padMin = String(minutes).padStart(2, '0');
+        const val = `${padHour}:${padMin}`;
+        
+        let endMin = min + gap;
+        let endHours = Math.floor(endMin / 60);
+        const endMinutesPart = endMin % 60;
+        const endPadHour = String(endHours).padStart(2, '0');
+        const endPadMin = String(endMinutesPart).padStart(2, '0');
+        const endVal = `${endPadHour}:${endPadMin}`;
+        
+        const disp = `${displayHours}:${padMin} ${ampm}`;
+        
+        allSlots.push({ value: val, end: endVal, display: disp });
+      }
+    } catch (e) {
+      console.error('Error generating slots from config:', e);
+    }
+
+    if (allSlots.length === 0) {
+      // Fallback
+      return [
+        { value: '09:00', end: '10:00', display: '9:00 AM' },
+        { value: '12:00', end: '13:00', display: '12:00 PM' },
+        { value: '15:00', end: '16:00', display: '3:00 PM' },
+        { value: '18:00', end: '19:00', display: '6:00 PM' },
+      ];
+    }
 
     // If today is selected, filter out past time slots
     const now = new Date();
