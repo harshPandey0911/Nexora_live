@@ -167,6 +167,7 @@ app.use('/api/public/cities', require('./routes/public-routes/city.routes.js'));
 
 // User routes
 app.use('/api/users/auth', require('./routes/user-routes/auth.routes'));
+app.use('/api/auth', require('./routes/user-routes/auth.routes'));
 app.use('/api/users', require('./routes/user-routes/profile.routes'));
 app.use('/api/user/wallet', require('./routes/user-routes/userWallet.routes'));
 app.use('/api/users/bookings', require('./routes/user-routes/booking.routes'));

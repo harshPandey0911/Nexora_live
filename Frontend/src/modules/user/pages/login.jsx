@@ -135,9 +135,17 @@ const Login = () => {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </label>
+              <div className="flex justify-between items-center mb-1">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Link
+                  to="/user/forgot-password"
+                  className="text-xs font-semibold text-gray-500 hover:text-[var(--brand-teal)] transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
                   <FiLock className="h-5 w-5 text-gray-400" />

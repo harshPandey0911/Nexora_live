@@ -391,11 +391,210 @@ const refreshToken = async (req, res) => {
   }
 };
 
+/**
+ * Request Password Reset (Forgot Password)
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { mobile } = req.body;
+    // Map mobile (from request) to phone (in db schema)
+    const user = await User.findOne({ phone: mobile });
+
+    if (!user) {
+      // Generic success to prevent user enumeration
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists, a reset link has been sent.'
+      });
+    }
+
+    // Generate secure random token
+    const crypto = require('crypto');
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    // Token expiry (15 minutes)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Save token in DB using the Token model
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+    
+    // Deactivate/Delete previous reset tokens for this user
+    await Token.deleteMany({ userId: user._id, type: TOKEN_TYPES.PASSWORD_RESET });
+
+    await Token.create({
+      userId: user._id,
+      phone: user.phone,
+      email: user.email,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      token: tokenHash,
+      expiresAt,
+      isUsed: false
+    });
+
+    // Create reset URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/user/reset-password/${rawToken}`;
+
+    // Log reset link in terminal for easier local testing
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n=== [DEVELOPMENT ONLY] SECURE RESET LINK ===\n${resetUrl}\n============================================\n`);
+    }
+
+    // Send reset email if user has email
+    if (user.email) {
+      const { sendPasswordResetEmail } = require('../../services/emailService');
+      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists, a reset link has been sent.'
+    });
+
+  } catch (error) {
+    console.error('ForgotPassword Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process request. Please try again.'
+    });
+  }
+};
+
+/**
+ * Verify Password Reset Token validity
+ */
+const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ valid: false, message: 'Token is required' });
+    }
+
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+
+    const tokenDoc = await Token.findOne({
+      token: tokenHash,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      expiresAt: { $gt: new Date() },
+      isUsed: false
+    });
+
+    if (!tokenDoc) {
+      return res.status(400).json({ valid: false, message: 'Reset Link Expired or Invalid' });
+    }
+
+    return res.status(200).json({ valid: true });
+
+  } catch (error) {
+    console.error('VerifyResetToken Error:', error);
+    return res.status(500).json({ valid: false, message: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Reset Password using token
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token, password } = req.body;
+
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+
+    const tokenDoc = await Token.findOne({
+      token: tokenHash,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      expiresAt: { $gt: new Date() },
+      isUsed: false
+    });
+
+    if (!tokenDoc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset Link Expired or Invalid'
+      });
+    }
+
+    const user = await User.findById(tokenDoc.userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Set new password (pre-save middleware handles hashing)
+    user.password = password;
+    
+    // Invalidate active session and clear fcm tokens
+    const loginSessionId = Date.now().toString();
+    user.loginSessionId = loginSessionId;
+    user.fcmTokens = [];
+    user.fcmTokenMobile = [];
+    
+    await user.save();
+
+    // Delete the reset token
+    await Token.deleteMany({ userId: user._id, type: TOKEN_TYPES.PASSWORD_RESET });
+
+    // Invalidate user refresh tokens
+    await Token.deleteMany({ userId: user._id, type: TOKEN_TYPES.REFRESH_TOKEN });
+
+    // Send confirmation email
+    if (user.email) {
+      const { sendPasswordChangedEmail } = require('../../services/emailService');
+      await sendPasswordChangedEmail(user.email, user.name);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully.'
+    });
+
+  } catch (error) {
+    console.error('ResetPassword Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update password. Please try again.'
+    });
+  }
+};
+
 module.exports = {
   sendOTP,
   verifyLogin,
   register,
   login,
   logout,
-  refreshToken
+  refreshToken,
+  forgotPassword,
+  verifyResetToken,
+  resetPassword
 };

@@ -75,6 +75,8 @@ const AboutCleaningExpert = lazyLoad(() => import('../pages/AboutCleaningExpert'
 const UpdateProfile = lazyLoad(() => import('../pages/UpdateProfile'));
 const Login = lazyLoad(() => import('../pages/login'));
 const Signup = lazyLoad(() => import('../pages/signup'));
+const ForgotPassword = lazyLoad(() => import('../pages/forgotPassword'));
+const ResetPassword = lazyLoad(() => import('../pages/resetPassword'));
 const Shop = lazyLoad(() => import('../pages/Shop'));
 const AddScrap = lazyLoad(() => import('../pages/Shop/AddScrap'));
 const Notifications = lazyLoad(() => import('../pages/Notifications'));
@@ -117,7 +119,10 @@ const UserRoutes = () => {
 
 
   // Check if we are on public pages (login/signup) where we shouldn't fetch bookings
-  const isPublicPage = location.pathname.includes('/login') || location.pathname.includes('/signup');
+  const isPublicPage = location.pathname.includes('/login') || 
+                       location.pathname.includes('/signup') || 
+                       location.pathname.includes('/forgot-password') || 
+                       location.pathname.includes('/reset-password');
 
   return (
     <ThemeManager theme="user">
@@ -130,6 +135,8 @@ const UserRoutes = () => {
                 {/* Public routes */}
                 <Route path="/login" element={<PublicRoute userType="user"><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute userType="user"><Signup /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute userType="user"><ForgotPassword /></PublicRoute>} />
+                <Route path="/reset-password/:token" element={<PublicRoute userType="user"><ResetPassword /></PublicRoute>} />
                 <Route path="/" element={<Home />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />

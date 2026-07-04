@@ -6,7 +6,10 @@ const {
   register,
   login,
   logout,
-  verifyLogin
+  verifyLogin,
+  forgotPassword,
+  verifyResetToken,
+  resetPassword
 } = require('../../controllers/userControllers/userAuthController');
 // ...
 
@@ -35,6 +38,21 @@ const registerValidation = [
   body('email').optional({ nullable: true, checkFalsy: true }).isEmail().withMessage('Please provide a valid email')
 ];
 
+const forgotPasswordValidation = [
+  body('mobile').trim().notEmpty().withMessage('Mobile number is required')
+    .isLength({ min: 10, max: 10 }).withMessage('Mobile number must be 10 digits')
+];
+
+const resetPasswordValidation = [
+  body('token').trim().notEmpty().withMessage('Token is required'),
+  body('password').trim().notEmpty().withMessage('Password is required')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/[A-Z]/).withMessage('Password must contain an uppercase letter')
+    .matches(/[a-z]/).withMessage('Password must contain a lowercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain a number')
+    .matches(/[^A-Za-z0-9]/).withMessage('Password must contain a special character')
+];
+
 // Routes
 router.post('/send-otp', sendOTPValidation, sendOTP);
 router.post('/verify-login', verifyLoginValidation, verifyLogin); // New Unified Entry
@@ -42,6 +60,13 @@ router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.post('/refresh-token', require('../../controllers/userControllers/userAuthController').refreshToken);
 router.post('/logout', authenticate, isUser, logout);
+
+const passwordResetLimiter = require('../../middleware/authRateLimiter');
+
+// Password Reset Flow
+router.post('/forgot-password', passwordResetLimiter, forgotPasswordValidation, forgotPassword);
+router.get('/reset-password/:token', verifyResetToken);
+router.post('/reset-password', resetPasswordValidation, resetPassword);
 
 module.exports = router;
 

@@ -68,7 +68,7 @@ const OfferBannerSlider = ({ banners }) => {
         ))}
       </Swiper>
       
-      <style jsx global>{`
+      <style>{`
         .swiper-pagination-bullet-active {
           background: #2874f0 !important;
         }

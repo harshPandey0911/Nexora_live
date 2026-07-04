@@ -76,6 +76,24 @@ export const userAuthService = {
     return response.data;
   },
 
+  // Forgot Password Link request
+  forgotPassword: async (mobile) => {
+    const response = await api.post('/auth/forgot-password', { mobile });
+    return response.data;
+  },
+
+  // Verify Reset Password Token
+  verifyResetToken: async (token) => {
+    const response = await api.get(`/auth/reset-password/${token}`);
+    return response.data;
+  },
+
+  // Reset Password
+  resetPassword: async (token, password) => {
+    const response = await api.post('/auth/reset-password', { token, password });
+    return response.data;
+  },
+
   // Logout
   logout: async () => {
     // Remove FCM token before logout

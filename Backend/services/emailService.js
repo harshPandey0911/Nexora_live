@@ -75,15 +75,15 @@ const emailWrapper = (content, title, preheader = '') => `
   <div class="wrapper">
     <div class="main">
       <div class="header">
-        <div class="logo-circle">H</div>
-        <h1>Homster</h1>
+        <div class="logo-circle">N</div>
+        <h1>Nexora Go</h1>
       </div>
       <div class="content">
         ${content}
       </div>
       <div class="footer">
-        <p>Premium Home Services • Delivered with Care</p>
-        <p>&copy; ${new Date().getFullYear()} Homster India. All rights reserved.</p>
+        <p>On-Demand Services • Delivered with Care</p>
+        <p>&copy; ${new Date().getFullYear()} Nexora Go. All rights reserved.</p>
         <div class="social-links">
           <a href="#">Help Center</a>
           <a href="#">Privacy Policy</a>
@@ -97,10 +97,11 @@ const emailWrapper = (content, title, preheader = '') => `
 `;
 
 const createTransporter = () => {
+  const isSecure = parseInt(process.env.EMAIL_PORT) === 465;
   return nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: false,
+    secure: isSecure,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
@@ -378,12 +379,82 @@ const sendDuesPaymentApprovedEmail = async (vendor, amount, balanceAfter) => {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+      from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: vendor.email,
-      subject: 'Dues Payment Verified - Homster',
+      subject: 'Dues Payment Verified - Nexora Go',
       html: emailWrapper(content, 'Verified', 'We have received your payment')
     });
   } catch (error) { console.error(error); }
+};
+
+/**
+ * Send Password Reset Link Email
+ */
+const sendPasswordResetEmail = async (email, name, resetUrl) => {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log(`[EMAIL SERVICE] Password Reset Link for ${email}: ${resetUrl}`);
+      return { success: true };
+    }
+
+    const transporter = createTransporter();
+    const content = `
+      <div style="text-align: left; padding: 20px 0;">
+        <h2>Reset Your Password</h2>
+        <p>Hi ${name || 'User'},</p>
+        <p>We received a request to reset your password.</p>
+        <p>Click the button below to set a new password:</p>
+        
+        <div class="btn-container" style="text-align: left; margin: 30px 0;">
+          <a href="${resetUrl}" class="btn" style="background-color: ${COLORS.primary}; color: #ffffff !important; padding: 15px 30px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block;">Reset Password</a>
+        </div>
+        
+        <p style="font-size: 14px; color: ${COLORS.lightText};">This link expires in 15 minutes.</p>
+        <p style="font-size: 14px; color: ${COLORS.lightText};">If you didn't request this, simply ignore this email.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
+      to: email,
+      subject: 'Reset Your Password',
+      html: emailWrapper(content, 'Reset Your Password', 'Reset Link')
+    });
+  } catch (error) {
+    console.error('sendPasswordResetEmail Error:', error);
+  }
+};
+
+/**
+ * Send Password Changed Confirmation Email
+ */
+const sendPasswordChangedEmail = async (email, name) => {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log(`[EMAIL SERVICE] Password successfully updated for ${email}`);
+      return { success: true };
+    }
+
+    const transporter = createTransporter();
+    const content = `
+      <div style="text-align: left; padding: 20px 0;">
+        <div class="badge badge-success">Success</div>
+        <h2>Password Updated Successfully</h2>
+        <p>Hi ${name || 'User'},</p>
+        <p>This is a confirmation that your password has been changed successfully.</p>
+        <p>If you did not perform this action, please contact support immediately to secure your account.</p>
+      </div>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
+      to: email,
+      subject: 'Password Changed Successfully',
+      html: emailWrapper(content, 'Password Updated', 'Your password was changed')
+    });
+  } catch (error) {
+    console.error('sendPasswordChangedEmail Error:', error);
+  }
 };
 
 module.exports = {
@@ -392,5 +463,7 @@ module.exports = {
   sendBookingEmails,
   sendBookingCompletionEmails,
   sendWithdrawalApprovedEmail,
-  sendDuesPaymentApprovedEmail
+  sendDuesPaymentApprovedEmail,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail
 };
