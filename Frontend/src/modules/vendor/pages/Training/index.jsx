@@ -49,8 +49,6 @@ const VendorTraining = () => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            setIsVideoWatched(true);
-            toast.success('Training completed! You can now start the test.');
             return 0;
           }
           return prev - 1;
@@ -59,6 +57,13 @@ const VendorTraining = () => {
     }
     return () => clearInterval(timer);
   }, [step, isVideoWatched, trainingData]);
+
+  useEffect(() => {
+    if (step === 'video' && timeLeft === 0 && !isVideoWatched && trainingData) {
+      setIsVideoWatched(true);
+      toast.success('Training completed! You can now start the test.');
+    }
+  }, [timeLeft, step, isVideoWatched, trainingData]);
 
   if (loading) return <LogoLoader />;
 
@@ -74,6 +79,8 @@ const VendorTraining = () => {
       </div>
     );
   }
+
+  const hasPassed = score >= Math.min(trainingData.minimumScore || 3, trainingData.questions.length);
 
   const handleProceedToTest = () => setStep('mcq');
 
@@ -95,7 +102,7 @@ const VendorTraining = () => {
   };
 
   const handleFinish = async () => {
-    if (score >= (trainingData.minimumScore || 3)) {
+    if (hasPassed) {
       // Logic for registration AFTER training
       const pendingData = location.state?.registerData || JSON.parse(sessionStorage.getItem('pendingVendorRegistration') || 'null');
       
@@ -184,7 +191,7 @@ const VendorTraining = () => {
                   src={getEmbedUrl(trainingData.videoUrl)} 
                   title="Training Video" 
                   frameBorder="0" 
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; compute-pressure" 
                   allowFullScreen
                 ></iframe>
                 <div className="absolute inset-0 z-10 bg-transparent pointer-events-none"></div>
@@ -234,18 +241,18 @@ const VendorTraining = () => {
 
           {step === 'result' && (
             <div className="text-center py-10 animate-fade-in space-y-8">
-              <div className="mx-auto w-24 h-24 rounded-[32px] flex items-center justify-center shadow-xl shadow-gray-100" style={{ backgroundColor: score >= (trainingData.minimumScore || 3) ? '#000000' : '#f3f4f6', color: score >= (trainingData.minimumScore || 3) ? '#ffffff' : '#9ca3af' }}>
-                {score >= (trainingData.minimumScore || 3) ? <FiCheckCircle size={40} /> : <FiAlertCircle size={40} />}
+              <div className="mx-auto w-24 h-24 rounded-[32px] flex items-center justify-center shadow-xl shadow-gray-100" style={{ backgroundColor: hasPassed ? '#000000' : '#f3f4f6', color: hasPassed ? '#ffffff' : '#9ca3af' }}>
+                {hasPassed ? <FiCheckCircle size={40} /> : <FiAlertCircle size={40} />}
               </div>
               <div>
-                <h3 className="text-sm font-medium text-gray-900 capitalize tracking-[0.3em] mb-2">{score >= (trainingData.minimumScore || 3) ? 'Credential Verified' : 'Assessment Failed'}</h3>
+                <h3 className="text-sm font-medium text-gray-900 capitalize tracking-[0.3em] mb-2">{hasPassed ? 'Credential Verified' : 'Assessment Failed'}</h3>
                 <p className="text-[10px] font-medium text-gray-400 capitalize tracking-widest">Accuracy Level: {score} / {trainingData.questions.length}</p>
               </div>
               <button 
                 onClick={handleFinish} 
                 className="w-full py-6 rounded-[32px] text-white font-medium capitalize tracking-[0.3em] shadow-2xl shadow-gray-200 bg-black active:scale-95 transition-all text-xs"
               >
-                {score >= (trainingData.minimumScore || 3) ? 'Access Portal' : 'Re-Attempt Briefing'}
+                {hasPassed ? 'Access Portal' : 'Re-Attempt Briefing'}
               </button>
             </div>
           )}

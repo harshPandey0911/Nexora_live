@@ -284,6 +284,33 @@ const register = async (req, res) => {
       });
     }
 
+    // Step 2.5: Determine initial Level & Performance Score based on MCQ Score
+    let initialLevel = 3;
+    let initialPerformanceScore = 10;
+    const trainingScore = req.body.trainingScore || 0;
+    
+    try {
+      const Training = require('../../models/Training');
+      const activeTraining = await Training.findOne({ isActive: true });
+      if (activeTraining && activeTraining.questions && activeTraining.questions.length > 0) {
+        const totalQuestions = activeTraining.questions.length;
+        const percentage = (trainingScore / totalQuestions) * 100;
+        
+        if (percentage >= 100) {
+          initialLevel = 1;
+          initialPerformanceScore = 100;
+        } else if (percentage >= 50) {
+          initialLevel = 2;
+          initialPerformanceScore = 75;
+        } else {
+          initialLevel = 3;
+          initialPerformanceScore = 10;
+        }
+      }
+    } catch (err) {
+      console.error('Error calculating initial level from MCQ:', err);
+    }
+
     // Step 3: Create Vendor Record
     const vendor = await Vendor.create({
       name,
@@ -299,7 +326,9 @@ const register = async (req, res) => {
         document: panUrl 
       },
       otherDocuments: processedOtherDocs,
-      trainingScore: req.body.trainingScore || 0,
+      trainingScore: trainingScore,
+      performanceScore: initialPerformanceScore,
+      level: initialLevel,
       approvalStatus: VENDOR_STATUS.PENDING,
       isActive: true, // Allow them to attempt login but blocked by PENDING status
       settings: { serviceRange: 15 }

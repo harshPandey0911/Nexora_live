@@ -17,10 +17,18 @@ const LiveBookingCard = ({ hasBottomNav }) => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
-  // Reset dismissed state when location changes (page changes)
+  // Reset dismissed state only when the booking ID or booking status changes (not on page navigation)
   useEffect(() => {
-    setIsDismissed(false);
-  }, [location.pathname]);
+    if (activeBooking) {
+      const bookingId = activeBooking._id || activeBooking.id;
+      const dismissedStatus = localStorage.getItem(`live_card_dismissed_${bookingId}`);
+      if (dismissedStatus === activeBooking.status) {
+        setIsDismissed(true);
+      } else {
+        setIsDismissed(false);
+      }
+    }
+  }, [activeBooking?._id, activeBooking?.id, activeBooking?.status]);
 
   // Status mapping for UI
   const getStatusInfo = (status) => {
@@ -179,6 +187,10 @@ const LiveBookingCard = ({ hasBottomNav }) => {
             onClick={(e) => {
               e.stopPropagation();
               setIsDismissed(true);
+              if (activeBooking) {
+                const bookingId = activeBooking._id || activeBooking.id;
+                localStorage.setItem(`live_card_dismissed_${bookingId}`, activeBooking.status);
+              }
             }}
             className="absolute top-1 right-1 p-1 bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 z-20 pointer-events-auto"
           >

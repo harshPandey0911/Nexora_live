@@ -67,6 +67,18 @@ const AllVendors = () => {
           totalJobs: vendor.totalJobs || 0,
           cancelledJobs: vendor.cancelledJobs || 0,
           performance: (() => {
+            // Prioritize database stored score and level if they exist
+            if (vendor.performanceScore !== undefined && vendor.level !== undefined) {
+              const compRate = vendor.totalJobs > 0 ? (vendor.completedJobs / vendor.totalJobs) * 100 : 0;
+              const cancRate = vendor.totalJobs > 0 ? (vendor.cancelledJobs / vendor.totalJobs) * 100 : 0;
+              return { 
+                score: vendor.performanceScore, 
+                level: vendor.level, 
+                completionRate: compRate, 
+                cancellationRate: cancRate 
+              };
+            }
+
             const total = vendor.totalJobs || 0;
             const completed = vendor.completedJobs || 0;
             const cancelled = vendor.cancelledJobs || 0;

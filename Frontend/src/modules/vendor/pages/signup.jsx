@@ -217,22 +217,19 @@ const VendorSignup = () => {
           verificationToken
         };
 
-        const response = await register(registerData);
+        // Store registration details in sessionStorage
+        sessionStorage.setItem('pendingVendorRegistration', JSON.stringify(registerData));
 
-        if (response.success) {
-          toast.success(
-            <div className="flex flex-col">
-              <span className="font-normal">Application Submitted!</span>
-              <span className="text-xs">Please complete the training module.</span>
-            </div>,
-            { icon: <FiCheckCircle className="text-[#D68F35]" />, duration: 5000 }
-          );
-          navigate('/vendor/training');
-        } else {
-          toast.error(response.message || 'Registration failed');
-        }
+        toast.success(
+          <div className="flex flex-col">
+            <span className="font-normal">Details Configured!</span>
+            <span className="text-xs">Please complete the training module.</span>
+          </div>,
+          { icon: <FiCheckCircle className="text-[#00a6a6]" />, duration: 5000 }
+        );
+        navigate('/vendor/training', { state: { registerData } });
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Registration failed');
+        toast.error('Failed to configure registration details.');
       } finally {
         setIsLoading(false);
       }
@@ -366,10 +363,7 @@ const VendorSignup = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-12 px-4"
-      style={{
-        background: 'linear-gradient(135deg, #00a6a6 0%, #008a8a 50%, #006b6b 100%)'
-      }}
+      className="min-h-screen flex items-center justify-center py-12 px-4 bg-gray-50"
     >
       <div className="w-full max-w-4xl">
         {/* White Card */}
@@ -716,11 +710,12 @@ const VendorSignup = () => {
         </div>
 
         {/* Bottom Link */}
-        <p className="mt-8 text-center text-white/90">
+        <p className="mt-8 text-center text-gray-500">
           <span className="text-sm">Already a network partner?</span>{' '}
           <Link 
             to="/vendor/login" 
-            className="text-sm font-normal border-b-2 border-white ml-1 hover:text-white transition-all pb-0.5"
+            className="text-sm font-semibold border-b-2 ml-1 transition-all pb-0.5"
+            style={{ color: '#00a6a6', borderColor: '#00a6a6' }}
           >
             Sign In
           </Link>

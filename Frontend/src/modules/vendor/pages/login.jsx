@@ -369,11 +369,12 @@ const VendorLogin = () => {
         </div>
 
         {/* Bottom Link */}
-        <p className="mt-8 text-center text-white/90">
+        <p className="mt-8 text-center text-gray-500">
           <span className="text-sm">New to the network?</span>{' '}
           <Link 
             to="/vendor/signup" 
-            className="text-sm font-normal border-b-2 border-white ml-1 hover:text-white transition-all pb-0.5"
+            className="text-sm font-semibold border-b-2 ml-1 transition-all pb-0.5"
+            style={{ color: '#00a6a6', borderColor: '#00a6a6' }}
           >
             Apply Now
           </Link>
