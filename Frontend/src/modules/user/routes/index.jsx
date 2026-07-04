@@ -136,7 +136,7 @@ const UserRoutes = () => {
                 <Route path="/login" element={<PublicRoute userType="user"><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute userType="user"><Signup /></PublicRoute>} />
                 <Route path="/forgot-password" element={<PublicRoute userType="user"><ForgotPassword /></PublicRoute>} />
-                <Route path="/reset-password/:token" element={<PublicRoute userType="user"><ResetPassword /></PublicRoute>} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path="/" element={<Home />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
