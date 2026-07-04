@@ -444,7 +444,20 @@ const createBooking = async (req, res) => {
           return;
         }
 
-        const sortedVendors = nearbyVendors.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        const sortedVendors = nearbyVendors.sort((a, b) => {
+          // 1. Group into 100m (0.1 km) distance brackets
+          const distA = Math.round((a.distance || 0) * 10) / 10;
+          const distB = Math.round((b.distance || 0) * 10) / 10;
+          
+          if (distA !== distB) {
+            return distA - distB;
+          }
+          
+          // 2. If same 100m bracket, sort by level ascending (Level 1 -> Level 2 -> Level 3)
+          const levelA = a.level || 3;
+          const levelB = b.level || 3;
+          return levelA - levelB;
+        });
 
         // Wave 1: First 3 vendors
         const WAVE_1_COUNT = 3;

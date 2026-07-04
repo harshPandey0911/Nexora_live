@@ -137,7 +137,7 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
         const vendors = await Vendor.find({
           _id: { $in: vendorIds },
           ...baseQuery
-        }).select('name businessName phone address profilePhoto service rating isOnline availability geoLocation');
+        }).select('name businessName phone address profilePhoto service rating isOnline availability geoLocation level performanceScore');
 
         // Merge distance from cache
         const vendorMap = new Map(vendors.map(v => [v._id.toString(), v.toObject()]));
@@ -177,7 +177,7 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
             }
           }
         })
-          .select('name businessName phone address profilePhoto service rating isOnline availability geoLocation settings')
+          .select('name businessName phone address profilePhoto service rating isOnline availability geoLocation settings level performanceScore')
           .limit(50); // Increased limit as we filter below
 
         // Calculate distance for each vendor
