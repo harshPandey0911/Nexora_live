@@ -9,35 +9,38 @@ const makeVendorOnline = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     const Vendor = require('../models/Vendor');
     
-    // Find abhisheka
     const vendor = await Vendor.findOne({ name: /abhisheka/i });
     if (!vendor) {
       console.log('Vendor abhisheka not found');
       return;
     }
     
-    console.log('Current status of abhisheka:');
-    console.log(`- Approval: ${vendor.approvalStatus}`);
-    console.log(`- Is Online: ${vendor.isOnline}`);
-    console.log(`- Availability: ${vendor.availability}`);
-    console.log(`- Services: ${JSON.stringify(vendor.service)}`);
-    console.log(`- Coordinates: ${JSON.stringify(vendor.geoLocation.coordinates)}`);
+    // Set abhisheka's coordinates and city details to Indore
+    vendor.address = {
+      ...vendor.address,
+      city: 'Indore',
+      state: 'Madhya Pradesh',
+      pincode: '452001',
+      lat: 22.7196,
+      lng: 75.8577
+    };
+    vendor.location = {
+      lat: 22.7196,
+      lng: 75.8577
+    };
+    vendor.geoLocation = {
+      type: 'Point',
+      coordinates: [75.8577, 22.7196]
+    };
     
-    // Update abhisheka to be completely approved, online, available, and match categories
     vendor.approvalStatus = 'approved';
     vendor.isOnline = true;
     vendor.availability = 'AVAILABLE';
-    vendor.service = ['HOME CLEANING', 'Vegetables', 'Cleaning expert', 'General'];
-    vendor.categories = ['HOME CLEANING', 'Vegetables', 'Cleaning expert', 'General'];
-    
-    // Set service range to 10000 km to bypass any local coordinate checks for testing!
-    vendor.settings = {
-      ...vendor.settings,
-      serviceRange: 20000 // 20,000 km covers the entire Earth!
-    };
+    vendor.service = ['HOME CLEANING', 'Vegetables', 'Cleaning expert', 'General', 'HOME CLEANING SERVICES'];
+    vendor.categories = ['HOME CLEANING', 'Vegetables', 'Cleaning expert', 'General', 'HOME CLEANING SERVICES'];
     
     await vendor.save();
-    console.log('\nUpdated abhisheka successfully! She is now APPROVED, ONLINE, and has category listings with a global service range.');
+    console.log('Updated abhisheka city to Indore, coordinates and categories successfully!');
   } catch (error) {
     console.error(error);
   } finally {

@@ -676,7 +676,7 @@ const BillingPage = () => {
             );
           })}
         </div>
-        <div className="fixed bottom-0 left-0 right-0 p-4 md:p-8 bg-white/90 backdrop-blur-2xl border-t border-gray-100 z-50 flex gap-4 md:gap-6">
+        <div className="sticky bottom-0 left-0 right-0 p-4 md:p-8 bg-white/90 backdrop-blur-2xl border-t border-gray-100 z-[100] flex gap-4 md:gap-6 mt-auto">
           <button onClick={() => setViewMode('timeline')} className="flex-1 py-3.5 md:py-6 bg-gray-50 text-gray-400 font-medium text-[10px] md:text-xs capitalize tracking-widest rounded-xl md:rounded-[28px] border border-gray-100 hover:bg-gray-100 transition-all shadow-inner">
             Save & Exit
           </button>
@@ -739,7 +739,7 @@ const BillingPage = () => {
             );
           })}
         </div>
-        <div className="fixed bottom-0 left-0 right-0 p-4 md:p-8 bg-white/90 backdrop-blur-2xl border-t border-gray-100 z-50 flex gap-4 md:gap-6">
+        <div className="sticky bottom-0 left-0 right-0 p-4 md:p-8 bg-white/90 backdrop-blur-2xl border-t border-gray-100 z-[100] flex gap-4 md:gap-6 mt-auto">
           <button onClick={() => setViewMode('timeline')} className="flex-1 py-3.5 md:py-6 bg-gray-50 text-gray-400 font-medium text-[10px] md:text-xs capitalize tracking-widest rounded-xl md:rounded-[28px] border border-gray-100 hover:bg-gray-100 transition-all shadow-inner">
             Save & Exit
           </button>
@@ -1182,7 +1182,7 @@ const BillingPage = () => {
       </main>
 
       {/* Fixed Bottom Navigation for Timeline View */}
-      <footer className="fixed bottom-0 left-0 right-0 p-4 md:p-10 bg-white/90 backdrop-blur-3xl border-t border-gray-100 z-50">
+      <footer className="sticky bottom-0 left-0 right-0 p-4 md:p-10 bg-white/90 backdrop-blur-3xl border-t border-gray-100 z-[100] mt-auto">
         <div className="max-w-[1600px] mx-auto flex gap-3 md:gap-6">
           {currentStep === 1 && (
             <button onClick={() => setCurrentStep(2)} className="w-full py-3.5 md:py-6 bg-blue-600 text-white font-medium text-[10px] md:text-xs capitalize tracking-[0.2em] md:tracking-[0.25em] rounded-xl md:rounded-[28px] flex items-center justify-center gap-2 md:gap-4 shadow-2xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all">

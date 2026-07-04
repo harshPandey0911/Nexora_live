@@ -286,7 +286,7 @@ const findVendorsByCity = async (city, filters = {}) => {
 
     console.log(`[LocationService] City search query: ${JSON.stringify(baseQuery)}`);
     const vendors = await Vendor.find(baseQuery)
-      .select('name businessName phone address location profilePhoto service rating isOnline availability settings')
+      .select('name businessName phone address location profilePhoto service rating isOnline availability settings level performanceScore')
       .limit(50);
 
     console.log(`[LocationService] Found ${vendors.length} vendors in city: ${city}`);
