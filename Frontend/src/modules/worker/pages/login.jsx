@@ -183,7 +183,7 @@ const WorkerLogin = () => {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8 relative z-10 animate-fade-in">
         <Logo className="h-24 w-24 mx-auto transform hover:scale-110 transition-transform duration-500" />
         <h2 className="mt-4 text-3xl font-extrabold text-gray-900 tracking-tight">
-          {step === 'phone' ? 'Xpert Sign In' : 'Verify Xpert'}
+          {step === 'phone' ? 'Nexora Sign In' : 'Verify Nexora'}
         </h2>
         <p className="mt-2 text-sm text-gray-600 animate-stagger-1 animate-fade-in">
           {step === 'phone' ? 'Access your tasks and earnings' : `We've sent a 6-digit code to ${phoneNumber}`}

@@ -190,30 +190,16 @@ const register = async (req, res) => {
       console.log('[REGISTER] Validation errors:', validErrors);
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
+        message: `Validation failed: ${validErrors.map(e => e.msg || e.message).join(', ')}`,
         errors: validErrors
       });
     }
 
-    // verificationToken handling
-    const { name, email, verificationToken, aadhar, pan } = req.body;
-    let phone = req.body.phone;
-
-    if (verificationToken) {
-      const verifiedPhone = verifyVerificationToken(verificationToken);
-      if (!verifiedPhone) {
-        console.log('[REGISTER] Invalid/Expired verification token');
-        return res.status(400).json({ success: false, message: 'Invalid verification session.' });
-      }
-      phone = verifiedPhone.replace(/\D/g, '').slice(-10);
-      console.log('[REGISTER] Phone from token:', phone);
-    } else {
-      // Fallback OTP
-      if (!req.body.otp) return res.status(400).json({ success: false, message: 'Verification required.' });
-      const ver = await verifyOTP(phone, req.body.otp);
-      if (!ver.success) return res.status(400).json({ success: false, message: ver.message });
-      phone = phone.replace(/\D/g, '').slice(-10);
+    const { name, email, phone: rawPhone, aadhar, pan, password } = req.body;
+    if (!rawPhone) {
+      return res.status(400).json({ success: false, message: 'Phone number is required.' });
     }
+    const phone = rawPhone.replace(/\D/g, '').slice(-10);
 
     // Check existing (using sanitized phone)
     const existing = await Vendor.findOne({ $or: [{ phone }, { email }] });
@@ -316,6 +302,7 @@ const register = async (req, res) => {
       name,
       email,
       phone,
+      password,
       aadhar: {
         number: aadhar,
         document: aadharUrl,
@@ -371,9 +358,17 @@ const register = async (req, res) => {
 
   } catch (error) {
     console.error('Vendor registration error:', error);
+    try {
+      const fs = require('fs');
+      const logContent = `[${new Date().toISOString()}] Vendor registration error:\n${error.stack}\n\n`;
+      fs.appendFileSync('error.log', logContent);
+    } catch (fsErr) {
+      console.error('Failed to write to error.log', fsErr);
+    }
     res.status(500).json({
       success: false,
-      message: 'Registration failed.'
+      message: `Registration failed: ${error.message}`,
+      stack: error.stack
     });
   }
 };
@@ -392,23 +387,23 @@ const login = async (req, res) => {
       });
     }
 
-    const { phone, otp } = req.body;
+    const { phone, password } = req.body;
 
-    // Verify OTP (checks Redis first, falls back to MongoDB)
-    const verification = await verifyOTP(phone, otp);
-    if (!verification.success) {
-      return res.status(400).json({
-        success: false,
-        message: verification.message
-      });
-    }
-
-    // Find vendor
-    const vendor = await Vendor.findOne({ phone });
+    // Find vendor and select password field
+    const vendor = await Vendor.findOne({ phone }).select('+password');
     if (!vendor) {
       return res.status(404).json({
         success: false,
         message: 'Vendor not found. Please sign up first.'
+      });
+    }
+
+    // Compare Password
+    const isMatch = await vendor.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid phone number or password'
       });
     }
 

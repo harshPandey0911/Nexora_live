@@ -125,13 +125,15 @@ const VendorTraining = () => {
           }
         } catch (error) {
           const errMsg = error.response?.data?.message || '';
-          if (errMsg.toLowerCase().includes('already exists')) {
+          const isDuplicate = errMsg.toLowerCase().includes('already exists') || errMsg.toLowerCase().includes('already registered');
+          if (isDuplicate) {
             // If already registered, just let them go to login
             sessionStorage.removeItem('pendingVendorRegistration');
             navigate('/vendor/login');
           } else {
             console.error('Registration finish error:', error);
-            toast.error('Something went wrong during registration.');
+            const displayMsg = error.response?.data?.message || 'Something went wrong during registration.';
+            toast.error(displayMsg);
           }
         } finally {
           setLoading(false);

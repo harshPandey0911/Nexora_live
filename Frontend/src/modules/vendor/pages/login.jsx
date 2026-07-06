@@ -1,41 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiPhone, FiArrowRight, FiChevronLeft, FiCheckCircle, FiLock, FiSmartphone } from 'react-icons/fi';
+import { FiPhone, FiArrowRight, FiCheckCircle, FiLock } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../theme';
-import { sendOTP, verifyLogin } from '../services/authService';
+import { login } from '../services/authService';
 import Logo from '../../../components/common/Logo';
 
 import { z } from "zod";
 
 // Zod schema
-const phoneSchema = z.object({
+const loginSchema = z.object({
   phone: z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit Indian phone number"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const VendorLogin = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState('phone'); // 'phone' or 'otp'
   const [phoneNumber, setPhoneNumber] = useState('8765432109');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [otpToken, setOtpToken] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-
-  // Timer countdown effect
-  useEffect(() => {
-    let interval;
-    if (resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendTimer]);
 
   // Refs for auto-focus
   const phoneInputRef = useRef(null);
-  const otpInputRefs = useRef([]);
 
   // Auto-focus logic
   useEffect(() => {
@@ -45,18 +31,16 @@ const VendorLogin = () => {
       return;
     }
 
-    if (step === 'phone' && phoneInputRef.current) {
+    if (phoneInputRef.current) {
       setTimeout(() => phoneInputRef.current.focus(), 100);
-    } else if (step === 'otp' && otpInputRefs.current[0]) {
-      setTimeout(() => otpInputRefs.current[0].focus(), 100);
     }
-  }, [step, navigate]);
+  }, [navigate]);
 
-  const handlePhoneSubmit = async (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
     // Zod Validation
-    const validationResult = phoneSchema.safeParse({ phone: phoneNumber });
+    const validationResult = loginSchema.safeParse({ phone: phoneNumber, password });
     if (!validationResult.success) {
       toast.error(validationResult.error.issues[0].message);
       return;
@@ -65,113 +49,42 @@ const VendorLogin = () => {
     const cleanPhone = phoneNumber.replace(/\D/g, '');
     setIsLoading(true);
     try {
-      const response = await sendOTP(cleanPhone);
-      if (response.success) {
-        // Speculative check: If backend sends vendor info at this stage
-        if (response.vendor?.adminApproval?.toLowerCase() === 'pending') {
-          toast.error('Your account is currently under review. Please wait for admin approval.', {
-            duration: 5000,
-            icon: '⏳'
-          });
-          return;
-        }
-
-        setOtpToken(response.token);
-        setIsLoading(false);
-        setStep('otp');
-        setResendTimer(120); // Start timer
-        toast.success('OTP sent successfully');
-      } else {
-        setIsLoading(false);
-        toast.error(response.message || 'Failed to send OTP');
-      }
-    } catch (error) {
-      setIsLoading(false);
-      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
-    }
-  };
-
-  const handleOtpChange = (index, value) => {
-    const cleanValue = value.replace(/\D/g, '').slice(0, 1);
-    const newOtp = [...otp];
-    newOtp[index] = cleanValue;
-    setOtp(newOtp);
-
-    if (cleanValue && index < 5) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  // Auto-verify as last digit enters
-  useEffect(() => {
-    const otpValue = otp.join('');
-    if (otpValue.length === 6 && !isLoading && otpToken) {
-      handleOtpSubmit();
-    }
-  }, [otp]);
-
-  const handleOtpSubmit = async (e) => {
-    if (e) e.preventDefault();
-    const otpValue = otp.join('');
-    if (otpValue.length !== 6) {
-      toast.error('Please enter complete OTP');
-      return;
-    }
-    if (!otpToken) {
-      toast.error('Please request OTP first');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const response = await verifyLogin({
-        phone: phoneNumber.replace(/\D/g, ''),
-        otp: otpValue
+      const response = await login({
+        phone: cleanPhone,
+        password: password
       });
 
       if (response.success) {
         setIsLoading(false);
 
-        if (response.isNewUser) {
-          toast.success('Phone verified! Please complete registration.');
-          navigate('/vendor/signup', {
-            state: { phone: phoneNumber.replace(/\D/g, ''), verificationToken: response.verificationToken }
+        // Check for admin approval status
+        if (response.vendor?.adminApproval === 'PENDING' || response.vendor?.adminApproval === 'pending') {
+          toast.error('Your account is currently under review. Please wait for admin approval.', {
+            duration: 5000,
+            icon: '⏳'
           });
-        } else {
-          // Check for admin approval status
-          if (response.vendor?.adminApproval === 'PENDING' || response.vendor?.adminApproval === 'pending') {
-            toast.error('Your account is currently under review. Please wait for admin approval.', {
-              duration: 5000,
-              icon: '⏳'
-            });
-            // Clear tokens if they were set by the service
-            localStorage.removeItem('vendorAccessToken');
-            localStorage.removeItem('vendorRefreshToken');
-            localStorage.removeItem('vendorData');
-            return;
-          }
-
-          toast.success(
-            <div className="flex flex-col">
-              <span className="font-normal">Welcome Back!</span>
-              <span className="text-xs">Successfully logged into your vendor account.</span>
-            </div>,
-            { icon: <FiCheckCircle className="text-green-500" /> }
-          );
-          navigate('/vendor', { replace: true });
+          // Clear tokens if they were set by the service
+          localStorage.removeItem('vendorAccessToken');
+          localStorage.removeItem('vendorRefreshToken');
+          localStorage.removeItem('vendorData');
+          return;
         }
+
+        toast.success(
+          <div className="flex flex-col">
+            <span className="font-normal">Welcome Back!</span>
+            <span className="text-xs">Successfully logged into your vendor account.</span>
+          </div>,
+          { icon: <FiCheckCircle className="text-green-500" /> }
+        );
+        navigate('/vendor', { replace: true });
       } else {
         setIsLoading(false);
         toast.error(response.message || 'Login failed');
       }
     } catch (error) {
       setIsLoading(false);
-      const errorMessage = error.response?.data?.message || 'Verification failed. Please try again.';
+      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
       toast.error(errorMessage);
     }
   };
@@ -194,178 +107,101 @@ const VendorLogin = () => {
                 boxShadow: `0 4px 12px rgba(30, 58, 138, 0.3)`
               }}
             >
-              {step === 'phone' ? (
-                <FiSmartphone className="w-8 h-8 text-white" />
-              ) : (
-                <FiLock className="w-8 h-8 text-white" />
-              )}
+              <FiLock className="w-8 h-8 text-white" />
             </div>
           </div>
 
           {/* Title */}
           <h1 className="text-3xl font-normal text-gray-900 text-center mb-2">
-            {step === 'phone' ? 'Vendor Login' : 'Verify OTP'}
+            Vendor Login
           </h1>
           <p className="text-gray-600 text-center mb-8">
-            {step === 'phone' 
-              ? 'Enter your mobile number to access your portal' 
-              : `Enter the 6-digit code sent to +91 ${phoneNumber}`}
+            Enter your mobile number and password to access your portal
           </p>
 
           {/* Form Content */}
-          {step === 'phone' ? (
-            <form onSubmit={handlePhoneSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mobile Number
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                    <FiPhone className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <div className="absolute left-12 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium border-r pr-3 mr-2">
-                    +91
-                  </div>
-                  <input
-                    ref={phoneInputRef}
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="0000000000"
-                    className="w-full pl-24 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
-                    onFocus={(e) => {
-                      e.target.style.borderColor = themeColors.button;
-                      e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#d1d5db';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                    required
-                  />
+          <form onSubmit={handleLoginSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mobile Number
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                  <FiPhone className="w-5 h-5 text-gray-400" />
                 </div>
+                <div className="absolute left-12 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium border-r pr-3 mr-2">
+                  +91
+                </div>
+                <input
+                  ref={phoneInputRef}
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                  placeholder="0000000000"
+                  className="w-full pl-24 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = themeColors.button;
+                    e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                  required
+                />
               </div>
-
-              <button
-                type="submit"
-                disabled={isLoading || !phoneNumber || phoneNumber.length < 10}
-                className="w-full py-3 rounded-xl text-white font-medium text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{
-                  background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
-                  boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 58, 138, 0.4)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 58, 138, 0.3)';
-                }}
-              >
-                {isLoading ? 'Sending...' : 'Initiate Login'}
-                {!isLoading && <FiArrowRight />}
-              </button>
-            </form>
-          ) : (
-            <div className="space-y-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setOtp(['', '', '', '', '', '']);
-                  setOtpToken('');
-                  setStep('phone');
-                  setResendTimer(0);
-                }}
-                className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
-              >
-                <FiChevronLeft className="mr-1" /> Use different number
-              </button>
-
-              <form onSubmit={handleOtpSubmit} className="space-y-6">
-                <div className="flex justify-between gap-2">
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      ref={(el) => (otpInputRefs.current[index] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(index, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      className="w-12 h-14 text-center text-xl font-normal border-2 border-gray-300 rounded-xl focus:outline-none transition-all"
-                      style={{
-                        borderColor: digit ? themeColors.button : '#d1d5db',
-                        boxShadow: digit ? `0 0 0 3px rgba(0, 166, 166, 0.1)` : 'none'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = themeColors.button;
-                        e.target.style.boxShadow = `0 0 0 3px rgba(0, 166, 166, 0.1)`;
-                      }}
-                      onBlur={(e) => {
-                        if (!e.target.value) {
-                          e.target.style.borderColor = '#d1d5db';
-                          e.target.style.boxShadow = 'none';
-                        }
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <div className="text-center">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (resendTimer > 0) return;
-                      try {
-                        const response = await sendOTP(phoneNumber.replace(/\D/g, ''));
-                        if (response.success) {
-                          setOtpToken(response.token);
-                          setResendTimer(120);
-                          toast.success('Security code re-issued');
-                        }
-                      } catch (error) {
-                        toast.error('Re-issue failed');
-                      }
-                    }}
-                    disabled={resendTimer > 0}
-                    className="text-sm font-medium transition-all"
-                    style={{ color: resendTimer > 0 ? '#d1d5db' : themeColors.button }}
-                  >
-                    {resendTimer > 0
-                      ? `Resend available in ${Math.floor(resendTimer / 60)}:${String(resendTimer % 60).padStart(2, '0')}`
-                      : 'Resend security code'}
-                  </button>
-                </div>
-
-                 <button
-                  type="submit"
-                  disabled={isLoading || otp.join('').length !== 6}
-                  className="w-full py-3 rounded-xl text-white font-medium text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{
-                    background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
-                    boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!e.currentTarget.disabled) {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 58, 138, 0.4)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 58, 138, 0.3)';
-                  }}
-                >
-                  {isLoading ? 'Verifying...' : 'Authorize Portal'}
-                  {!isLoading && <FiCheckCircle />}
-                </button>
-              </form>
             </div>
-          )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                  <FiLock className="w-5 h-5 text-gray-400" />
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = themeColors.button;
+                    e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#d1d5db';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading || !phoneNumber || phoneNumber.length < 10 || !password || password.length < 6}
+              className="w-full py-3 rounded-xl text-white font-medium text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              style={{
+                background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
+                boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.disabled) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(30, 58, 138, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(30, 58, 138, 0.3)';
+              }}
+            >
+              {isLoading ? 'Verifying...' : 'Login'}
+              {!isLoading && <FiArrowRight />}
+            </button>
+          </form>
         </div>
 
         {/* Bottom Link */}
