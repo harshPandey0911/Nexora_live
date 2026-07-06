@@ -69,6 +69,7 @@ const addWorker = async (req, res) => {
       name,
       email,
       phone,
+      password,
       aadhar,
       serviceCategories,
       address,
@@ -91,6 +92,7 @@ const addWorker = async (req, res) => {
         worker.vendorId = vendorId;
         worker.name = name;
         worker.email = email;
+        if (password) worker.password = password;
         if (profilePhoto) worker.profilePhoto = profilePhoto;
         if (aadhar) {
           worker.aadhar = {
@@ -122,6 +124,7 @@ const addWorker = async (req, res) => {
       name,
       email: email || null, // Handle empty string as null for sparse index
       phone,
+      password,
       profilePhoto: profilePhoto || null,
       aadhar: {
         number: aadhar.number,

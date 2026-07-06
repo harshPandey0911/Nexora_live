@@ -32,8 +32,7 @@ const registerValidation = [
 
 const loginValidation = [
   body('phone').trim().notEmpty().withMessage('Phone number is required').isLength({ min: 10, max: 10 }).withMessage('Phone number must be 10 digits'),
-  body('otp').isLength({ min: 6, max: 6 }).withMessage('OTP must be 6 digits'),
-  body('token').trim().notEmpty().withMessage('Verification token is required')
+  body('password').trim().notEmpty().withMessage('Password is required').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ];
 
 // Routes

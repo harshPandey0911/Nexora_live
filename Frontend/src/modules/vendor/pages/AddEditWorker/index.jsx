@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiSave, FiX, FiLink, FiUserPlus, FiSearch, FiChevronDown, FiCamera, FiUpload, FiMapPin, FiPlusCircle, FiCheck, FiUser } from 'react-icons/fi';
+import { FiSave, FiX, FiLink, FiUserPlus, FiSearch, FiChevronDown, FiCamera, FiUpload, FiMapPin, FiPlusCircle, FiCheck, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import AddressSelectionModal from '../../../user/pages/Checkout/components/AddressSelectionModal';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
@@ -14,6 +14,7 @@ import { z } from "zod";
 const addWorkerSchema = z.object({
   name: z.string().min(2, "Name is required"),
   phone: z.string().regex(/^\d{10}$/, "Enter valid 10-digit phone number"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
   serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
   aadhar: z.object({
     number: z.string().regex(/^\d{12}$/, "Aadhar must be 12 digits"),
@@ -32,6 +33,7 @@ const AddEditWorker = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const [showPassword, setShowPassword] = useState(false);
 
   const [activeTab, setActiveTab] = useState('new'); // 'new' | 'link'
   const [loading, setLoading] = useState(false);
@@ -43,6 +45,7 @@ const AddEditWorker = () => {
     name: '',
     phone: '',
     email: '',
+    password: '',
     aadhar: {
       number: '',
       document: '' // Base64 string ideally
@@ -248,7 +251,7 @@ const AddEditWorker = () => {
       name: formData.name,
       phone: formData.phone,
       serviceCategories: formData.serviceCategories,
-      ...(isEdit ? {} : { aadhar: { number: formData.aadhar.number } })
+      ...(isEdit ? {} : { password: formData.password, aadhar: { number: formData.aadhar.number } })
     };
 
     const validationResult = schema.safeParse(validationData);
@@ -476,6 +479,28 @@ const AddEditWorker = () => {
                     maxLength={10}
                   />
                 </div>
+
+                {!isEdit && (
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-500 ml-1">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => handleInputChange('password', e.target.value)}
+                        placeholder="Set password (min 6 characters)"
+                        className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-500 ml-1">Email (Optional)</label>

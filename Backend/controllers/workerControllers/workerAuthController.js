@@ -241,9 +241,6 @@ const register = async (req, res) => {
   }
 };
 
-/**
- * Login worker with OTP
- */
 const login = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -255,19 +252,11 @@ const login = async (req, res) => {
       });
     }
 
-    const { phone, otp } = req.body;
-
-    // Verify OTP
-    const verification = await verifyOTP(phone, otp);
-    if (!verification.success) {
-      return res.status(400).json({
-        success: false,
-        message: verification.message
-      });
-    }
+    const { phone: rawPhone, password } = req.body;
+    const phone = rawPhone.replace(/\D/g, '').slice(-10);
 
     // Find worker
-    const worker = await Worker.findOne({ phone });
+    const worker = await Worker.findOne({ phone }).select('+password');
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -275,9 +264,25 @@ const login = async (req, res) => {
       });
     }
 
+    if (!worker.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password not set. Please contact your vendor to set a password.'
+      });
+    }
+
+    const isMatch = await worker.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials.'
+      });
+    }
+
     if (!worker.isActive) {
       return res.status(403).json({ success: false, message: 'Account deactivated.' });
     }
+
     const loginSessionId = Date.now().toString();
     await Worker.findByIdAndUpdate(worker._id, { 
       loginSessionId,

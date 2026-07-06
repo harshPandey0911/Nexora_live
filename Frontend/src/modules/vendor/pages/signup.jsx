@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiX, FiArrowRight, FiChevronLeft, FiCheckCircle, FiCamera, FiUserPlus, FiLock } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiX, FiArrowRight, FiChevronLeft, FiCheckCircle, FiCamera, FiUserPlus, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../theme';
 import { register, sendOTP as sendVendorOTP, verifyLogin } from '../services/authService';
@@ -36,6 +36,7 @@ const VendorSignup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [documentPreview, setDocumentPreview] = useState({});
   const [uploadingDocs, setUploadingDocs] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
 
   // Refs for auto-focus
   const nameInputRef = useRef(null);
@@ -320,12 +321,12 @@ const VendorSignup = () => {
                       <FiLock className="w-5 h-5 text-gray-400" />
                     </div>
                     <input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
                       placeholder="••••••••"
-                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium"
+                      className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium"
                       onFocus={(e) => {
                         e.target.style.borderColor = themeColors.button;
                         e.target.style.boxShadow = `0 0 0 3px rgba(0, 166, 166, 0.1)`;
@@ -336,6 +337,13 @@ const VendorSignup = () => {
                       }}
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none z-10"
+                    >
+                      {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                    </button>
                   </div>
                 </div>
 
