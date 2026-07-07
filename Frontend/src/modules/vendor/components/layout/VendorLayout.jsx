@@ -16,7 +16,9 @@ const VendorLayout = ({ children }) => {
 
   const isAuthRoute = location.pathname === '/vendor/login' || 
                      location.pathname === '/vendor/signup' || 
-                     location.pathname === '/vendor/training';
+                     location.pathname === '/vendor/training' ||
+                     location.pathname === '/vendor/forgot-password' ||
+                     location.pathname.includes('/vendor/reset-password');
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
 

@@ -280,3 +280,50 @@ export const verifyToken = async () => {
   }
 };
 
+/**
+ * Forgot password (vendor)
+ * @param {string} phone
+ * @returns {Promise<Object>}
+ */
+export const forgotPassword = async (phone) => {
+  try {
+    const response = await api.post('/vendors/auth/forgot-password', { phone });
+    return response.data;
+  } catch (error) {
+    console.error('Error in forgotPassword:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify reset token (vendor)
+ * @param {string} token
+ * @returns {Promise<Object>}
+ */
+export const verifyResetToken = async (token) => {
+  try {
+    const response = await api.get(`/vendors/auth/verify-reset-token/${token}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error in verifyResetToken:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reset password (vendor)
+ * @param {string} token
+ * @param {string} password
+ * @returns {Promise<Object>}
+ */
+export const resetPassword = async (token, password) => {
+  try {
+    const response = await api.post('/vendors/auth/reset-password', { token, password });
+    return response.data;
+  } catch (error) {
+    console.error('Error in resetPassword:', error);
+    throw error;
+  }
+};
+
+

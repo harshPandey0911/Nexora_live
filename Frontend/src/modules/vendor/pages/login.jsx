@@ -179,6 +179,16 @@ const VendorLogin = () => {
               </div>
             </div>
 
+            <div className="flex justify-end">
+              <Link 
+                to="/vendor/forgot-password" 
+                className="text-sm font-semibold transition-all hover:opacity-80"
+                style={{ color: themeColors.button }}
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading || !phoneNumber || phoneNumber.length < 10 || !password || password.length < 6}

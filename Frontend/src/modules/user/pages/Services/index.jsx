@@ -150,7 +150,7 @@ const ServicesPage = () => {
         serviceId: service.id || service._id,
         title: service.title,
         description: service.description || '',
-        icon: toAssetUrl(service.icon || ''),
+        icon: toAssetUrl(service.iconUrl || service.icon || ''),
         price: service.basePrice,
         unitPrice: service.basePrice,
         serviceCount: 1,
@@ -159,7 +159,7 @@ const ServicesPage = () => {
           title: service.title,
           subtitle: service.description || '',
           price: service.basePrice,
-          imageUrl: toAssetUrl(service.icon || ''),
+          imageUrl: toAssetUrl(service.iconUrl || service.icon || ''),
         }
       };
 
@@ -277,7 +277,7 @@ const ServicesPage = () => {
                     {/* Left/Top: Image */}
                     <div className="relative w-full aspect-[16/11] sm:aspect-[4/3] self-stretch overflow-hidden bg-slate-50 flex-shrink-0">
                       <img 
-                        src={toAssetUrl(svc.icon || svc.vendorPhoto || '')} 
+                        src={toAssetUrl(svc.iconUrl || svc.icon || svc.vendorPhoto || '')} 
                         className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
                         alt={svc.title}
                         onError={(e) => {

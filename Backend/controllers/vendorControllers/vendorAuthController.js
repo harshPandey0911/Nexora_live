@@ -571,11 +571,211 @@ const refreshToken = async (req, res) => {
   }
 };
 
+/**
+ * Request Password Reset (Forgot Password) for Vendor
+ */
+const forgotPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { phone } = req.body;
+    const cleanPhone = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+
+    const vendor = await Vendor.findOne({ phone: cleanPhone });
+
+    if (!vendor) {
+      // Generic success to prevent user enumeration
+      return res.status(200).json({
+        success: true,
+        message: 'If an account exists, a reset link has been sent.'
+      });
+    }
+
+    // Generate secure random token
+    const crypto = require('crypto');
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    // Token expiry (15 minutes)
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Save token in DB using the Token model
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+
+    // Deactivate/Delete previous reset tokens for this vendor
+    await Token.deleteMany({ userId: vendor._id, type: TOKEN_TYPES.PASSWORD_RESET });
+
+    await Token.create({
+      userId: vendor._id,
+      phone: vendor.phone,
+      email: vendor.email,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      token: tokenHash,
+      expiresAt,
+      isUsed: false
+    });
+
+    // Create reset URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/vendor/reset-password/${rawToken}`;
+
+    // Log reset link in terminal for easier local testing
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`\n=== [DEVELOPMENT ONLY] VENDOR SECURE RESET LINK ===\n${resetUrl}\n===================================================\n`);
+    }
+
+    // Send reset email if vendor has email
+    if (vendor.email) {
+      const { sendPasswordResetEmail } = require('../../services/emailService');
+      await sendPasswordResetEmail(vendor.email, vendor.name, resetUrl);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'If an account exists, a reset link has been sent.'
+    });
+
+  } catch (error) {
+    console.error('Vendor ForgotPassword Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process request. Please try again.'
+    });
+  }
+};
+
+/**
+ * Verify Password Reset Token validity for Vendor
+ */
+const verifyResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    if (!token) {
+      return res.status(400).json({ valid: false, message: 'Token is required' });
+    }
+
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+
+    const tokenDoc = await Token.findOne({
+      token: tokenHash,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      expiresAt: { $gt: new Date() },
+      isUsed: false
+    });
+
+    if (!tokenDoc) {
+      return res.status(400).json({ valid: false, message: 'Reset Link Expired or Invalid' });
+    }
+
+    return res.status(200).json({ valid: true });
+
+  } catch (error) {
+    console.error('Vendor VerifyResetToken Error:', error);
+    return res.status(500).json({ valid: false, message: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Reset Password using token for Vendor
+ */
+const resetPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { token, password } = req.body;
+
+    const crypto = require('crypto');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const Token = require('../../models/Token');
+    const { TOKEN_TYPES } = require('../../utils/constants');
+
+    const tokenDoc = await Token.findOne({
+      token: tokenHash,
+      type: TOKEN_TYPES.PASSWORD_RESET,
+      expiresAt: { $gt: new Date() },
+      isUsed: false
+    });
+
+    if (!tokenDoc) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset Link Expired or Invalid'
+      });
+    }
+
+    const vendor = await Vendor.findById(tokenDoc.userId);
+    if (!vendor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vendor not found'
+      });
+    }
+
+    // Set new password (pre-save middleware handles hashing)
+    vendor.password = password;
+    
+    // Invalidate active session and clear fcm tokens
+    vendor.loginSessionId = Date.now().toString();
+    vendor.fcmTokens = [];
+    vendor.fcmTokenMobile = [];
+    
+    await vendor.save();
+
+    // Delete the reset token
+    await Token.deleteMany({ userId: vendor._id, type: TOKEN_TYPES.PASSWORD_RESET });
+
+    // Invalidate refresh tokens
+    await Token.deleteMany({ userId: vendor._id, type: TOKEN_TYPES.REFRESH_TOKEN });
+
+    // Send confirmation email
+    if (vendor.email) {
+      const { sendPasswordChangedEmail } = require('../../services/emailService');
+      await sendPasswordChangedEmail(vendor.email, vendor.name);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully.'
+    });
+
+  } catch (error) {
+    console.error('Vendor ResetPassword Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update password. Please try again.'
+    });
+  }
+};
+
 module.exports = {
   sendOTP,
   verifyLogin,
   register,
   login,
   logout,
-  refreshToken
+  refreshToken,
+  forgotPassword,
+  verifyResetToken,
+  resetPassword
 };
+

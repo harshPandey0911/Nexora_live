@@ -570,7 +570,14 @@ const AddCustomContent = () => {
                         {productForm.images.map((img, idx) => (
                           <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-100 group">
                             <img src={toAssetUrl(img)} alt="" className="w-full h-full object-cover" />
-                            <button type="button" onClick={() => setProductForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))} className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100">×</button>
+                            <button 
+                              type="button" 
+                              onClick={() => setProductForm(prev => ({ ...prev, images: prev.images.filter((_, i) => i !== idx) }))} 
+                              className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-md transition-all active:scale-90"
+                              title="Delete Image"
+                            >
+                              ×
+                            </button>
                           </div>
                         ))}
                       </div>

@@ -37,6 +37,8 @@ const lazyLoad = (importFunc) => {
 const Login = lazyLoad(() => import('../pages/login'));
 const Signup = lazyLoad(() => import('../pages/signup'));
 const Training = lazyLoad(() => import('../pages/Training'));
+const ForgotPassword = lazyLoad(() => import('../pages/forgotPassword'));
+const ResetPassword = lazyLoad(() => import('../pages/resetPassword'));
 const Dashboard = lazyLoad(() => import('../pages/Dashboard'));
 const BookingAlert = lazyLoad(() => import('../pages/BookingAlert'));
 const BookingAlerts = lazyLoad(() => import('../pages/BookingAlerts'));
@@ -86,6 +88,8 @@ const VendorRoutes = () => {
                 <Route path="/login" element={<PublicRoute userType="vendor"><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute userType="vendor"><Signup /></PublicRoute>} />
                 <Route path="/training" element={<PublicRoute userType="vendor"><Training /></PublicRoute>} />
+                <Route path="/forgot-password" element={<PublicRoute userType="vendor"><ForgotPassword /></PublicRoute>} />
+                <Route path="/reset-password/:token" element={<PublicRoute userType="vendor"><ResetPassword /></PublicRoute>} />
 
                 {/* Protected routes */}
                 <Route path="/" element={<ProtectedRoute userType="vendor"><Navigate to="dashboard" replace /></ProtectedRoute>} />
