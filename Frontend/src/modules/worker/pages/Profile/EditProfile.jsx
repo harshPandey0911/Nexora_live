@@ -20,7 +20,7 @@ const workerProfileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   phone: z.string().optional(), // Read-only but good to have in schema
   email: z.string().email("Invalid email address").optional().or(z.literal('')),
-  serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
+  serviceCategories: z.array(z.string()).optional(),
   address: z.object({
     addressLine1: z.string().optional(),
     city: z.string().optional(),
@@ -427,51 +427,27 @@ const EditProfile = () => {
             <h2 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Work Profile</h2>
           </div>
 
+          {/* Work Category — Read-Only, assigned by Vendor */}
           <div>
             <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wide">
               Categories
             </label>
-            <div className="relative">
-              <div
-                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between cursor-pointer"
-              >
+            <div className="w-full px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+              {formData.serviceCategories && formData.serviceCategories.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {formData.serviceCategories && formData.serviceCategories.length > 0 ? (
-                    formData.serviceCategories.map((cat, idx) => (
-                      <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
-                        {cat}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-400">Select Categories</span>
-                  )}
+                  {formData.serviceCategories.map((cat, idx) => (
+                    <span key={idx} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">
+                      {cat}
+                    </span>
+                  ))}
                 </div>
-                <FiChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
-              </div>
-
-              {isCategoryOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 max-h-60 overflow-y-auto">
-                  {categories.map((cat, index) => {
-                    const isSelected = formData.serviceCategories.includes(cat.title);
-                    return (
-                      <div
-                        key={cat._id || index}
-                        onClick={() => {
-                          handleCategoryChange(cat.title);
-                          // Don't close immediately for multi-select
-                        }}
-                        className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0 font-medium text-gray-700 flex justify-between items-center"
-                      >
-                        <span>{cat.title}</span>
-                        {isSelected && <FiCheck className="text-blue-600 w-4 h-4" />}
-                      </div>
-                    );
-                  })}
-                </div>
+              ) : (
+                <span className="text-gray-400 text-sm">No categories assigned yet</span>
               )}
             </div>
-            {errors.serviceCategories && <p className="text-red-500 text-[10px] mt-1">{errors.serviceCategories}</p>}
+            <p className="text-[10px] text-amber-600 mt-1.5 flex items-center gap-1">
+              🔒 Categories are assigned by your vendor. Contact your vendor to change them.
+            </p>
           </div>
 
         </div>

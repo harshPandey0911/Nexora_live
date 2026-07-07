@@ -77,6 +77,25 @@ const vendorService = {
     } catch (error) {
       throw error;
     }
+  },
+
+  // --- Service Requests ---
+  submitServiceRequest: async (data) => {
+    try {
+      const response = await api.post('/vendors/service-requests', data);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getMyServiceRequests: async () => {
+    try {
+      const response = await api.get('/vendors/service-requests');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

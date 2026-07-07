@@ -4,6 +4,7 @@ const Settlement = require('../../models/Settlement');
 const Withdrawal = require('../../models/Withdrawal');
 const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
+const User = require('../../models/User');
 const { uploadPaymentScreenshot } = require('../../utils/cloudinaryUpload');
 
 /**

@@ -16,7 +16,7 @@ const AddCustomContent = () => {
   const query = new URLSearchParams(window.location.search);
   const initialType = query.get('type') || 'SERVICE';
 
-  const [activeTab, setActiveTab] = useState(isEditMode ? 'product' : 'category');
+  const [activeTab, setActiveTab] = useState('product');
   const [offeringType, setOfferingType] = useState(initialType);
   const [loading, setLoading] = useState(false);
   const [myCategories, setMyCategories] = useState([]);
@@ -273,33 +273,7 @@ const AddCustomContent = () => {
       </div>
 
       <main className="max-w-[1200px] mx-auto">
-        {/* Tab Switcher */}
-        <div className="flex bg-white p-1 rounded-2xl mb-8 border border-gray-100 shadow-sm max-w-sm mx-auto">
-          {!isEditMode && (
-          <button
-            onClick={() => setActiveTab('category')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-medium capitalize tracking-wider transition-all duration-300 ${
-              activeTab === 'category' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <FiGrid className="w-3.5 h-3.5" />
-            Category
-          </button>
-          )}
-          <button
-            onClick={() => setActiveTab('product')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[10px] font-medium capitalize tracking-wider transition-all duration-300 ${
-              activeTab === 'product' 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' 
-                : 'text-gray-400 hover:text-gray-600'
-            }`}
-          >
-            <FiBox className="w-3.5 h-3.5" />
-            {offeringType === 'PRODUCT' ? 'Product' : 'Service'}
-          </button>
-        </div>
+
 
         <AnimatePresence mode="wait">
           {activeTab === 'category' && !isEditMode ? (
@@ -429,33 +403,17 @@ const AddCustomContent = () => {
                     <select
                       value={productForm.categoryId}
                       onChange={(e) => {
-                        if (e.target.value === 'NEW_CAT') {
-                          setActiveTab('category');
-                        } else {
-                          setProductForm({ ...productForm, categoryId: e.target.value });
-                        }
+                        setProductForm({ ...productForm, categoryId: e.target.value });
                       }}
                       className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl text-sm font-normal text-gray-700 focus:ring-2 focus:ring-blue-500/20 transition-all outline-none appearance-none cursor-pointer"
                       required
                     >
                       <option value="">Select Platform Section (Where should this show?)...</option>
-                      <option value="NEW_CAT" className="text-blue-600 font-medium">+ ADD NEW CATEGORY NAME</option>
-                      <optgroup label="PLATFORM SECTIONS">
-                        <option value="Needs">Daily Needs (Grocery, Milk, etc.)</option>
-                        <option value="Delivery">Delivery Services (Parcel, Food Delivery)</option>
-                        <option value="Home">Home Services (AC Repair, Cleaning)</option>
-                        <option value="Health">Health & Care (Medicines, Doctor)</option>
-                        <option value="More">More Services (Other Categories)</option>
-                      </optgroup>
-                      {myCategories.length > 0 && (
-                        <optgroup label="YOUR CUSTOM SECTIONS">
-                          {myCategories.map(cat => (
-                            <option key={cat.id || cat._id} value={cat.id || cat._id}>
-                              {cat.title}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )}
+                      {myCategories.map(cat => (
+                        <option key={cat.id || cat._id} value={cat.id || cat._id}>
+                          {cat.title}
+                        </option>
+                      ))}
                     </select>
                     <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-400 pointer-events-none" />
                   </div>

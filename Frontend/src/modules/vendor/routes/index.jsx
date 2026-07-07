@@ -120,7 +120,6 @@ const VendorRoutes = () => {
                 <Route path="/my-products" element={<ProtectedRoute userType="vendor"><MyProducts /></ProtectedRoute>} />
                 <Route path="/add-custom-content" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
                 <Route path="/product/edit/:id" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
-                <Route path="/service/edit/:id" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
                 
                 {/* Worker Management Routes */}
                 <Route path="/workers" element={<ProtectedRoute userType="vendor"><WorkersList /></ProtectedRoute>} />

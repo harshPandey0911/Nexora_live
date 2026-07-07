@@ -189,6 +189,7 @@ app.use('/api/vendors/bookings', require('./routes/vendor-routes/booking.routes'
 app.use('/api/vendors/fcm-tokens', require('./routes/vendor-routes/fcmToken.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/vendorBill.routes'));
 app.use('/api/vendors/catalog', require('./routes/vendor-routes/catalog.routes'));
+app.use('/api/vendors/service-requests', require('./routes/vendor-routes/serviceRequest.routes'));
 app.use('/api/vendors/training', require('./routes/vendor-routes/training.routes'));
 app.use('/api/vendors/support', require('./routes/vendor-routes/support.routes'));
 app.use('/api/vendors/workers', require('./routes/vendor-routes/worker.routes'));
@@ -214,6 +215,7 @@ app.use('/api/admin', require('./routes/admin-routes/categoryManagement.routes')
 app.use('/api/admin', require('./routes/admin-routes/brandManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/serviceManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/vendorCatalogManagement.routes'));
+app.use('/api/admin', require('./routes/admin-routes/serviceRequestManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/homePageManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/bookingManagement.routes'));
 app.use('/api/admin', require('./routes/admin-routes/paymentManagement.routes'));

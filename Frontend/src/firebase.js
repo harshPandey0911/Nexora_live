@@ -24,13 +24,20 @@ let app;
 let messaging;
 let db;
 
-try {
-  app = initializeApp(firebaseConfig);
-  messaging = getMessaging(app);
-  db = getDatabase(app);
-  console.log('✅ Firebase initialized successfully');
-} catch (error) {
-  console.error('❌ Firebase initialization failed:', error);
+// Only initialize if projectId is configured (prevents crash when env vars are empty)
+const isFirebaseConfigured = !!firebaseConfig.projectId && !!firebaseConfig.apiKey;
+
+if (isFirebaseConfigured) {
+  try {
+    app = initializeApp(firebaseConfig);
+    messaging = getMessaging(app);
+    db = getDatabase(app);
+    console.log('✅ Firebase initialized successfully');
+  } catch (error) {
+    console.error('❌ Firebase initialization failed:', error);
+  }
+} else {
+  console.warn('⚠️ Firebase config missing (VITE_FIREBASE_PROJECT_ID not set). Push notifications will be disabled.');
 }
 
 export { app, messaging, db, getToken, onMessage };

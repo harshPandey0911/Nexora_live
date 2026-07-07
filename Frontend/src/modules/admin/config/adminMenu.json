@@ -131,6 +131,15 @@
     "children": []
   },
   {
+    "title": "Service Requests",
+    "route": "/admin/service-requests",
+    "allowedRoles": [
+      "super_admin",
+      "admin"
+    ],
+    "children": []
+  },
+  {
     "title": "Reports",
     "route": "/admin/reports",
     "allowedRoles": [

@@ -30,7 +30,7 @@ const Checkout = () => {
   const location = useLocation();
   const category = location.state?.category || null;
   const plan = location.state?.plan || null;
-  const { fetchCart: fetchCartGlobal, clearCart: clearCartGlobal, removeCategoryItems: removeCategoryGlobal } = useCart();
+  const { fetchCart: fetchCartGlobal, clearCart: clearCartGlobal, removeCategoryItems: removeCategoryGlobal, updateItem: updateItemGlobal, removeItem: removeItemGlobal } = useCart();
 
   const [cartItems, setCartItems] = useState([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -229,20 +229,20 @@ const Checkout = () => {
       if (!item) return;
 
       const newCount = Math.max(1, (item.serviceCount || 1) + change);
-      const response = await cartService.updateItem(itemId, newCount);
+
+      // Use context update — this syncs the global CartContext state
+      // so the Cart page stays in sync when user navigates back
+      const response = await updateItemGlobal(itemId, newCount);
 
       if (response.success) {
-        // Refresh global cart badge
-        fetchCartGlobal();
-
-        // Reload cart and filter by category
+        // Re-filter the local checkout view from the fresh cart
         const cartResponse = await cartService.getCart();
         if (cartResponse.success) {
           let items = cartResponse.data || [];
           if (category) {
             const normalizedCategory = category.toLowerCase().trim();
-            items = items.filter(item => {
-              const itemCat = (item.category || 'Other').toLowerCase().trim();
+            items = items.filter(it => {
+              const itemCat = (it.category || 'Other').toLowerCase().trim();
               return itemCat === normalizedCategory;
             });
           }
@@ -258,11 +258,11 @@ const Checkout = () => {
 
   const handleRemoveItem = async (itemId) => {
     try {
-      const response = await cartService.removeItem(itemId);
+      // Use context remove — this syncs the global CartContext state
+      // so the Cart page stays in sync when user navigates back
+      const response = await removeItemGlobal(itemId);
       if (response.success) {
         toast.success('Item removed');
-        // Refresh global cart badge
-        fetchCartGlobal();
         loadCart();
       } else {
         toast.error(response.message || 'Failed to remove item');

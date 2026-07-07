@@ -35,6 +35,9 @@ const BrandsPage = lazy(() => import('../pages/UserCategories/pages/BrandsPage')
 const VendorServicesPage = lazy(() => import('../pages/UserCategories/pages/VendorServicesPage'));
 const VendorPartsPage = lazy(() => import('../pages/UserCategories/pages/VendorPartsPage'));
 
+// Service Requests Page
+const ServiceRequestsPage = lazy(() => import('../pages/ServiceRequests'));
+
 // Loading fallback component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -89,6 +92,7 @@ const AdminRoutes = () => {
           <Route path="support" element={<Support />} />
           <Route path="training" element={<TrainingManagement />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="service-requests" element={<ServiceRequestsPage />} />
         </Route>
 
         {/* 404 Redirect */}

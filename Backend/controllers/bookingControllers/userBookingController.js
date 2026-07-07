@@ -153,7 +153,20 @@ const createBooking = async (req, res) => {
       }
     } else {
       console.log(`[LocationService] Searching vendors with: center=${JSON.stringify(bookingLocation)}, radius=10km, filters=${JSON.stringify(vendorFilters)}`);
-      nearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+      const rawNearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+
+      // Find all vendors who have subscribed to this service
+      const ServiceModel = require('../../models/UserService');
+      const subscriptions = await ServiceModel.find({
+        title: service.title,
+        vendorId: { $ne: null },
+        status: 'active'
+      }).select('vendorId').lean();
+      const subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
+      console.log(`[CreateBooking] Vendors subscribed to "${service.title}":`, subscribedVendorIds);
+
+      // Filter nearby vendors to only those who are subscribed
+      nearbyVendors = rawNearbyVendors.filter(v => subscribedVendorIds.includes(v._id.toString()));
     }
     console.log(`[CreateBooking] Final nearbyVendors count: ${nearbyVendors.length}`);
 

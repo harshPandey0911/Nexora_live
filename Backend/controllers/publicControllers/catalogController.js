@@ -374,6 +374,11 @@ const getPublicServices = async (req, res) => {
       query.title = { $regex: escapedSearch, $options: 'i' };
     }
 
+    // Default to admin master template services to avoid duplicate listings per vendor
+    if (!query.vendorId) {
+      query.vendorId = null;
+    }
+
     const services = await Service.find(query)
       .populate({
         path: 'vendorId',

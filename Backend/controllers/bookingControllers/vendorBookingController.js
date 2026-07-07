@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
+const User = require('../../models/User');
+const UserService = require('../../models/UserService');
+const Category = require('../../models/Category');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');

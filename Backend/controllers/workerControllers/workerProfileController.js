@@ -65,7 +65,9 @@ const updateProfile = async (req, res) => {
     }
 
     const workerId = req.user.id;
-    const { name, serviceCategories, serviceCategory, skills, address, status, profilePhoto } = req.body;
+    const { name, skills, address, status, profilePhoto } = req.body;
+    // NOTE: serviceCategories is intentionally excluded from destructuring.
+    // Categories can ONLY be assigned by the vendor, not the worker themselves.
 
     const worker = await Worker.findById(workerId);
 
@@ -79,12 +81,8 @@ const updateProfile = async (req, res) => {
     // Update fields
     if (name) worker.name = name.trim();
 
-    // Handle categories: prefer array, fallback to single legacy string
-    if (serviceCategories && Array.isArray(serviceCategories)) {
-      worker.serviceCategories = serviceCategories;
-    } else if (serviceCategory) {
-      worker.serviceCategories = [serviceCategory.trim()];
-    }
+    // serviceCategories update is intentionally BLOCKED here.
+    // Categories are assigned by the vendor via the vendor worker management panel.
 
     if (skills && Array.isArray(skills)) worker.skills = skills;
     if (address) {

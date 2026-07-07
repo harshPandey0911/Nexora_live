@@ -184,8 +184,38 @@ const addVendorCategory = async (req, res) => {
  */
   const addVendorService = async (req, res) => {
   try {
-    const { title, description, basePrice, categoryId, iconUrl, detailedDescription, features, benefits, images, offeringType } = req.body;
+    const { serviceId, title, description, basePrice, categoryId, iconUrl, detailedDescription, features, benefits, images, offeringType } = req.body;
     const vendorId = req.user.id;
+
+    // Handle subscription to Admin Master Service
+    if (serviceId) {
+      const masterService = await Service.findOne({ _id: serviceId, vendorId: null });
+      if (!masterService) {
+        return res.status(404).json({ success: false, message: 'Master service not found' });
+      }
+
+      const existing = await Service.findOne({ title: masterService.title, vendorId });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Service already exists in your portfolio' });
+      }
+
+      const service = await Service.create({
+        title: masterService.title,
+        description: masterService.description,
+        basePrice: masterService.basePrice, // Fixed price set by Admin
+        categoryId: categoryId || masterService.categoryId,
+        vendorId,
+        iconUrl: masterService.iconUrl,
+        detailedDescription: masterService.detailedDescription,
+        features: masterService.features,
+        benefits: masterService.benefits,
+        images: masterService.images,
+        offeringType: offeringType || masterService.offeringType || 'SERVICE',
+        status: 'active'
+      });
+
+      return res.status(201).json({ success: true, message: 'Service subscribed successfully', data: service });
+    }
 
     if (!title || !basePrice || !categoryId) {
       return res.status(400).json({ success: false, message: 'Title, price, and category are required' });
