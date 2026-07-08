@@ -290,6 +290,11 @@ const bookingSchema = new mongoose.Schema({
     enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
     default: 'PENDING'
   },
+  rejectedWorkerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Worker',
+    default: null
+  },
   // Timestamps
   acceptedAt: { type: Date, default: null },
   assignedAt: { type: Date, default: null },

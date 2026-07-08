@@ -797,6 +797,8 @@ const respondToJob = async (req, res) => {
 
     } else if (status === 'REJECTED') {
       booking.workerId = null;
+      booking.workerResponse = 'REJECTED';
+      booking.rejectedWorkerId = workerId;
       booking.status = BOOKING_STATUS.CONFIRMED; // Revert to unassigned state
 
       const { createNotification } = require('../notificationControllers/notificationController');

@@ -47,8 +47,13 @@ const WorkerJobAlertModal = ({ isOpen, jobId, onClose, onJobAccepted }) => {
         setJob(res.data);
       }
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to load job details');
+      if (error.response?.status === 404) {
+        toast.error('This job is no longer available or has been reassigned.');
+        onClose();
+      } else {
+        console.error(error);
+        toast.error('Failed to load job details');
+      }
     } finally {
       setLoading(false);
     }

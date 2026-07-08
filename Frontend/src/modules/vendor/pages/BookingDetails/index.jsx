@@ -641,8 +641,14 @@ export default function BookingDetails() {
               </h2>
             </div>
             <div className="flex flex-col items-end gap-2 md:gap-3 shrink-0">
-              <div className="px-3.5 py-1.5 md:px-5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-medium capitalize tracking-widest bg-blue-600 text-white shadow-lg shadow-blue-500/20">
-                {booking.status.replace('_', ' ')}
+              <div className={`px-3.5 py-1.5 md:px-5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-medium capitalize tracking-widest ${
+                booking.workerResponse === 'REJECTED' && !booking.assignedTo
+                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
+                  : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+              }`}>
+                {booking.workerResponse === 'REJECTED' && !booking.assignedTo
+                  ? 'Rejected by Worker'
+                  : booking.status.replace('_', ' ')}
               </div>
               {booking.assignedTo?.name === 'You (Self)' && (
                 <span className="text-[9px] md:text-[10px] font-medium text-blue-600 bg-blue-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg border border-blue-100 capitalize tracking-widest">
@@ -994,24 +1000,62 @@ export default function BookingDetails() {
             </div>
           )}
 
+          {!booking.assignedTo && !['completed', 'cancelled', 'rejected'].includes(booking.status) && (
+            <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 border border-gray-100 mb-4 md:mb-6 shadow-sm">
+              <div className="flex flex-col items-center text-center p-2">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
+                  <FiUser className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-900 text-sm md:text-base tracking-tight mb-1">No Worker Assigned</h3>
+                <p className="text-[10px] md:text-xs text-gray-500 max-w-sm mb-4 leading-relaxed">
+                  {booking.workerResponse === 'REJECTED' 
+                    ? "The previously assigned worker declined this job. Please assign another worker or handle it yourself."
+                    : "Please assign a worker to this booking or handle it yourself to begin operations."}
+                </p>
+                <div className="flex gap-3 w-full justify-center">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAssignWorker}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all shadow-md"
+                  >
+                    Assign Worker
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleAssignToSelf}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all border border-gray-200"
+                  >
+                    Do It Myself
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Service Deployment Protocol (Simplified Flow) */}
           {booking.offeringType !== 'PRODUCT' && !['completed', 'cancelled', 'rejected'].includes(booking.status) && (
             <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 border border-gray-100 mb-4 md:mb-6 shadow-sm">
               <div className="text-center mb-5 md:mb-8">
                 <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 border shadow-md ${
-                  ['requested', 'searching'].includes(booking.status) ? 'bg-blue-50 border-blue-100' : 'bg-emerald-50 border-emerald-100'
+                  ['requested', 'searching'].includes(booking.status) ? 'bg-blue-50 border-blue-100' :
+                  (!booking.assignedTo && booking.workerResponse === 'REJECTED') ? 'bg-rose-50 border-rose-100' :
+                  'bg-emerald-50 border-emerald-100'
                 }`}>
                   {['requested', 'searching'].includes(booking.status) ? (
                     <FiNavigation className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+                  ) : (!booking.assignedTo && booking.workerResponse === 'REJECTED') ? (
+                    <FiXCircle className="w-6 h-6 md:w-8 md:h-8 text-rose-600" />
                   ) : (
                     <FiTool className="w-6 h-6 md:w-8 md:h-8 text-emerald-600" />
                   )}
                 </div>
                 <h3 className="text-lg md:text-xl font-medium text-gray-900 tracking-tight capitalize">
-                  {['requested', 'searching'].includes(booking.status) ? 'New Request' : 'Active Operation'}
+                  {['requested', 'searching'].includes(booking.status) ? 'New Request' : 
+                   (!booking.assignedTo && booking.workerResponse === 'REJECTED') ? 'Assignment Declined' : 'Active Operation'}
                 </h3>
                 <p className="text-[9px] md:text-[10px] font-medium text-gray-400 capitalize tracking-widest mt-1.5 md:mt-2">
-                  {['requested', 'searching'].includes(booking.status) ? 'Awaiting Your Acceptance' : 'Perform work and mark as completed'}
+                  {['requested', 'searching'].includes(booking.status) ? 'Awaiting Your Acceptance' : 
+                   (!booking.assignedTo && booking.workerResponse === 'REJECTED') ? 'Worker declined assignment. Please reassign.' : 'Perform work and mark as completed'}
                 </p>
               </div>
 
@@ -1026,14 +1070,35 @@ export default function BookingDetails() {
                     Accept Booking Request
                   </motion.button>
                 ) : !['work_done', 'completed'].includes(booking.status) ? (
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsWorkDoneModalOpen(true)}
-                    className="w-full max-w-sm py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 md:gap-3"
-                  >
-                    <FiCheckCircle className="w-4 h-4 md:w-5 md:h-5" />
-                    Work Done
-                  </motion.button>
+                  !booking.assignedTo ? (
+                    <div className="flex flex-col gap-3 w-full max-w-sm">
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAssignWorker}
+                        className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 md:gap-3"
+                      >
+                        <FiUser className="w-4 h-4 md:w-5 md:h-5" />
+                        Reassign Worker
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleAssignToSelf}
+                        className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-gray-100 text-gray-800 font-medium text-[9px] md:text-[10px] capitalize tracking-widest hover:bg-gray-200 transition-all flex items-center justify-center gap-2 md:gap-3 border border-gray-200"
+                      >
+                        <FiUser className="w-4 h-4 md:w-5 md:h-5" />
+                        Do It Myself
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setIsWorkDoneModalOpen(true)}
+                      className="w-full max-w-sm py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 md:gap-3"
+                    >
+                      <FiCheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                      Work Done
+                    </motion.button>
+                  )
                 ) : booking.status === 'work_done' ? (
                   <motion.button
                     whileTap={{ scale: 0.95 }}

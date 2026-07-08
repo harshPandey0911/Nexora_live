@@ -167,36 +167,22 @@ const LiveBookingCard = ({ hasBottomNav }) => {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 100, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-        onClick={() => {
-          const status = activeBooking.status?.toUpperCase();
-          // If worker is on the way, go to tracking map
-          if (status === 'STARTED' || status === 'JOURNEY_STARTED') {
-            navigate(`/user/booking/${activeBooking._id || activeBooking.id}/track`);
-          } else if (status === 'SEARCHING' || status === 'REQUESTED') {
-            navigate(`/user/booking-confirmation/${activeBooking._id || activeBooking.id}`);
-          } else {
-            navigate(`/user/booking/${activeBooking._id || activeBooking.id}`);
-          }
-        }}
         className={`fixed ${hasBottomNav ? 'bottom-24' : 'bottom-6'} left-4 right-4 md:left-auto md:right-8 md:w-[420px] z-50`}
       >
-        <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 flex items-center gap-4 relative overflow-hidden cursor-pointer active:scale-95 transition-transform group">
-
-          {/* Close Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDismissed(true);
-              if (activeBooking) {
-                const bookingId = activeBooking._id || activeBooking.id;
-                localStorage.setItem(`live_card_dismissed_${bookingId}`, activeBooking.status);
-              }
-            }}
-            className="absolute top-1 right-1 p-1 bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 z-20 pointer-events-auto"
-          >
-            <FiX className="w-3 h-3" />
-          </button>
-
+        <div 
+          onClick={() => {
+            const status = activeBooking.status?.toUpperCase();
+            // If worker is on the way, go to tracking map
+            if (status === 'STARTED' || status === 'JOURNEY_STARTED') {
+              navigate(`/user/booking/${activeBooking._id || activeBooking.id}/track`);
+            } else if (status === 'SEARCHING' || status === 'REQUESTED') {
+              navigate(`/user/booking-confirmation/${activeBooking._id || activeBooking.id}`);
+            } else {
+              navigate(`/user/booking/${activeBooking._id || activeBooking.id}`);
+            }
+          }}
+          className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 flex items-center gap-4 relative overflow-hidden cursor-pointer active:scale-95 transition-transform group"
+        >
           {/* Progress Bar Background */}
           <div className="absolute bottom-0 left-0 h-1 bg-gray-100 w-full">
             <motion.div
@@ -243,6 +229,26 @@ const LiveBookingCard = ({ hasBottomNav }) => {
           )}
 
         </div>
+
+        {/* Close Button is a sibling of the clickable card - absolutely positioned over it */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            console.log('[LiveBookingCard] Close button clicked!');
+            setIsDismissed(true);
+            if (activeBooking) {
+              const bookingId = activeBooking._id || activeBooking.id;
+              localStorage.setItem(`live_card_dismissed_${bookingId}`, activeBooking.status);
+              console.log('[LiveBookingCard] Dismissed status saved:', bookingId, activeBooking.status);
+            }
+            setActiveBooking(null); // Force clear booking state to guarantee immediate dismissal
+          }}
+          className="absolute top-2 right-2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-full z-[100] pointer-events-auto transition-all shadow-sm"
+          title="Dismiss notification"
+        >
+          <FiX className="w-3.5 h-3.5" />
+        </button>
       </motion.div>
 
       {/* Global Rating Modal */}

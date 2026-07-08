@@ -236,7 +236,6 @@ const updateVendorOnlineStatus = async (vendorId, isOnline, socketId) => {
     const { setVendorOnline, setVendorAvailability } = require('../services/redisService');
 
     const updateData = {
-      isOnline,
       currentSocketId: socketId
     };
 

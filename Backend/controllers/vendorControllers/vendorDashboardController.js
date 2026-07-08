@@ -98,6 +98,8 @@ const getDashboardStats = async (req, res) => {
                   'address.addressLine1': 1,
                   userId: 1,
                   workerId: 1,
+                  rejectedWorkerId: 1,
+                  workerResponse: 1,
                   serviceId: 1,
                   potentialVendors: 1,
                   serviceCategory: 1,
@@ -135,6 +137,7 @@ const getDashboardStats = async (req, res) => {
     await Booking.populate(recentBookings, [
       { path: 'userId', select: 'name phone', options: { lean: true } },
       { path: 'workerId', select: 'name', options: { lean: true } },
+      { path: 'rejectedWorkerId', select: 'name', options: { lean: true } },
       {
         path: 'serviceId',
         select: 'title iconUrl categoryId',

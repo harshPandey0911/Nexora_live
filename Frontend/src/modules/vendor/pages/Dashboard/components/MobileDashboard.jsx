@@ -175,10 +175,27 @@ const MobileDashboard = memo(({
                             <FiMapPin className="w-3 h-3 text-blue-500" />
                             <span className="truncate max-w-[100px]">{job.location}</span>
                           </div>
-                          <div className={`ml-auto px-3 py-1 rounded-lg text-[7px] font-medium capitalize tracking-[0.15em] text-white shadow`}
-                            style={{ backgroundColor: getStatusColor(job.status) }}>
-                            {getStatusLabel(job.status)}
-                          </div>
+                          {job.workerResponse === 'REJECTED' && !job.assignedTo ? (
+                            <div className="ml-auto flex items-center gap-1.5 shrink-0">
+                              <div className="px-2.5 py-1 rounded-lg text-[6px] md:text-[7px] font-medium capitalize tracking-[0.1em] text-white bg-rose-500 shadow">
+                                Rejected by Worker ({job.rejectedWorker?.name || 'Worker'})
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/vendor/booking/${job.id}/assign-worker`);
+                                }}
+                                className="px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[7px] font-bold uppercase tracking-wider transition-all"
+                              >
+                                Reassign
+                              </button>
+                            </div>
+                          ) : (
+                            <div className={`ml-auto px-3 py-1 rounded-lg text-[7px] font-medium capitalize tracking-[0.15em] text-white shadow`}
+                              style={{ backgroundColor: getStatusColor(job.status) }}>
+                              {getStatusLabel(job.status)}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

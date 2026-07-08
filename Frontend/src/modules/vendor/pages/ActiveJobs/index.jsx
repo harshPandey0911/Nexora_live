@@ -47,6 +47,8 @@ const ActiveJobs = memo(() => {
         price: (job.finalAmount ? job.finalAmount * 0.9 : 0).toFixed(2),
         status: job.status,
         assignedTo: job.workerId ? { name: job.workerId.name } : (job.assignedAt ? { name: 'You (Self)' } : null),
+        workerResponse: job.workerResponse,
+        rejectedWorker: job.rejectedWorkerId ? { name: job.rejectedWorkerId.name } : null,
         offeringType: job.offeringType || 'SERVICE',
         timeSlot: {
           date: job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Date',
@@ -224,11 +226,12 @@ const ActiveJobs = memo(() => {
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-800 tracking-tight leading-none text-right">₹{job.price}</p>
                       <span className={`text-[8px] font-medium capitalize tracking-wider px-1.5 py-0.5 rounded-md mt-1 inline-block ${
+                        job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                         isPending ? 'bg-orange-50 text-orange-600 border border-orange-100' : 
                         isCompleted ? 'bg-green-50 text-green-600 border border-green-100' : 
                         'bg-blue-50 text-blue-600 border border-blue-100'
                       }`}>
-                        {job.status}
+                        {job.workerResponse === 'REJECTED' && !job.assignedTo ? 'Rejected by Worker' : job.status}
                       </span>
                     </div>
                   </div>
@@ -270,14 +273,31 @@ const ActiveJobs = memo(() => {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between w-full">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <p className="text-[9px] font-medium text-gray-400 capitalize tracking-wider">
-                          {job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Ready for Assignment'}
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
+                        }`} />
+                        <p className="text-[9px] font-medium text-gray-500 capitalize tracking-wider">
+                          {job.workerResponse === 'REJECTED' && !job.assignedTo 
+                            ? `Declined by: ${job.rejectedWorker?.name || 'Worker'}` 
+                            : job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Ready for Assignment'}
                         </p>
                       </div>
-                      <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-4 h-4" />
+                      
+                      {job.workerResponse === 'REJECTED' && !job.assignedTo ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/vendor/booking/${job.id}/assign-worker`);
+                          }}
+                          className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider transition-all"
+                        >
+                          Reassign
+                        </button>
+                      ) : (
+                        <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-4 h-4" />
+                      )}
                     </div>
                   )}
                 </div>

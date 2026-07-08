@@ -188,6 +188,8 @@ const Dashboard = memo(() => {
       },
       status: booking.status,
       assignedTo: booking.workerId ? { name: booking.workerId.name } : null,
+      workerResponse: booking.workerResponse,
+      rejectedWorker: booking.rejectedWorkerId ? { name: booking.rejectedWorkerId.name } : null,
     }));
     setRecentJobs(recentJobsData);
 

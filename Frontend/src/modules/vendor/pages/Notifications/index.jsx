@@ -11,6 +11,7 @@ import {
   deleteNotification,
   deleteAllNotifications
 } from '../../services/notificationService';
+import { assignWorker } from '../../services/bookingService';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -56,6 +57,22 @@ const Notifications = () => {
     } catch (error) {
       console.error('Failed to mark as read', error);
       toast.error('Failed to mark as read');
+    }
+  };
+
+  const handleSelfAssign = async (bookingId) => {
+    try {
+      const response = await assignWorker(bookingId, 'SELF');
+      if (response && response.success) {
+        toast.success('Assigned to yourself successfully');
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        fetchNotifications();
+      } else {
+        throw new Error(response?.message || 'Failed to assign worker');
+      }
+    } catch (error) {
+      console.error('Error assigning to self:', error);
+      toast.error(error.message || 'Failed to assign worker');
     }
   };
 
@@ -253,6 +270,23 @@ const Notifications = () => {
                     <p className="text-xs text-gray-500 font-medium leading-relaxed">
                       {notif.message}
                     </p>
+
+                    {notif.type === 'job_rejected' && notif.relatedId && (
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => navigate(`/vendor/booking/${notif.relatedId}/assign-worker`)}
+                          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider hover:bg-blue-500 transition-all"
+                        >
+                          Reassign Worker
+                        </button>
+                        <button
+                          onClick={() => handleSelfAssign(notif.relatedId)}
+                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-800 text-[9px] font-bold uppercase tracking-wider hover:bg-gray-200 transition-all border border-gray-200"
+                        >
+                          Do It Myself
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center gap-3.5 mt-2.5">
                        <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest">
                         {notif.time || (notif.createdAt && new Date(notif.createdAt).toLocaleString())}

@@ -228,16 +228,35 @@ const VendorFullDashboard = ({ stats, recentJobs, vendorProfile, isOnline, handl
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-normal text-gray-800">₹{order.price}</p>
-                  <span className="text-[9px] font-normal capitalize tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                    {order.status}
-                  </span>
+                  {order.workerResponse === 'REJECTED' && !order.assignedTo ? (
+                    <span className="text-[9px] font-normal capitalize tracking-widest text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-100">
+                      Rejected by Worker
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-normal capitalize tracking-widest text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-100">
+                      {order.status}
+                    </span>
+                  )}
                 </div>
               </div>
               <h4 className="text-sm font-normal text-gray-800 capitalize truncate">{order.serviceType}</h4>
               <p className="text-xs text-gray-500 font-medium mt-1">{order.customerName}</p>
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-gray-200/50">
-                <FiCalendar className="text-gray-400 w-3 h-3" />
-                <span className="text-[10px] text-gray-500 font-normal capitalize tracking-wider">{order.timeSlot.date}</span>
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200/50">
+                <div className="flex items-center gap-2">
+                  <FiCalendar className="text-gray-400 w-3 h-3" />
+                  <span className="text-[10px] text-gray-500 font-normal capitalize tracking-wider">{order.timeSlot.date}</span>
+                </div>
+                {order.workerResponse === 'REJECTED' && !order.assignedTo && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/vendor/booking/${order.id}/assign-worker`);
+                    }}
+                    className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider transition-all"
+                  >
+                    Reassign
+                  </button>
+                )}
               </div>
             </div>
           )) : (

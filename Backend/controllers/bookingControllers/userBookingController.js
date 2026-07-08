@@ -128,10 +128,12 @@ const createBooking = async (req, res) => {
     // CUSTOM - Check Cash Limit only if payment method is CASH
     const vendorFilters = {
       ...(category ? { service: category.title } : {}),
+      city: address.city,
       checkCashLimit: paymentMethod === 'cash'
     };
 
     let nearbyVendors = [];
+    let subscribedVendorIds = [];
     
     // IF VENDOR ID IS PROVIDED BY FRONTEND OR SERVICE HAS A VENDOR ID, ONLY NOTIFY THAT VENDOR (EXCLUSIVE)
     const targetVendorId = vendorId || service.vendorId;
@@ -148,6 +150,7 @@ const createBooking = async (req, res) => {
           businessName: ownerVendor.businessName,
           phone: ownerVendor.phone
         }];
+        subscribedVendorIds = [ownerVendor._id.toString()];
       } else {
         console.log(`[CreateBooking] Target vendor NOT found for id: ${targetVendorId}`);
       }
@@ -162,7 +165,7 @@ const createBooking = async (req, res) => {
         vendorId: { $ne: null },
         status: 'active'
       }).select('vendorId').lean();
-      const subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
+      subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
       console.log(`[CreateBooking] Vendors subscribed to "${service.title}":`, subscribedVendorIds);
 
       // Filter nearby vendors to only those who are subscribed
@@ -181,6 +184,18 @@ const createBooking = async (req, res) => {
 
     console.log(`[CreateBooking] Found ${nearbyVendors.length} nearby vendors for booking`);
     // --- END VENDOR SEARCH BLOCK ---
+
+    if (nearbyVendors.length === 0) {
+      console.log('[CreateBooking] No nearby vendors found. Trying global online subscriber fallback...');
+      const globalOnlineVendors = await Vendor.find({
+        approvalStatus: 'approved',
+        isActive: true,
+        isOnline: true
+      }).select('_id name businessName phone address').lean();
+
+      nearbyVendors = globalOnlineVendors.filter(v => subscribedVendorIds.includes(v._id.toString()));
+      console.log(`[CreateBooking] Global online subscriber fallback matched: ${nearbyVendors.length} vendors`);
+    }
 
     if (nearbyVendors.length === 0) {
       return res.status(400).json({

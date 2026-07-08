@@ -200,6 +200,28 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
           return v.distance <= vRange;
         });
 
+        // Add vendors in the same city who have missing/default coordinates (e.g. [0,0])
+        if (filters.city) {
+          const cityVendors = await Vendor.find({
+            ...baseQuery,
+            'address.city': { $regex: new RegExp(filters.city, 'i') },
+            _id: { $nin: nearbyVendors.map(v => v._id) }
+          })
+            .select('name businessName phone address profilePhoto service rating isOnline availability geoLocation settings level performanceScore')
+            .limit(50);
+
+          const formattedCityVendors = cityVendors.map(v => ({
+            ...v.toObject(),
+            distance: null
+          }));
+
+          nearbyVendors = [...nearbyVendors, ...formattedCityVendors];
+        }
+
+        if (nearbyVendors.length === 0 && filters.city) {
+          console.log(`[LocationService] 2dsphere returned 0 vendors. Trying city fallback for: ${filters.city}`);
+          return findVendorsByCity(filters.city, filters);
+        }
         console.log(`[LocationService] Found ${nearbyVendors.length} vendors using 2dsphere query`);
         return nearbyVendors;
       }
@@ -237,8 +259,31 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
       };
     }).filter(vendor => vendor.withinRange);
 
+    // Merge other vendors in the same city who have missing/default coordinates
+    if (filters.city) {
+      const cityVendors = await Vendor.find({
+        ...baseQuery,
+        'address.city': { $regex: new RegExp(filters.city, 'i') },
+        _id: { $nin: nearbyVendors.map(v => v._id) }
+      })
+        .select('name businessName phone address profilePhoto service rating isOnline availability settings')
+        .limit(50);
+
+      const formattedCityVendors = cityVendors.map(v => ({
+        ...v.toObject(),
+        distance: null
+      }));
+
+      nearbyVendors = [...nearbyVendors, ...formattedCityVendors];
+    }
+
     const currentLocCount = nearbyVendors.filter(v => v.isUsingCurrentLocation).length;
     console.log(`[LocationService] Found ${nearbyVendors.length} vendors (Online/Current: ${currentLocCount}) using Haversine`);
+
+    if (nearbyVendors.length === 0 && filters.city) {
+      console.log(`[LocationService] Haversine returned 0 vendors. Trying city fallback for: ${filters.city}`);
+      return findVendorsByCity(filters.city, filters);
+    }
     return nearbyVendors;
   } catch (error) {
     console.error('Find nearby vendors error:', error);

@@ -119,6 +119,8 @@ const getVendorBookings = async (req, res) => {
                 'address.city': 1,
                 userId: 1,
                 workerId: 1,
+                rejectedWorkerId: 1,
+                workerResponse: 1,
                 serviceId: 1,
                 acceptedAt: 1,
                 assignedAt: 1,
@@ -141,6 +143,7 @@ const getVendorBookings = async (req, res) => {
     await Booking.populate(bookings, [
       { path: 'userId', select: 'name phone', options: { lean: true } },
       { path: 'workerId', select: 'name', options: { lean: true } },
+      { path: 'rejectedWorkerId', select: 'name', options: { lean: true } },
       {
         path: 'serviceId',
         select: 'title iconUrl categoryId',

@@ -7,7 +7,7 @@ import { playNotificationSound, isSoundEnabled, playAlertRing } from '../utils/n
 import { registerFCMToken } from '../services/pushNotificationService';
 import { acceptBooking, rejectBooking, assignWorker } from '../modules/vendor/services/bookingService';
 
-const SwipeableNotification = ({ t, data, onClick }) => {
+const SwipeableNotification = ({ t, data, onClick, onReassign, onSelfAssignSuccess }) => {
   const x = useMotionValue(0);
   const opacity = useTransform(x, [-200, 0, 200], [0, 1, 0]);
   const [isActionLoading, setIsActionLoading] = useState(null);
@@ -28,6 +28,15 @@ const SwipeableNotification = ({ t, data, onClick }) => {
         window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id: data.bookingId } }));
         assignWorker(data.bookingId, 'SELF').catch(() => {});
         toast.success('Job Accepted!');
+      } else if (action === 'reassign') {
+        onReassign?.();
+        toast.dismiss(t.id);
+      } else if (action === 'self_assign') {
+        await assignWorker(data.bookingId, 'SELF');
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        toast.success('Assigned to yourself!');
+        toast.dismiss(t.id);
+        onSelfAssignSuccess?.();
       } else {
         await rejectBooking(data.bookingId, 'Rejected from notification');
         toast.success('Job Skipped');
@@ -104,6 +113,25 @@ const SwipeableNotification = ({ t, data, onClick }) => {
             className="flex-1 bg-white/5 text-gray-500 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-gray-300 transition-all active:scale-95 disabled:opacity-50 border border-white/5"
           >
             {isActionLoading === 'reject' ? '...' : 'Reject'}
+          </button>
+        </div>
+      )}
+
+      {data.type === 'worker_job_rejected' && (
+        <div className="flex border-t border-white/5 p-3 gap-3 bg-white/[0.02]">
+          <button
+            disabled={!!isActionLoading}
+            onClick={(e) => handleAction(e, 'reassign')}
+            className="flex-1 bg-blue-600 text-white py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-900/20 hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {isActionLoading === 'reassign' ? '...' : 'Reassign Worker'}
+          </button>
+          <button
+            disabled={!!isActionLoading}
+            onClick={(e) => handleAction(e, 'self_assign')}
+            className="flex-1 bg-white/5 text-gray-300 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all active:scale-95 disabled:opacity-50 border border-white/5"
+          >
+            {isActionLoading === 'self_assign' ? '...' : 'Do It Myself'}
           </button>
         </div>
       )}
@@ -453,9 +481,38 @@ export const SocketProvider = ({ children }) => {
       });
 
       newSocket.on('worker_job_rejected', (data) => {
-        toast.error(`Worker declined job #${data.bookingNumber || ''}`);
         window.dispatchEvent(new CustomEvent('workerJobStatusChanged', { detail: { bookingId: data.bookingId, status: 'REJECTED' } }));
         window.dispatchEvent(new Event('vendorJobsUpdated'));
+
+        if (isSoundEnabled('vendor')) {
+          playNotificationSound();
+        }
+
+        toast.custom((t) => (
+          <SwipeableNotification
+            t={t}
+            data={{
+              bookingId: data.bookingId,
+              type: 'worker_job_rejected',
+              title: 'Worker Declined Job',
+              message: `Worker declined job #${data.bookingNumber || ''}`
+            }}
+            onClick={() => {
+              toast.dismiss(t.id);
+              navigate(`/vendor/booking/${data.bookingId}`);
+            }}
+            onReassign={() => {
+              navigate(`/vendor/booking/${data.bookingId}/assign-worker`);
+            }}
+            onSelfAssignSuccess={() => {
+              navigate(`/vendor/booking/${data.bookingId}`);
+            }}
+          />
+        ), {
+          id: `worker-rejected-${data.bookingId}`,
+          duration: 10000,
+          position: 'top-right'
+        });
       });
     }
 
