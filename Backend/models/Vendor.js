@@ -293,6 +293,14 @@ const vendorSchema = new mongoose.Schema({
       'profile-settings', 
       'support'
     ]
+  },
+  subscription: {
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null },
+    status: { type: String, enum: ['active', 'inactive', 'expired'], default: 'inactive' },
+    startDate: { type: Date, default: null },
+    expiryDate: { type: Date, default: null },
+    razorpayOrderId: { type: String, default: null },
+    razorpayPaymentId: { type: String, default: null }
   }
 }, {
   timestamps: true

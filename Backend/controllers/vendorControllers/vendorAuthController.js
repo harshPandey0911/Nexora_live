@@ -151,7 +151,8 @@ const verifyLogin = async (req, res) => {
           phone: vendor.phone,
           businessName: vendor.businessName,
           service: vendor.service,
-          approvalStatus: vendor.approvalStatus
+          approvalStatus: vendor.approvalStatus,
+          subscription: vendor.subscription
         },
         ...tokens
       });
@@ -459,7 +460,8 @@ const login = async (req, res) => {
         email: vendor.email,
         phone: vendor.phone,
         businessName: vendor.businessName,
-        service: vendor.service
+        service: vendor.service,
+        subscription: vendor.subscription
       },
       ...tokens
     });

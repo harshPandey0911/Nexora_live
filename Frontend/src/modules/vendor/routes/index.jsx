@@ -69,70 +69,92 @@ const AddCustomContent = lazyLoad(() => import('../pages/AddCustomContent'));
 const WorkersList = lazyLoad(() => import('../pages/WorkersList'));
 const AddEditWorker = lazyLoad(() => import('../pages/AddEditWorker'));
 const AssignWorker = lazyLoad(() => import('../pages/AssignWorker'));
+const Subscribe = lazyLoad(() => import('../pages/Subscribe/Subscribe'));
 
 const LoadingFallback = () => (
   <LogoLoader />
 );
 
-const VendorRoutes = () => {
-  const location = useLocation();
+const SubscriptionGuard = ({ children }) => {
+  const { user } = useAuth();
+  if (user && (!user.subscription || user.subscription.status !== 'active')) {
+    return <Navigate to="/vendor/subscribe" replace />;
+  }
+  return children;
+};
 
+const SubscribeGuard = ({ children }) => {
+  const { user } = useAuth();
+  if (user && user.subscription && user.subscription.status === 'active') {
+    return <Navigate to="/vendor/dashboard" replace />;
+  }
+  return children;
+};
+
+const VendorRoutes = () => {
   return (
     <ErrorBoundary>
-      <VendorLayout>
-        <div>
-          <Suspense fallback={<LoadingFallback />}>
-            <PageTransition>
-              <Routes>
-                {/* Public routes */}
-                <Route path="/login" element={<PublicRoute userType="vendor"><Login /></PublicRoute>} />
-                <Route path="/signup" element={<PublicRoute userType="vendor"><Signup /></PublicRoute>} />
-                <Route path="/training" element={<PublicRoute userType="vendor"><Training /></PublicRoute>} />
-                <Route path="/forgot-password" element={<PublicRoute userType="vendor"><ForgotPassword /></PublicRoute>} />
-                <Route path="/reset-password/:token" element={<PublicRoute userType="vendor"><ResetPassword /></PublicRoute>} />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/login" element={<PublicRoute userType="vendor"><Login /></PublicRoute>} />
+          <Route path="/signup" element={<PublicRoute userType="vendor"><Signup /></PublicRoute>} />
+          <Route path="/training" element={<PublicRoute userType="vendor"><Training /></PublicRoute>} />
+          <Route path="/forgot-password" element={<PublicRoute userType="vendor"><ForgotPassword /></PublicRoute>} />
+          <Route path="/reset-password/:token" element={<PublicRoute userType="vendor"><ResetPassword /></PublicRoute>} />
 
-                {/* Protected routes */}
-                <Route path="/" element={<ProtectedRoute userType="vendor"><Navigate to="dashboard" replace /></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute userType="vendor"><Dashboard /></ProtectedRoute>} />
-                <Route path="/booking-alerts" element={<ProtectedRoute userType="vendor"><BookingAlerts /></ProtectedRoute>} />
-                <Route path="/booking-alert/:id" element={<ProtectedRoute userType="vendor"><BookingAlert /></ProtectedRoute>} />
-                <Route path="/booking/:id" element={<ProtectedRoute userType="vendor"><BookingDetails /></ProtectedRoute>} />
-                <Route path="/booking/:id/assign-worker" element={<ProtectedRoute userType="vendor"><AssignWorker /></ProtectedRoute>} />
-                <Route path="/booking/:id/map" element={<ProtectedRoute userType="vendor"><BookingMap /></ProtectedRoute>} />
-                <Route path="/booking/:id/billing" element={<ProtectedRoute userType="vendor"><BillingPage /></ProtectedRoute>} />
-                <Route path="/booking/:id/timeline" element={<ProtectedRoute userType="vendor"><BookingTimeline /></ProtectedRoute>} />
-                <Route path="/jobs" element={<ProtectedRoute userType="vendor"><ActiveJobs /></ProtectedRoute>} />
-                <Route path="/product-orders" element={<ProtectedRoute userType="vendor"><ProductOrders /></ProtectedRoute>} />
-                <Route path="/earnings" element={<ProtectedRoute userType="vendor"><Earnings /></ProtectedRoute>} />
-                <Route path="/wallet" element={<ProtectedRoute userType="vendor"><Wallet /></ProtectedRoute>} />
-                <Route path="/wallet/withdraw" element={<ProtectedRoute userType="vendor"><WithdrawalRequest /></ProtectedRoute>} />
-                <Route path="/wallet/settle" element={<ProtectedRoute userType="vendor"><SettlementRequest /></ProtectedRoute>} />
-                <Route path="/wallet/settlements" element={<ProtectedRoute userType="vendor"><SettlementHistory /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute userType="vendor"><Profile /></ProtectedRoute>} />
-                <Route path="/profile/details" element={<ProtectedRoute userType="vendor"><ProfileDetails /></ProtectedRoute>} />
-                <Route path="/profile/edit" element={<ProtectedRoute userType="vendor"><EditProfile /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute userType="vendor"><Settings /></ProtectedRoute>} />
-                <Route path="/address-management" element={<ProtectedRoute userType="vendor"><AddressManagement /></ProtectedRoute>} />
-                <Route path="/notifications" element={<ProtectedRoute userType="vendor"><Notifications /></ProtectedRoute>} />
-                <Route path="/my-ratings" element={<ProtectedRoute userType="vendor"><MyRatings /></ProtectedRoute>} />
-                <Route path="/about-cleaning-expert" element={<ProtectedRoute userType="vendor"><AboutCleaningExpert /></ProtectedRoute>} />
-                <Route path="/my-services" element={<ProtectedRoute userType="vendor"><MyServices /></ProtectedRoute>} />
-                <Route path="/my-products" element={<ProtectedRoute userType="vendor"><MyProducts /></ProtectedRoute>} />
-                <Route path="/add-custom-content" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
-                <Route path="/product/edit/:id" element={<ProtectedRoute userType="vendor"><AddCustomContent /></ProtectedRoute>} />
-                
-                {/* Worker Management Routes */}
-                <Route path="/workers" element={<ProtectedRoute userType="vendor"><WorkersList /></ProtectedRoute>} />
-                <Route path="/workers/new" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
-                <Route path="/workers/edit/:id" element={<ProtectedRoute userType="vendor"><AddEditWorker /></ProtectedRoute>} />
+          {/* Subscription payment screen */}
+          <Route path="/subscribe" element={<ProtectedRoute userType="vendor"><SubscribeGuard><Subscribe /></SubscribeGuard></ProtectedRoute>} />
 
-                <Route path="/support" element={<ProtectedRoute userType="vendor"><SupportList /></ProtectedRoute>} />
-                <Route path="/support/:id" element={<ProtectedRoute userType="vendor"><TicketDetails /></ProtectedRoute>} />
-              </Routes>
-            </PageTransition>
-          </Suspense>
-        </div>
-      </VendorLayout>
+          {/* Protected routes wrapped in layout & subscription check */}
+          <Route path="/*" element={
+            <ProtectedRoute userType="vendor">
+              <SubscriptionGuard>
+                <VendorLayout>
+                  <PageTransition>
+                    <Routes>
+                      <Route path="/" element={<Navigate to="dashboard" replace />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/booking-alerts" element={<BookingAlerts />} />
+                      <Route path="/booking-alert/:id" element={<BookingAlert />} />
+                      <Route path="/booking/:id" element={<BookingDetails />} />
+                      <Route path="/booking/:id/assign-worker" element={<AssignWorker />} />
+                      <Route path="/booking/:id/map" element={<BookingMap />} />
+                      <Route path="/booking/:id/billing" element={<BillingPage />} />
+                      <Route path="/booking/:id/timeline" element={<BookingTimeline />} />
+                      <Route path="/jobs" element={<ActiveJobs />} />
+                      <Route path="/product-orders" element={<ProductOrders />} />
+                      <Route path="/earnings" element={<Earnings />} />
+                      <Route path="/wallet" element={<Wallet />} />
+                      <Route path="/wallet/withdraw" element={<WithdrawalRequest />} />
+                      <Route path="/wallet/settle" element={<SettlementRequest />} />
+                      <Route path="/wallet/settlements" element={<SettlementHistory />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/profile/details" element={<ProfileDetails />} />
+                      <Route path="/profile/edit" element={<EditProfile />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/address-management" element={<AddressManagement />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/my-ratings" element={<MyRatings />} />
+                      <Route path="/about-cleaning-expert" element={<AboutCleaningExpert />} />
+                      <Route path="/my-services" element={<MyServices />} />
+                      <Route path="/my-products" element={<MyProducts />} />
+                      <Route path="/add-custom-content" element={<AddCustomContent />} />
+                      <Route path="/product/edit/:id" element={<AddCustomContent />} />
+                      <Route path="/workers" element={<WorkersList />} />
+                      <Route path="/workers/new" element={<AddEditWorker />} />
+                      <Route path="/workers/edit/:id" element={<AddEditWorker />} />
+                      <Route path="/support" element={<SupportList />} />
+                      <Route path="/support/:id" element={<TicketDetails />} />
+                      <Route path="*" element={<Navigate to="/vendor/dashboard" replace />} />
+                    </Routes>
+                  </PageTransition>
+                </VendorLayout>
+              </SubscriptionGuard>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Suspense>
       <CashLimitModal />
       <GlobalBookingAlert />
     </ErrorBoundary>

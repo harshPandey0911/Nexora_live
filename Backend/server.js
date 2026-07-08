@@ -193,6 +193,7 @@ app.use('/api/vendors/service-requests', require('./routes/vendor-routes/service
 app.use('/api/vendors/training', require('./routes/vendor-routes/training.routes'));
 app.use('/api/vendors/support', require('./routes/vendor-routes/support.routes'));
 app.use('/api/vendors/workers', require('./routes/vendor-routes/worker.routes'));
+app.use('/api/vendors/subscription', require('./routes/vendor-routes/subscription.routes'));
 
 // Worker routes
 app.use('/api/workers/auth', require('./routes/worker-routes/auth.routes'));
