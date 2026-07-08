@@ -136,7 +136,7 @@ const createBooking = async (req, res) => {
     let subscribedVendorIds = [];
     
     // IF VENDOR ID IS PROVIDED BY FRONTEND OR SERVICE HAS A VENDOR ID, ONLY NOTIFY THAT VENDOR (EXCLUSIVE)
-    const targetVendorId = vendorId || service.vendorId;
+    let targetVendorId = vendorId || service.vendorId;
 
     if (targetVendorId) {
       console.log(`[CreateBooking] targetVendorId found: ${targetVendorId}`);
@@ -203,6 +203,13 @@ const createBooking = async (req, res) => {
         noVendorsOnline: true,
         message: 'NO vendor online'
       });
+    }
+
+    // Auto-assign product vendor if not provided (assign closest vendor selling this product)
+    let isProduct = (service.offeringType || offeringType) === 'PRODUCT';
+    if (isProduct && !targetVendorId && nearbyVendors.length > 0) {
+      targetVendorId = nearbyVendors[0]._id;
+      console.log(`[CreateBooking] Auto-assigning product vendor: ${targetVendorId}`);
     }
 
     // Calculate pricing - use amount from frontend if provided, otherwise calculate
@@ -349,7 +356,6 @@ const createBooking = async (req, res) => {
       brandIcon = formattedBookedItems[0].brandIcon || null;
     }
 
-    const isProduct = (service.offeringType || offeringType) === 'PRODUCT';
 
     const booking = await Booking.create({
       bookingNumber,
@@ -468,6 +474,36 @@ const createBooking = async (req, res) => {
                 price: finalAmount,
                 offeringType: 'PRODUCT'
              });
+          }
+
+          // Create persistent notification and Firebase Push notification for this vendor
+          try {
+            await createNotification({
+              vendorId: targetVendorId,
+              type: 'booking_request',
+              title: 'New Product Order',
+              message: `New product order for ${serviceForBackground.title} from ${userForBackground.name}`,
+              relatedId: bookingForBackground._id,
+              relatedType: 'booking',
+              data: {
+                bookingId: bookingForBackground._id.toString(),
+                serviceName: serviceForBackground.title,
+                customerName: userForBackground.name,
+                customerPhone: userForBackground.phone,
+                scheduledDate: scheduledDate,
+                scheduledTime: scheduledTime,
+                location: address,
+                price: finalAmount,
+                offeringType: 'PRODUCT'
+              },
+              pushData: {
+                type: 'new_booking',
+                dataOnly: false,
+                link: `/vendor/bookings/${bookingForBackground._id}`
+              }
+            });
+          } catch (notifError) {
+            console.error('[CreateBooking][bg] Product notification error:', notifError.message);
           }
           return;
         }

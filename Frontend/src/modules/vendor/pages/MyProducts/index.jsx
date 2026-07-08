@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FiPackage, FiPlus, FiTrash2, FiEye, FiSearch, 
-  FiDownload, FiFilter, FiMoreVertical, FiChevronDown, FiBox 
+  FiDownload, FiFilter, FiMoreVertical, FiChevronDown, FiBox,
+  FiX, FiSend, FiClock 
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import vendorService from '../../services/vendorService';
@@ -17,11 +18,19 @@ const MyProducts = () => {
   const [showConfirm, setShowConfirm] = useState(null);
   const [isRemoving, setIsRemoving] = useState(false);
   
-  const [quickAdd, setQuickAdd] = useState({ title: '', basePrice: '', categoryId: '' });
+  const [adminProducts, setAdminProducts] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   
   const [editingCategory, setEditingCategory] = useState(null); // ID of category being edited
   const [editTitle, setEditTitle] = useState('');
+  const [expandedCategoryId, setExpandedCategoryId] = useState(null);
+
+  // --- Request States ---
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestForm, setRequestForm] = useState({ categoryName: '', serviceName: '', suggestedPrice: '', description: '' });
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [myRequests, setMyRequests] = useState([]);
 
   const loadProducts = async () => {
     try {
@@ -29,10 +38,16 @@ const MyProducts = () => {
       const res = await vendorService.getMyCustomContent();
       const allPublicRes = await vendorService.getMyServices(); // For performance stats
       const publicCatsRes = await publicCatalogService.getCategories(); // Fetch all platform categories
+      const publicProductsRes = await publicCatalogService.getServices({ offeringType: 'PRODUCT' });
+
+      if (publicProductsRes.success) {
+        const globalProducts = (publicProductsRes.services || []).filter(p => !p.vendorId);
+        setAdminProducts(globalProducts);
+      }
 
       if (res.success) {
         const myCats = (res.data?.categories || []).map(c => ({ ...c, id: c._id || c.id }));
-        const platformCats = (publicCatsRes.success ? publicCatsRes.categories : []).map(c => ({ ...c, id: c._id || c.id }));
+        const platformCats = (publicCatsRes.success ? (publicCatsRes.categories || publicCatsRes.data || []) : []).map(c => ({ ...c, id: c._id || c.id }));
         
         // Filter by PRODUCT type and merge (Prioritize myCats)
         const combined = [...myCats];
@@ -67,8 +82,43 @@ const MyProducts = () => {
     }
   };
 
+  const loadServiceRequests = async () => {
+    try {
+      const res = await vendorService.getMyServiceRequests();
+      if (res.success) setMyRequests(res.requests || []);
+    } catch {}
+  };
+
+  const handleSubmitServiceRequest = async () => {
+    const { categoryName, serviceName, suggestedPrice } = requestForm;
+    if (!categoryName.trim() || !serviceName.trim() || !suggestedPrice) {
+      toast.error('Category name, product name and price are required');
+      return;
+    }
+    setIsSubmittingRequest(true);
+    try {
+      const res = await vendorService.submitServiceRequest({
+        categoryName: categoryName.trim(),
+        serviceName: serviceName.trim(),
+        suggestedPrice: Number(suggestedPrice),
+        description: requestForm.description.trim()
+      });
+      if (res.success) {
+        toast.success('Request submitted! Admin will review it.');
+        setRequestForm({ categoryName: '', serviceName: '', suggestedPrice: '', description: '' });
+        setShowRequestForm(false);
+        loadServiceRequests();
+      }
+    } catch {
+      toast.error('Failed to submit request');
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
+
   useEffect(() => {
     loadProducts();
+    loadServiceRequests();
   }, []);
 
   const handleDeleteCategory = async (categoryId) => {
@@ -123,23 +173,22 @@ const MyProducts = () => {
 
   const handleQuickAdd = async (e, catId) => {
     e.preventDefault();
-    if (!quickAdd.title || !quickAdd.basePrice) return toast.error('Please enter name and price');
+    if (!selectedProductId) return toast.error('Please select an approved product');
     
     try {
       setIsAdding(true);
       const res = await vendorService.addVendorService({
-        title: quickAdd.title,
-        basePrice: quickAdd.basePrice,
+        serviceId: selectedProductId,
         categoryId: catId,
         offeringType: 'PRODUCT'
       });
       if (res.success) {
-        toast.success('Item added!');
-        setQuickAdd({ title: '', basePrice: '', categoryId: '' });
+        toast.success('Product added successfully!');
+        setSelectedProductId('');
         loadProducts();
       }
     } catch (error) {
-      toast.error('Failed to add item');
+      toast.error(error.response?.data?.message || 'Failed to add product');
     } finally {
       setIsAdding(false);
     }
@@ -147,35 +196,22 @@ const MyProducts = () => {
 
   return (
     <div className="space-y-5 pb-20">
-      {/* Header - White Style - Hidden on Mobile */}
-      <div className="hidden md:flex bg-white p-6 rounded-3xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
+      {/* Header - White Style - Visible on mobile and desktop */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-4">
         <div>
-          <h2 className="text-3xl font-medium text-gray-900 tracking-tight leading-none capitalize">
-            Product Inventory
+          <h2 className="text-xl md:text-3xl font-semibold text-gray-900 tracking-tight leading-none capitalize">
+            Product Portfolio
           </h2>
-          <p className="text-gray-500 font-medium mt-2">
-            Add many items quickly using the inline forms below
+          <p className="hidden md:block text-gray-500 font-medium mt-2 text-sm">
+            Configure your products and inventory for user orders
           </p>
         </div>
-        <div className="flex items-center gap-3">
-           <button 
-             onClick={() => navigate('/vendor/add-custom-content?type=PRODUCT')}
-             className="flex items-center gap-2 px-6 py-3 bg-gray-50 text-gray-400 rounded-xl text-xs font-normal capitalize tracking-wider hover:bg-gray-100 transition-all active:scale-95 border border-gray-100"
-           >
-             <FiPlus className="w-4 h-4" />
-             New Category
-           </button>
-        </div>
-      </div>
-
-      {/* Mobile Add Category Button */}
-      <div className="flex md:hidden px-1 pb-1">
-        <button 
-          onClick={() => navigate('/vendor/add-custom-content?type=PRODUCT')}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2874F0] text-white rounded-xl text-xs font-normal capitalize tracking-wider shadow-md active:scale-95 transition-all"
+        <button
+          onClick={() => setShowRequestForm(true)}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 active:scale-95 transition-all shadow-md shadow-blue-100/50 shrink-0"
         >
-          <FiPlus className="w-4 h-4" />
-          New Category
+          <FiPlus className="w-3.5 h-3.5" />
+          Request Product
         </button>
       </div>
 
@@ -194,156 +230,154 @@ const MyProducts = () => {
           </div>
         ) : (
           categories.map(cat => (
-            <div key={cat._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              {/* Category Header with Inline Add */}
-              <div className="bg-gray-50/50 px-4 py-4 border-b border-gray-100">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
-                      {cat.imageUrl ? (
-                        <img src={cat.imageUrl} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <FiPackage className="text-gray-400 w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      {editingCategory === cat.id ? (
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            className="px-2.5 py-1 bg-white border border-blue-500/30 rounded-lg text-xs font-normal text-gray-800 focus:outline-none"
-                            autoFocus
-                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateCategory(cat.id)}
-                          />
-                          <button 
-                            onClick={() => handleUpdateCategory(cat.id)}
-                            className="text-[9px] font-medium text-blue-600 capitalize"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <h3 className="text-sm font-normal text-gray-900 capitalize tracking-tight">{cat.title}</h3>
-                          {cat.vendorId && (
-                            <>
-                              <button 
-                                onClick={() => {
-                                  setEditingCategory(cat.id);
-                                  setEditTitle(cat.title);
-                                }}
-                                className="p-1.5 text-gray-300 hover:text-blue-500 transition-all"
-                              >
-                                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="12" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteCategory(cat.id)}
-                                className="p-1.5 text-gray-300 hover:text-red-500 transition-all"
-                                title="Delete Category"
-                              >
-                                <FiTrash2 size={12} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      <p className="text-[8px] font-normal text-blue-500 capitalize tracking-widest mt-0.5">
-                        {groupedProducts[cat.id]?.length || 0} Products Active
-                      </p>
-                    </div>
+            <div key={cat.id || cat._id || cat.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
+              {/* Category Header (Clickable Accordion Trigger) */}
+              <div 
+                onClick={() => setExpandedCategoryId(expandedCategoryId === (cat.id || cat._id) ? null : (cat.id || cat._id))}
+                className="bg-gray-50/50 px-4 py-4 border-b border-gray-100 cursor-pointer flex items-center justify-between select-none hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
+                    {cat.imageUrl ? (
+                      <img src={cat.imageUrl} className="w-full h-full object-cover" alt="" />
+                    ) : (
+                      <FiPackage className="text-gray-400 w-5 h-5" />
+                    )}
                   </div>
-                  
-                  {/* Quick Add Form */}
-                  <form 
-                    onSubmit={(e) => handleQuickAdd(e, cat._id)}
-                    className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-xl border border-gray-100 shadow-sm"
-                  >
-                    <input 
-                      type="text"
-                      placeholder="Item Name (e.g. Maggie)"
-                      value={quickAdd.categoryId === cat._id ? quickAdd.title : ''}
-                      onChange={(e) => setQuickAdd({ ...quickAdd, title: e.target.value, categoryId: cat._id })}
-                      className="px-3 py-1.5 bg-gray-50 border border-transparent rounded-lg text-[10px] font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none min-w-[130px] transition-all"
-                    />
-                    <input 
-                      type="number"
-                      placeholder="Price"
-                      value={quickAdd.categoryId === cat._id ? quickAdd.basePrice : ''}
-                      onChange={(e) => setQuickAdd({ ...quickAdd, basePrice: e.target.value, categoryId: cat._id })}
-                      className="w-16 px-3 py-1.5 bg-gray-50 border border-transparent rounded-lg text-[10px] font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all"
-                    />
-                    <button 
-                      type="submit"
-                      disabled={isAdding && quickAdd.categoryId === cat._id}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[9px] font-medium capitalize tracking-widest hover:bg-blue-700 transition-all shadow active:scale-95 disabled:opacity-50"
-                    >
-                      {isAdding && quickAdd.categoryId === cat._id ? '...' : <><FiPlus className="w-3 h-3" /> Quick Add</>}
-                    </button>
-                  </form>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-sm font-semibold text-gray-900 capitalize tracking-tight">{cat.title}</h3>
+                    </div>
+                    <p className="text-[8px] font-normal text-blue-500 capitalize tracking-widest mt-0.5">
+                      {groupedProducts[cat.id || cat._id]?.length || 0} Products Active
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-gray-400">
+                  <FiChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedCategoryId === (cat.id || cat._id) ? 'rotate-180' : ''}`} />
                 </div>
               </div>
 
-              {/* Items Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="px-4 py-3 text-[9px] font-medium text-gray-400 capitalize tracking-wider">Product Specification</th>
-                      <th className="px-4 py-3 text-[9px] font-medium text-gray-400 capitalize tracking-wider">Market Value</th>
-                      <th className="px-4 py-3 text-[9px] font-medium text-gray-400 capitalize tracking-wider text-right">Operations</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 px-1">
-                    {!groupedProducts[cat._id] || groupedProducts[cat._id].length === 0 ? (
-                      <tr>
-                        <td colSpan="3" className="px-4 py-8 text-center">
-                          <div className="flex flex-col items-center gap-1.5">
-                            <p className="text-[9px] font-medium text-gray-300 capitalize tracking-widest">No items found in this category</p>
-                            <p className="text-[8px] font-normal text-gray-400 capitalize">Use the form above to add items instantly</p>
+              {/* Accordion Content Container */}
+              <AnimatePresence initial={false}>
+                {expandedCategoryId === (cat.id || cat._id) && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 space-y-4 border-t border-gray-100">
+                      {/* Quick Add Form */}
+                      <form 
+                        onSubmit={(e) => handleQuickAdd(e, cat.id || cat._id)}
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm w-full mt-2 mb-4"
+                      >
+                        <div className="flex-1 w-full">
+                          <select
+                            value={selectedProductId}
+                            onChange={(e) => setSelectedProductId(e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all"
+                          >
+                            <option value="">Select Product...</option>
+                            {adminProducts
+                              .filter(s => {
+                                const sCatId = s.categoryId?._id || s.categoryId || '';
+                                const activeCatId = cat.id || cat._id || '';
+                                return sCatId.toString() === activeCatId.toString();
+                              })
+                              .map(s => (
+                                <option key={s._id || s.id} value={s._id || s.id}>
+                                  {s.title}
+                                </option>
+                              ))
+                            }
+                          </select>
+                        </div>
+
+                        {selectedProductId && (
+                          <div className="flex items-center justify-between sm:justify-start gap-2 bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100/30 w-full sm:w-auto shrink-0">
+                            <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">Fixed Price:</span>
+                            <span className="text-xs font-bold text-blue-600">
+                              ₹{adminProducts.find(s => (s._id || s.id) === selectedProductId)?.basePrice || 0}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      groupedProducts[cat._id].map(item => (
-                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
-                                <img src={item.iconUrl || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-normal text-gray-800 capitalize truncate tracking-tight">{item.title}</p>
-                                <p className="text-[8px] font-normal text-gray-400 capitalize tracking-wider mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">ID: {item.id.slice(-6).toUpperCase()}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs font-medium text-emerald-600">₹{item.basePrice.toLocaleString()}</span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                               <button 
-                                 onClick={() => navigate(`/vendor/product/edit/${item.id}`)}
-                                 className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-medium capitalize tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-blue-100 shadow-sm active:scale-95"
-                               >
-                                 Manage
-                               </button>
-                               <button 
-                                 onClick={() => setShowConfirm(item.id)}
-                                 className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"
-                               >
-                                 <FiTrash2 className="w-3.5 h-3.5" />
-                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                        )}
+
+                        <button 
+                          type="submit"
+                          disabled={isAdding || !selectedProductId}
+                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all shadow active:scale-95 disabled:opacity-50 shrink-0"
+                        >
+                          {isAdding ? '...' : <><FiPlus className="w-3.5 h-3.5" /> Add Product</>}
+                        </button>
+                      </form>
+
+                      {/* Items Table */}
+                      <div className="overflow-x-auto border border-gray-100 rounded-xl">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="border-b border-gray-50 bg-gray-50/50">
+                              <th className="px-4 py-3 text-[9px] font-semibold text-gray-400 capitalize tracking-wider">Product Specification</th>
+                              <th className="px-4 py-3 text-[9px] font-semibold text-gray-400 capitalize tracking-wider">Market Value</th>
+                              <th className="px-4 py-3 text-[9px] font-semibold text-gray-400 capitalize tracking-wider text-right">Operations</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50 px-1">
+                            {!groupedProducts[cat.id || cat._id] || groupedProducts[cat.id || cat._id].length === 0 ? (
+                              <tr>
+                                <td colSpan="3" className="px-4 py-8 text-center">
+                                  <div className="flex flex-col items-center gap-1.5">
+                                    <p className="text-[9px] font-medium text-gray-300 capitalize tracking-widest">No items found in this category</p>
+                                    <p className="text-[8px] font-normal text-gray-400 capitalize">Use the form above to add items instantly</p>
+                                  </div>
+                                </td>
+                              </tr>
+                            ) : (
+                              groupedProducts[cat.id || cat._id].map(item => (
+                                <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2.5">
+                                      <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
+                                        <img src={item.iconUrl || 'https://via.placeholder.com/150'} className="w-full h-full object-cover" alt="" />
+                                      </div>
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-normal text-gray-800 capitalize truncate tracking-tight">{item.title}</p>
+                                        <p className="text-[8px] font-normal text-gray-400 capitalize tracking-wider mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">ID: {item.id.slice(-6).toUpperCase()}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="text-xs font-medium text-emerald-600">₹{item.basePrice.toLocaleString()}</span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                       <button 
+                                         onClick={() => navigate(`/vendor/product/edit/${item.id}`)}
+                                         className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-medium capitalize tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-blue-100 shadow-sm active:scale-95"
+                                       >
+                                         Manage
+                                       </button>
+                                       <button 
+                                         onClick={() => setShowConfirm(item.id)}
+                                         className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"
+                                       >
+                                         <FiTrash2 className="w-3.5 h-3.5" />
+                                       </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))
         )}
@@ -388,6 +422,137 @@ const MyProducts = () => {
                 >
                   {isRemoving ? 'Deleting...' : 'Delete'}
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Past Requests List */}
+      {myRequests.length > 0 && (
+        <div className="mt-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">My Product Requests</p>
+          <div className="space-y-3">
+            {myRequests.map(req => (
+              <div key={req._id} className="flex items-center justify-between py-3 px-4 bg-gray-50/50 rounded-xl border border-gray-100/60 hover:bg-gray-50 transition-colors">
+                <div>
+                  <p className="text-xs font-semibold text-gray-800 capitalize">{req.serviceName}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{req.categoryName} • ₹{req.suggestedPrice?.toLocaleString()}</p>
+                  {req.adminNote && (
+                    <div className="mt-1.5 flex items-start gap-1 bg-blue-50/50 border border-blue-100/50 rounded-lg px-2 py-1 text-[9px] text-blue-600">
+                      <span className="font-semibold shrink-0">Admin:</span>
+                      <span>{req.adminNote}</span>
+                    </div>
+                  )}
+                </div>
+                <span className={`text-[8px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider ${
+                  req.status === 'approved' ? 'bg-green-100 text-green-600 border border-green-200' :
+                  req.status === 'rejected' ? 'bg-red-100 text-red-500 border border-red-200' :
+                  'bg-amber-100 text-amber-600 border border-amber-200'
+                }`}>
+                  {req.status === 'pending' ? <span className="flex items-center gap-1"><FiClock className="w-2.5 h-2.5 animate-pulse" /> Pending</span> : req.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Request Product Modal ── */}
+      <AnimatePresence>
+        {showRequestForm && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowRequestForm(false)}
+              className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+            />
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl border border-gray-100 z-10"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-[9px] font-semibold text-blue-500 uppercase tracking-widest">New Suggestion</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mt-0.5">Request a New Product</h3>
+                </div>
+                <button
+                  onClick={() => setShowRequestForm(false)}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 transition-all"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-[9px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 leading-relaxed">
+                  ⚠️ This suggestion will be sent to the admin for review. Once approved, the admin will manually add it to the global catalog.
+                </p>
+
+                <div>
+                  <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest mb-1 block">Category Name *</label>
+                  <input
+                    value={requestForm.categoryName}
+                    onChange={e => setRequestForm(f => ({ ...f, categoryName: e.target.value }))}
+                    placeholder="e.g. Electrical Products"
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 placeholder-gray-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest mb-1 block">Product Name *</label>
+                  <input
+                    value={requestForm.serviceName}
+                    onChange={e => setRequestForm(f => ({ ...f, serviceName: e.target.value }))}
+                    placeholder="e.g. Copper Wire 10m"
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 placeholder-gray-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest mb-1 block">Suggested Price (₹) *</label>
+                  <input
+                    type="number"
+                    value={requestForm.suggestedPrice}
+                    onChange={e => setRequestForm(f => ({ ...f, suggestedPrice: e.target.value }))}
+                    placeholder="e.g. 750"
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 placeholder-gray-300"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[9px] font-semibold text-gray-500 uppercase tracking-widest mb-1 block">Description (optional)</label>
+                  <textarea
+                    rows={2}
+                    value={requestForm.description}
+                    onChange={e => setRequestForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder="Brief description of the product..."
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 placeholder-gray-300 resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => setShowRequestForm(false)}
+                    className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-600 text-xs font-semibold hover:bg-gray-200 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmitServiceRequest}
+                    disabled={isSubmittingRequest}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-md shadow-blue-100"
+                  >
+                    <FiSend className="w-3 h-3" />
+                    {isSubmittingRequest ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

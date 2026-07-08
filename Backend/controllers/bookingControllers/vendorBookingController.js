@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Booking = require('../../models/Booking');
 const Worker = require('../../models/Worker');
+const VendorBill = require('../../models/VendorBill');
 const User = require('../../models/User');
 const UserService = require('../../models/UserService');
 const Category = require('../../models/Category');
@@ -191,7 +192,8 @@ const getBookingById = async (req, res) => {
       .populate('vendorId', 'name businessName phone email')
       .populate('serviceId', 'title description iconUrl images')
       .populate('categoryId', 'title slug')
-      .populate('workerId', 'name phone rating totalJobs completedJobs');
+      .populate('workerId', 'name phone rating totalJobs completedJobs')
+      .populate('vendorBillId', 'vendorTotalEarning companyRevenue');
 
     if (!booking) {
       return res.status(404).json({
@@ -421,7 +423,9 @@ const rejectBooking = async (req, res) => {
         { notifiedVendors: vendorId },
         { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] } },
         // Allow admin-assigned vendor to reject
-        { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true, status: BOOKING_STATUS.REQUESTED }
+        { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true, status: BOOKING_STATUS.REQUESTED },
+        // Allow assigned product vendor to reject
+        { vendorId: new mongoose.Types.ObjectId(vendorId), offeringType: 'PRODUCT', status: BOOKING_STATUS.CONFIRMED }
       ]
     });
 
@@ -432,12 +436,149 @@ const rejectBooking = async (req, res) => {
       });
     }
 
-    const validStatuses = [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING];
+    const isProduct = booking.offeringType === 'PRODUCT';
+    const validStatuses = isProduct
+      ? [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.CONFIRMED]
+      : [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING];
+
     if (!validStatuses.includes(booking.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot reject booking with status: ${booking.status}`
       });
+    }
+
+    // If product booking, handle re-routing or escalation to admin immediately
+    if (isProduct) {
+      console.log(`[RejectBooking] Product booking ${booking.bookingNumber} rejected by vendor ${vendorId}. Re-routing...`);
+
+      // Update/Create BookingRequest for this vendor to REJECTED
+      const BookingRequest = require('../../models/BookingRequest');
+      await BookingRequest.findOneAndUpdate(
+        { bookingId: id, vendorId },
+        {
+          status: 'REJECTED',
+          respondedAt: new Date(),
+          rejectReason: reason || 'Rejected by vendor'
+        },
+        { upsert: true }
+      );
+
+      // Find other vendors offering this product
+      const { findNearbyVendors } = require('../../services/locationService');
+      const bookingLocation = booking.address.lat && booking.address.lng
+        ? { lat: booking.address.lat, lng: booking.address.lng }
+        : null;
+
+      let nextVendor = null;
+      if (bookingLocation) {
+        // Find category details for filtering
+        const categoryObj = await Category.findById(booking.categoryId).select('title');
+        const vendorFilters = {
+          ...(categoryObj ? { service: categoryObj.title } : {}),
+          city: booking.address.city,
+          checkCashLimit: booking.paymentMethod === 'cash'
+        };
+
+        const rawNearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+
+        // Subscribed vendors
+        const subscriptions = await UserService.find({
+          title: booking.serviceName,
+          vendorId: { $ne: null },
+          status: 'active'
+        }).select('vendorId').lean();
+        const subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
+
+        // Get already rejected vendor IDs for this booking
+        const rejectedRequests = await BookingRequest.find({
+          bookingId: id,
+          status: 'REJECTED'
+        }).select('vendorId').lean();
+        const rejectedVendorIds = rejectedRequests.map(r => r.vendorId.toString());
+
+        // Filter and sort to find next available vendor
+        const availableVendors = rawNearbyVendors
+          .filter(v => subscribedVendorIds.includes(v._id.toString()) && !rejectedVendorIds.includes(v._id.toString()))
+          .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+
+        if (availableVendors.length > 0) {
+          nextVendor = availableVendors[0];
+        }
+      }
+
+      if (nextVendor) {
+        console.log(`[RejectBooking] Found next vendor for product: ${nextVendor._id}. Reassigning...`);
+        booking.vendorId = nextVendor._id;
+        booking.status = BOOKING_STATUS.CONFIRMED;
+        booking.notifiedVendors = [nextVendor._id];
+        await booking.save();
+
+        // Emit Socket.IO and Notification to next vendor
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`vendor_${nextVendor._id}`).emit('new_booking_request', {
+            bookingId: booking._id,
+            serviceName: booking.serviceName,
+            customerName: booking.userId?.name || 'Customer',
+            price: booking.finalAmount,
+            offeringType: 'PRODUCT'
+          });
+        }
+
+        try {
+          await createNotification({
+            vendorId: nextVendor._id,
+            type: 'booking_request',
+            title: 'New Product Order',
+            message: `New product order for ${booking.serviceName} from customer`,
+            relatedId: booking._id,
+            relatedType: 'booking',
+            data: {
+              bookingId: booking._id.toString(),
+              serviceName: booking.serviceName,
+              price: booking.finalAmount,
+              offeringType: 'PRODUCT'
+            },
+            pushData: {
+              type: 'new_booking',
+              dataOnly: false,
+              link: `/vendor/bookings/${booking._id}`
+            }
+          });
+        } catch (notifErr) {
+          console.error('[RejectBooking] Notification error:', notifErr.message);
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: 'Booking re-routed to next available vendor successfully',
+          data: { bookingId: id }
+        });
+      } else {
+        // No vendor available -> Escalate to Admin
+        console.log('[RejectBooking] No other vendors available. Escalating product booking to admin...');
+        booking.status = BOOKING_STATUS.ESCALATED;
+        booking.isEscalatedToAdmin = true;
+        booking.vendorId = null;
+        await booking.save();
+
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
+            bookingId: booking._id,
+            bookingNumber: booking.bookingNumber,
+            message: 'Our admin team is manually assigning a professional for your order.'
+          });
+          io.emit('adminBookingEscalated', { bookingId: booking._id });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: 'No other vendors available. Product order escalated to admin for manual assignment.',
+          data: { bookingId: id }
+        });
+      }
     }
 
     // If this booking was admin-assigned directly to this vendor, handle immediately

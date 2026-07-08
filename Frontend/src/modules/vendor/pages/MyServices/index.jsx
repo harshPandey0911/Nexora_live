@@ -48,7 +48,7 @@ const MyServices = () => {
 
       if (res.success) {
         const myCats = (res.data?.categories || []).map(c => ({ ...c, id: c._id || c.id }));
-        const platformCats = (publicCatsRes.success ? publicCatsRes.categories : []).map(c => ({ ...c, id: c._id || c.id }));
+        const platformCats = (publicCatsRes.success ? (publicCatsRes.categories || publicCatsRes.data || []) : []).map(c => ({ ...c, id: c._id || c.id }));
         
         // Filter by SERVICE type and merge (Prioritize myCats)
         const combined = [...myCats];

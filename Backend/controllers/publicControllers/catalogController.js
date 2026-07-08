@@ -42,7 +42,7 @@ const getPublicCategories = async (req, res) => {
     }
 
     const allCategories = await Category.find(query)
-      .select('title slug homeIconUrl homeBadge hasSaleBadge homeOrder showOnHome vendorId cityIds description group')
+      .select('title slug homeIconUrl homeBadge hasSaleBadge homeOrder showOnHome vendorId cityIds description group offeringType')
       .sort({ homeOrder: 1, createdAt: -1 })
       .lean();
 
@@ -95,7 +95,8 @@ const getPublicCategories = async (req, res) => {
           badge: cat.homeBadge || '',
           hasSaleBadge: cat.hasSaleBadge || false,
           showOnHome: cat.showOnHome || false,
-          group: cat.group || 'None'
+          group: cat.group || 'None',
+          offeringType: cat.offeringType || 'SERVICE'
         });
       }
     });

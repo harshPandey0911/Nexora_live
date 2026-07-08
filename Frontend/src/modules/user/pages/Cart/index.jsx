@@ -161,7 +161,7 @@ const Cart = () => {
                         <div className="flex items-start justify-between mb-1 sm:mb-2">
                           <div>
                             <span className="text-[8px] sm:text-[9px] font-bold text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 sm:py-1 rounded mb-1 sm:mb-2 inline-block">
-                              {item.category || 'Service'}
+                              {item.serviceId?.offeringType === 'PRODUCT' ? 'Product' : (item.category || 'Service')}
                             </span>
                             <h3 className="text-sm sm:text-xl font-bold text-gray-900 truncate uppercase tracking-tight">
                               {item.title}

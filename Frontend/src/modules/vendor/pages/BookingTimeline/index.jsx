@@ -28,6 +28,9 @@ const BookingTimeline = () => {
   const [workPhotos, setWorkPhotos] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isWorkApproved, setIsWorkApproved] = useState(false);
+  const [isPayWorkerModalOpen, setIsPayWorkerModalOpen] = useState(false);
+  const [customPayAmount, setCustomPayAmount] = useState('');
+  const [customPayNotes, setCustomPayNotes] = useState('');
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -65,7 +68,7 @@ const BookingTimeline = () => {
           },
           status: apiData.status,
           finalAmount: apiData.finalAmount || apiData.price || 0,
-          vendorEarnings: apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0),
+          vendorEarnings: apiData.vendorBillId?.vendorTotalEarning || apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0),
           // Timeline mapping if backend supports it, otherwise derived from status/timestamps
           timeline: [
             { stage: 1, timestamp: apiData.createdAt },
@@ -127,29 +130,27 @@ const BookingTimeline = () => {
 
   /* Handlers */
   const handleWorkerPayment = async () => {
-    // Determine payment type
-    const confirmMsg = booking?.cashCollected
-      ? `Worker has collected ₹${booking.finalAmount}. Confirm payment of ₹${booking.vendorEarnings} to worker?`
-      : `Confirm payment of ₹${booking.vendorEarnings} to the worker?`;
+    setCustomPayAmount(booking?.vendorEarnings || '');
+    setCustomPayNotes('');
+    setIsPayWorkerModalOpen(true);
+  };
 
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Pay Worker',
-      message: confirmMsg,
-      type: 'info',
-      onConfirm: async () => {
-        try {
-          setActionLoading(true);
-          await payWorker(id);
-          toast.success('Worker payment processed successfully');
-          window.location.reload();
-        } catch (e) {
-          toast.error(e.response?.data?.message || 'Payment failed');
-        } finally {
-          setActionLoading(false);
-        }
-      }
-    });
+  const handleSubmitWorkerPayment = async () => {
+    if (!customPayAmount || isNaN(customPayAmount) || Number(customPayAmount) <= 0) {
+      return toast.error('Please enter a valid payment amount');
+    }
+
+    try {
+      setActionLoading(true);
+      await vendorWalletService.payWorker(id, Number(customPayAmount), customPayNotes);
+      toast.success('Worker payment processed successfully');
+      setIsPayWorkerModalOpen(false);
+      window.location.reload();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Payment failed');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleApproveWork = async () => {
@@ -545,6 +546,82 @@ const BookingTimeline = () => {
         message={confirmDialog.message}
         type={confirmDialog.type}
       />
+
+      {/* Pay Worker Custom Modal */}
+      {isPayWorkerModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-gray-100">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold text-gray-800">Pay Worker</h3>
+              <button 
+                onClick={() => setIsPayWorkerModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {booking?.cashCollected && (
+                <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-100 text-amber-800 text-sm flex items-start gap-2.5">
+                  <FiDollarSign className="w-5 h-5 shrink-0 mt-0.5" style={{ color: '#D97706' }} />
+                  <span>
+                    Worker has collected <strong>₹{booking?.finalAmount}</strong> from customer.
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Payout Amount (₹)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
+                  <input
+                    type="number"
+                    value={customPayAmount}
+                    onChange={(e) => setCustomPayAmount(e.target.value)}
+                    placeholder="Enter payout amount"
+                    className="w-full pl-8 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-gray-800 font-bold focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1.5 pl-1">
+                  Default net earnings: <strong>₹{booking?.vendorEarnings}</strong>
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={customPayNotes}
+                  onChange={(e) => setCustomPayNotes(e.target.value)}
+                  placeholder="e.g. Completed plumbing work"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-gray-700 text-sm focus:outline-none focus:border-blue-500 transition-colors resize-none h-20"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setIsPayWorkerModalOpen(false)}
+                className="flex-1 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-colors active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitWorkerPayment}
+                disabled={actionLoading}
+                className="flex-1 py-3.5 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
+              >
+                {actionLoading ? 'Processing...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

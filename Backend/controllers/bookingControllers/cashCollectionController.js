@@ -30,17 +30,20 @@ exports.initiateOnlineCollection = async (req, res) => {
 
     // Store extra items for proper commission calculation
     if (extraItems && Array.isArray(extraItems) && extraItems.length > 0) {
+      // Sanitize: Keep only valid objects to prevent 'Cannot read properties of undefined (reading name)'
+      const validItems = extraItems.filter(item => item && typeof item === 'object');
+
       booking.workDoneDetails = {
         ...booking.workDoneDetails,
-        items: extraItems.map(item => ({
-          title: item.name || item.title,
+        items: validItems.map(item => ({
+          title: item.name || item.title || 'Extra Item',
           qty: Number(item.qty) || Number(item.quantity) || 1,
           price: Number(item.price) || 0
         }))
       };
 
-      booking.extraCharges = extraItems.map(item => ({
-        name: item.name || item.title,
+      booking.extraCharges = validItems.map(item => ({
+        name: item.name || item.title || 'Extra Item',
         quantity: Number(item.qty) || Number(item.quantity) || 1,
         price: Number(item.price) || 0,
         total: (Number(item.qty) || Number(item.quantity) || 1) * (Number(item.price) || 0)
@@ -155,19 +158,22 @@ exports.initiateCashCollection = async (req, res) => {
 
     // Store extra items for proper commission calculation
     if (extraItems && Array.isArray(extraItems) && extraItems.length > 0) {
+      // Sanitize: Keep only valid objects to prevent 'Cannot read properties of undefined (reading name)'
+      const validItems = extraItems.filter(item => item && typeof item === 'object');
+
       // 1. Update workDoneDetails (Frontend display)
       booking.workDoneDetails = {
         ...booking.workDoneDetails,
-        items: extraItems.map(item => ({
-          title: item.name || item.title,
+        items: validItems.map(item => ({
+          title: item.name || item.title || 'Extra Item',
           qty: Number(item.qty) || Number(item.quantity) || 1,
           price: Number(item.price) || 0
         }))
       };
 
       // 2. Update extraCharges (Backend calculation)
-      booking.extraCharges = extraItems.map(item => ({
-        name: item.name || item.title,
+      booking.extraCharges = validItems.map(item => ({
+        name: item.name || item.title || 'Extra Item',
         quantity: Number(item.qty) || Number(item.quantity) || 1,
         price: Number(item.price) || 0,
         total: (Number(item.qty) || Number(item.quantity) || 1) * (Number(item.price) || 0)
@@ -283,17 +289,20 @@ exports.confirmCashCollection = async (req, res) => {
 
     // Store extra items in workDoneDetails (for display)
     if (extraItems && Array.isArray(extraItems) && extraItems.length > 0) {
+      // Sanitize: Keep only valid objects to prevent 'Cannot read properties of undefined (reading name)'
+      const validItems = extraItems.filter(item => item && typeof item === 'object');
+
       booking.workDoneDetails = {
         ...booking.workDoneDetails,
-        items: extraItems.map(item => ({
-          title: item.name || item.title,
+        items: validItems.map(item => ({
+          title: item.name || item.title || 'Extra Item',
           qty: Number(item.qty) || Number(item.quantity) || 1,
           price: Number(item.price) || 0
         }))
       };
 
-      booking.extraCharges = extraItems.map(item => ({
-        name: item.name || item.title,
+      booking.extraCharges = validItems.map(item => ({
+        name: item.name || item.title || 'Extra Item',
         quantity: Number(item.qty) || Number(item.quantity) || 1,
         price: Number(item.price) || 0,
         total: (Number(item.qty) || Number(item.quantity) || 1) * (Number(item.price) || 0)

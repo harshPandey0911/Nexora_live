@@ -273,7 +273,11 @@ const AdminLayout = () => {
                   >
                     <div>
                       <h4 className="font-bold text-gray-900 text-xs">{vendor.businessName || vendor.name}</h4>
-                      <p className="text-[10px] text-gray-400">{vendor.phone}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{vendor.phone}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                        <span className="text-[10px] text-gray-400">{vendor.isOnline ? 'Online' : 'Offline'} • {vendor.availability || 'N/A'}</span>
+                      </div>
                     </div>
                     <button
                       onClick={() => handleAssignVendor(vendor._id)}

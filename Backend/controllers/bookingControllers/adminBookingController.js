@@ -363,7 +363,7 @@ const assignVendor = async (req, res) => {
         serviceName: booking.serviceName,
         customerName: booking.customerName || 'Authorized Client',
         customerPhone: booking.customerPhone || '',
-        address: { addressLine1: booking.location?.address || 'Location shared' },
+        address: booking.address || { addressLine1: booking.location?.address || 'Location shared' },
         price: booking.finalAmount,
         vendorEarnings: booking.finalAmount * 0.9,
         serviceCategory: booking.serviceCategory || 'Nexora Service',
@@ -371,7 +371,9 @@ const assignVendor = async (req, res) => {
         scheduledTime: booking.timeSlot?.time || 'ASAP',
         createdAt: booking.createdAt,
         expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min window
-        assignedByAdmin: true
+        assignedByAdmin: true,
+        playSound: true,
+        message: 'New manual booking assignment from admin!'
       });
 
       io.to(`user_${booking.userId}`).emit('booking_updated', {
@@ -379,6 +381,38 @@ const assignVendor = async (req, res) => {
         status: booking.status,
         message: 'Vendor has been assigned by Admin'
       });
+    }
+
+    // Create database notification and trigger FCM push notification
+    try {
+      const { createNotification } = require('../notificationControllers/notificationController');
+      const userObj = await User.findById(booking.userId).select('name phone');
+      await createNotification({
+        vendorId: vendorId,
+        type: 'booking_request',
+        title: 'New Booking Request',
+        message: `New manual booking assignment for ${booking.serviceName} from Admin`,
+        relatedId: booking._id,
+        relatedType: 'booking',
+        data: {
+          bookingId: booking._id.toString(),
+          serviceName: booking.serviceName,
+          customerName: userObj?.name || 'Customer',
+          customerPhone: userObj?.phone || '',
+          scheduledDate: booking.scheduledDate,
+          scheduledTime: booking.timeSlot?.time || 'ASAP',
+          location: booking.address || { addressLine1: booking.location?.address || 'Location shared' },
+          price: booking.finalAmount,
+          assignedByAdmin: true
+        },
+        pushData: {
+          type: 'new_booking',
+          dataOnly: false,
+          link: `/vendor/bookings/${booking._id}`
+        }
+      });
+    } catch (notifError) {
+      console.error('[AssignVendor] Notification error:', notifError.message);
     }
 
     res.status(200).json({
