@@ -28,15 +28,31 @@ function App() {
       // Also dispatch generic one if needed
       window.dispatchEvent(new Event('appNotificationReceived'));
 
-      // REDUNDANT: We now have a rich SwipeableNotification in SocketContext.jsx 
-      // which handles all internal socket notifications (emitted by Backend along with Push).
-      // Showing a toast here results in "double alerts" for the user.
-      /*
-      toast(payload.notification?.body || 'New notification', {
-        icon: '🔔',
-        duration: 2000,
-      });
-      */
+      // Show toast specifically for test notifications in foreground
+      if (payload.data?.type === 'test' || payload.notification?.title?.includes('Test')) {
+        toast(payload.notification?.body || 'Test notification received!', {
+          icon: '🔔',
+          duration: 4000,
+          style: {
+            background: '#1E3A8A',
+            color: '#fff',
+            fontWeight: 'bold',
+            borderRadius: '12px'
+          }
+        });
+
+        // Force native browser notification to display in foreground
+        if ('Notification' in window && Notification.permission === 'granted') {
+          navigator.serviceWorker.ready.then((registration) => {
+            registration.showNotification(payload.notification?.title || '🔔 Test Notification', {
+              body: payload.notification?.body || 'This is a test notification from Appzeto!',
+              icon: '/cleaning-expert-logo.png',
+              tag: 'test-notification',
+              renotify: true
+            });
+          }).catch(err => console.error('SW ready failed:', err));
+        }
+      }
     });
   }, []);
 

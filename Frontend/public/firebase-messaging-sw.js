@@ -10,13 +10,13 @@ importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compa
 
 // Firebase configuration - Production values
 const firebaseConfig = {
-  apiKey: 'AIzaSyB0p9BwQh6P4U6RpNI783Mf2yLV96ZFemo',
-  authDomain: 'homster-notifications.firebaseapp.com',
-  projectId: 'homster-notifications',
-  storageBucket: 'homster-notifications.firebasestorage.app',
-  messagingSenderId: '330091938710',
-  appId: '1:330091938710:web:b58aa8c0830445b1fa53b7',
-  measurementId: 'G-E493PBZLED'
+  apiKey: 'AIzaSyB2mCKQ06sGGqRZ7Z2DlWAtzhyIjbs9VlE',
+  authDomain: 'nexorago-2628b.firebaseapp.com',
+  projectId: 'nexorago-2628b',
+  storageBucket: 'nexorago-2628b.firebasestorage.app',
+  messagingSenderId: '593553034409',
+  appId: '1:593553034409:web:2d672ed9208532459c6db8',
+  measurementId: 'G-WZCWWJ6DR2'
 };
 
 // Initialize Firebase
@@ -176,24 +176,8 @@ messaging.onBackgroundMessage((payload) => {
     timestamp: Date.now()
   };
 
-  // Show the notification ONLY if app is not in foreground (to avoid duplicate with in-app socket toast)
-  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    .then(function (clientList) {
-      const isVisible = clientList.some(function (client) {
-        return client.visibilityState === 'visible';
-      });
-
-      if (isVisible) {
-        console.log('[SW] 🚫 App is visible, skipping system notification to avoid duplicate');
-        return;
-      }
-
-      return self.registration.showNotification(notificationTitle, notificationOptions);
-    })
-    .catch(function (err) {
-      console.error('[SW] ⚠️ Error checking clients, falling back to notification:', err);
-      return self.registration.showNotification(notificationTitle, notificationOptions);
-    });
+  // Show the notification
+  return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // Handle notification click

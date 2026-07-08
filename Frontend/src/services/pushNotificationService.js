@@ -101,32 +101,24 @@ async function getFCMToken() {
  */
 async function registerFCMToken(userType = 'user', forceUpdate = false) {
   try {
-    // console.log(`[FCM] Starting registration for ${userType}, forceUpdate: ${forceUpdate}`);
-
     // Check if already registered
     const storageKey = `fcm_token_${userType}_web`;
     const savedToken = localStorage.getItem(storageKey);
     if (savedToken && !forceUpdate) {
-      // console.log('[FCM] Token already registered in localStorage');
       return savedToken;
     }
 
     // Request permission
-    // console.log('[FCM] Requesting notification permission...');
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      // console.log('[FCM] ❌ Notification permission not granted, skipping FCM registration');
-      return null;
+      throw new Error('Notification permission denied by browser. Please enable notifications in your browser address bar/settings.');
     }
 
     // Get token
-    // console.log('[FCM] Getting FCM token from Firebase...');
     const token = await getFCMToken();
     if (!token) {
-      // console.log('[FCM] ❌ Failed to get FCM token from Firebase');
-      return null;
+      throw new Error('Failed to get push token from Firebase. Check your internet connection or Firebase config.');
     }
-    // console.log('[FCM] ✅ Got FCM token:', token.substring(0, 30) + '...');
 
     // Determine API endpoint based on user type
     let endpoint;
@@ -145,7 +137,6 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
         authTokenKey = 'accessToken';
         break;
       default:
-        // console.warn(`[FCM] Unknown userType: ${userType}, defaulting to user`);
         endpoint = '/users/fcm-tokens/save';
         authTokenKey = 'accessToken';
     }
@@ -153,13 +144,11 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
     // Get auth token
     const authToken = localStorage.getItem(authTokenKey);
     if (!authToken) {
-      // console.log(`[FCM] ❌ No auth token found for ${userType} (${authTokenKey}), skipping registration`);
-      return null;
+      throw new Error('User not logged in. Please sign in and try again.');
     }
 
     // Save to backend
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-    // console.log(`[FCM] Saving to backend: ${baseUrl}${endpoint}`);
 
     const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
@@ -173,20 +162,20 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
       })
     });
 
-    // console.log(`[FCM] Backend response status: ${response.status}`);
-
     if (response.ok) {
       localStorage.setItem(storageKey, token);
-      // console.log('[FCM] ✅ FCM token registered with backend successfully!');
       return token;
     } else {
-      const error = await response.json();
-      // console.error('[FCM] ❌ Failed to register token with backend:', error);
-      return null;
+      let errMsg = 'Failed to save notification token on server';
+      try {
+        const error = await response.json();
+        errMsg = error.error || error.message || errMsg;
+      } catch (e) {}
+      throw new Error(errMsg);
     }
   } catch (error) {
-    // console.error('[FCM] ❌ Error registering FCM token:', error);
-    return null;
+    console.error('[FCM] ❌ Error registering FCM token:', error);
+    throw error;
   }
 }
 
@@ -309,11 +298,48 @@ async function initializePushNotifications() {
   }
 }
 
+/**
+ * Trigger a test push notification
+ * @returns {Promise<Object>}
+ */
+async function testPushNotification() {
+  try {
+    const token = await registerFCMToken('user', true);
+    if (!token) {
+      throw new Error('FCM token registration failed. Please allow notification permission.');
+    }
+
+    const authToken = localStorage.getItem('accessToken');
+    if (!authToken) {
+      throw new Error('Authentication token not found. Please log in first.');
+    }
+
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const response = await fetch(`${baseUrl}/users/fcm-tokens/test`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Server failed to send test notification');
+    }
+    return data;
+  } catch (error) {
+    console.error('[FCM Test] Error:', error);
+    throw error;
+  }
+}
+
 export {
   initializePushNotifications,
   registerFCMToken,
   removeFCMToken,
   setupForegroundNotificationHandler,
   requestNotificationPermission,
-  getFCMToken
+  getFCMToken,
+  testPushNotification
 };

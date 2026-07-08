@@ -11,6 +11,7 @@ import { useAuth } from '../../../../context/AuthContext';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import AddressSelectionModal from '../../pages/Checkout/components/AddressSelectionModal';
+import { testPushNotification } from '../../../../services/pushNotificationService';
 
 const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks, siteIdentity, homeContent }) => {
   const logoRef = useRef(null);
@@ -20,6 +21,26 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [houseNumber, setHouseNumber] = useState('');
+  const [isTestPushSending, setIsTestPushSending] = useState(false);
+  const [testPushSent, setTestPushSent] = useState(false);
+
+  const handleTestPushClick = async () => {
+    if (testPushSent) {
+      toast.error('Test notification already sent once.');
+      return;
+    }
+    setIsTestPushSending(true);
+    const loadingToast = toast.loading('Initializing test push...');
+    try {
+      await testPushNotification();
+      toast.success('Test notification sent successfully!', { id: loadingToast });
+      setTestPushSent(true);
+    } catch (err) {
+      toast.error(err.message || 'Failed to send test push', { id: loadingToast });
+    } finally {
+      setIsTestPushSending(false);
+    }
+  };
 
   const brandName = siteIdentity?.brandName || 'NEXORA GO';
   const slogan = siteIdentity?.slogan || 'Everything you need, one place';
@@ -162,6 +183,22 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
 
           {/* Right: Actions (Search, Cart, Account, Location) */}
           <div className="flex items-center gap-1 sm:gap-5">
+            {/* Test Push Button */}
+            <button
+              onClick={handleTestPushClick}
+              disabled={isTestPushSending || testPushSent}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all duration-300 border ${
+                testPushSent
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : isTestPushSending
+                  ? 'bg-blue-50 text-blue-400 border-blue-100 cursor-wait'
+                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-transparent hover:shadow-md hover:scale-105 active:scale-95 shadow-sm'
+              }`}
+            >
+              <span>🔔</span>
+              <span>{testPushSent ? 'Push Sent' : isTestPushSending ? 'Sending...' : 'Test Push'}</span>
+            </button>
+
             {/* Location (Subtle integration) */}
             <div
               className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
@@ -220,6 +257,25 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
       {isMobileMenuOpen && (
         <div className="lg:hidden border-t border-gray-100 bg-white shadow-lg">
           <div className="flex flex-col p-4 gap-4">
+            {/* Mobile Test Push Button */}
+            <button
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                handleTestPushClick();
+              }}
+              disabled={isTestPushSending || testPushSent}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-extrabold transition-all duration-300 border ${
+                testPushSent
+                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                  : isTestPushSending
+                  ? 'bg-blue-50 text-blue-400 border-blue-100 cursor-wait'
+                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-transparent shadow-sm'
+              }`}
+            >
+              <span>🔔</span>
+              <span>{testPushSent ? 'Push Sent' : isTestPushSending ? 'Sending...' : 'Test Push Notification'}</span>
+            </button>
+
             {/* Mobile Location Selector (Visible under md) */}
             <div
               className="flex md:hidden items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
