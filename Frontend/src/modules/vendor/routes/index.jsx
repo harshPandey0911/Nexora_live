@@ -8,6 +8,7 @@ import CashLimitModal from '../components/common/CashLimitModal';
 import GlobalBookingAlert from '../components/common/GlobalBookingAlert';
 import LogoLoader from '../../../components/common/LogoLoader';
 import VendorLayout from '../components/layout/VendorLayout';
+import { useAuth } from '../../../context/AuthContext';
 
 const lazyLoad = (importFunc) => {
   return lazy(() => {

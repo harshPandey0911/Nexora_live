@@ -35,3 +35,6 @@ data/
 # Firebase Config
 config/firebase-service-account.json
 
+Backend/config/*.json
+
+Backend/cloudinary-image-urls.json
