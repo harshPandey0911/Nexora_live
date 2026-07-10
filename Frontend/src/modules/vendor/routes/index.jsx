@@ -77,16 +77,18 @@ const LoadingFallback = () => (
 );
 
 const SubscriptionGuard = ({ children }) => {
-  const { user } = useAuth();
-  if (user && (!user.subscription || user.subscription.status !== 'active')) {
+  const vendorDataRaw = localStorage.getItem('vendorData');
+  const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
+  if (vendor && (!vendor.subscription || vendor.subscription.status !== 'active')) {
     return <Navigate to="/vendor/subscribe" replace />;
   }
   return children;
 };
 
 const SubscribeGuard = ({ children }) => {
-  const { user } = useAuth();
-  if (user && user.subscription && user.subscription.status === 'active') {
+  const vendorDataRaw = localStorage.getItem('vendorData');
+  const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
+  if (vendor && vendor.subscription && vendor.subscription.status === 'active') {
     return <Navigate to="/vendor/dashboard" replace />;
   }
   return children;

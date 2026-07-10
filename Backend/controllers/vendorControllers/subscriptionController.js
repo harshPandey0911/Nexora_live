@@ -29,7 +29,12 @@ exports.createSubscriptionOrder = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      order: orderResult.order,
+      order: {
+        id: orderResult.orderId,
+        amount: orderResult.amount, // already in paise
+        currency: orderResult.currency,
+        receipt: orderResult.receipt
+      },
       plan: {
         id: plan._id,
         name: plan.name,

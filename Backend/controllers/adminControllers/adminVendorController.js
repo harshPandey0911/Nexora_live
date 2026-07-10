@@ -44,6 +44,7 @@ const getAllVendors = async (req, res) => {
     // Get vendors
     const vendors = await Vendor.find(query)
       .select('-password')
+      .populate('subscription.planId', 'name price duration')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));

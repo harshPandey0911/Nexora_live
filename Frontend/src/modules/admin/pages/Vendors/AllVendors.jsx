@@ -60,6 +60,7 @@ const AllVendors = () => {
           },
           createdAt: vendor.createdAt,
           isActive: vendor.isActive,
+          subscription: vendor.subscription,
           permissions: vendor.permissions || AVAILABLE_PERMISSIONS.map(p => p.id),
           trainingScore: vendor.trainingScore || 0,
           rating: vendor.rating || 0,
@@ -329,10 +330,19 @@ const AllVendors = () => {
                   filteredVendors.map((vendor) => (
                     <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
-                        <div>
+                        <div className="flex flex-col gap-0.5">
                           <p className="font-bold text-gray-900 text-xs">{vendor.name}</p>
                           <p className="text-[10px] text-gray-500">{vendor.phone}</p>
                           <p className="text-[10px] text-gray-400">{vendor.email}</p>
+                          {vendor.subscription && vendor.subscription.status === 'active' ? (
+                            <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-50 text-green-700 text-[9px] font-bold border border-green-100 w-fit">
+                              Plan: {vendor.subscription.planId?.name || 'Active Plan'} ({vendor.subscription.planId?.duration || '1'} Month)
+                            </span>
+                          ) : (
+                            <span className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-50 text-gray-400 text-[9px] font-bold border border-gray-200 w-fit">
+                              No Active Plan
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -503,6 +513,22 @@ const AllVendors = () => {
                   </span>
                 </div>
               </div>
+              {selectedVendor.subscription && selectedVendor.subscription.status === 'active' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Active Plan</label>
+                    <div className="text-sm font-bold text-green-600">
+                      {selectedVendor.subscription.planId?.name || 'Active Plan'} ({selectedVendor.subscription.planId?.duration || '1'} Month)
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Expires On</label>
+                    <div className="text-sm text-gray-900">
+                      {selectedVendor.subscription.expiryDate ? new Date(selectedVendor.subscription.expiryDate).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Performance Analytics */}

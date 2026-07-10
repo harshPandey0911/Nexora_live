@@ -18,8 +18,8 @@ const Subscribe = () => {
 
   const fetchPlans = async () => {
     try {
-      // Fetch plans from admin plans endpoint (available publicly or for logged in vendor)
-      const res = await api.get('/admin/plans');
+      // Fetch plans from public plans endpoint
+      const res = await api.get('/public/plans');
       if (res.data && res.data.success) {
         // Filter only active plans
         const activePlans = (res.data.data || []).filter(p => p.isActive);
