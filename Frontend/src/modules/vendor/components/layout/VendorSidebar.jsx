@@ -7,6 +7,7 @@ import {
   FiUser, FiHelpCircle, FiLogOut, FiBell
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { logout } from '../../services/authService';
 
 const VendorSidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
@@ -109,9 +110,14 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
             <motion.div
               key={item.id}
               whileTap={{ scale: 0.98 }}
-              onClick={() => {
+              onClick={async () => {
                 setIsOpen?.(false);
                 if (item.id === 'logout') {
+                  try {
+                    await logout();
+                  } catch (e) {
+                    console.error('Logout failed:', e);
+                  }
                   navigate('/vendor/login');
                 } else {
                   navigate(item.path);
