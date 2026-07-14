@@ -4,6 +4,7 @@ import { FiArrowLeft, FiSend, FiUpload, FiCheck, FiCreditCard, FiSmartphone, FiD
 import vendorWalletService from '../../../../services/vendorWalletService';
 import { toast } from 'react-hot-toast';
 import flutterBridge from '../../../../utils/flutterBridge';
+import { uploadToCloudinary } from '../../../../utils/cloudinaryUpload';
 
 const SettlementRequest = () => {
   const navigate = useNavigate();
@@ -82,36 +83,6 @@ const SettlementRequest = () => {
         resolve(file);
       };
     });
-  };
-
-  const uploadToCloudinary = async (file) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const sigRes = await fetch(`${apiUrl}/api/upload/sign-signature`);
-    const sigData = await sigRes.json();
-
-    if (!sigData.success) {
-      throw new Error(sigData.message || 'Failed to get upload signature');
-    }
-
-    const { signature, timestamp, cloudName, apiKey, folder } = sigData;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('api_key', apiKey);
-    formData.append('timestamp', timestamp);
-    formData.append('signature', signature);
-    if (folder) formData.append('folder', folder);
-
-    const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-      { method: 'POST', body: formData }
-    );
-
-    const data = await res.json();
-    if (data.error) {
-      throw new Error(data.error.message);
-    }
-    return data.secure_url;
   };
 
   const handleNativeCamera = async () => {
