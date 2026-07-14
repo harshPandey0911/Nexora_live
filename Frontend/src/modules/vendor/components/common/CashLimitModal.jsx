@@ -34,6 +34,23 @@ const CashLimitModal = () => {
 
   // Show modal based on data & Re-show on navigation
   useEffect(() => {
+    const token = sessionStorage.getItem('vendorAccessToken') || localStorage.getItem('vendorAccessToken');
+    if (!token) {
+      setShow(false);
+      return;
+    }
+
+    const isPublicRoute = location.pathname === '/vendor/login' || 
+                         location.pathname === '/vendor/signup' || 
+                         location.pathname === '/vendor/training' ||
+                         location.pathname === '/vendor/forgot-password' ||
+                         location.pathname.includes('/vendor/reset-password');
+
+    if (isPublicRoute) {
+      setShow(false);
+      return;
+    }
+
     if (walletData) {
       const dues = walletData.dues || 0;
       const limit = walletData.cashLimit || 10000;
