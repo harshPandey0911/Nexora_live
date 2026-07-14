@@ -76,21 +76,100 @@ const LoadingFallback = () => (
   <LogoLoader />
 );
 
+import api from '../../../services/api';
+
 const SubscriptionGuard = ({ children }) => {
-  const vendorDataRaw = localStorage.getItem('vendorData');
-  const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
-  if (vendor && (!vendor.subscription || vendor.subscription.status !== 'active')) {
+  const [checking, setChecking] = React.useState(true);
+  const [status, setStatus] = React.useState(null);
+
+  React.useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const res = await api.get('/vendors/subscription/status');
+        if (res.data && res.data.success) {
+          const subscription = res.data.subscription;
+          
+          // Update the localStorage vendorData so we are in sync
+          const vendorDataRaw = localStorage.getItem('vendorData');
+          if (vendorDataRaw) {
+            const vendor = JSON.parse(vendorDataRaw);
+            vendor.subscription = subscription;
+            localStorage.setItem('vendorData', JSON.stringify(vendor));
+          }
+          
+          setStatus(subscription.status);
+        } else {
+          setStatus('inactive');
+        }
+      } catch (err) {
+        console.error('Error verifying subscription status:', err);
+        // Fallback to local storage if API call fails
+        const vendorDataRaw = localStorage.getItem('vendorData');
+        const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
+        setStatus(vendor?.subscription?.status || 'inactive');
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkSubscription();
+  }, []);
+
+  if (checking) {
+    return <LogoLoader />;
+  }
+
+  if (status !== 'active') {
     return <Navigate to="/vendor/subscribe" replace />;
   }
+
   return children;
 };
 
 const SubscribeGuard = ({ children }) => {
-  const vendorDataRaw = localStorage.getItem('vendorData');
-  const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
-  if (vendor && vendor.subscription && vendor.subscription.status === 'active') {
+  const [checking, setChecking] = React.useState(true);
+  const [status, setStatus] = React.useState(null);
+
+  React.useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const res = await api.get('/vendors/subscription/status');
+        if (res.data && res.data.success) {
+          const subscription = res.data.subscription;
+          
+          // Sync localStorage
+          const vendorDataRaw = localStorage.getItem('vendorData');
+          if (vendorDataRaw) {
+            const vendor = JSON.parse(vendorDataRaw);
+            vendor.subscription = subscription;
+            localStorage.setItem('vendorData', JSON.stringify(vendor));
+          }
+          
+          setStatus(subscription.status);
+        } else {
+          setStatus('inactive');
+        }
+      } catch (err) {
+        console.error('Error verifying subscription status in SubscribeGuard:', err);
+        const vendorDataRaw = localStorage.getItem('vendorData');
+        const vendor = vendorDataRaw ? JSON.parse(vendorDataRaw) : null;
+        setStatus(vendor?.subscription?.status || 'inactive');
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkSubscription();
+  }, []);
+
+  if (checking) {
+    return <LogoLoader />;
+  }
+
+  if (status === 'active') {
     return <Navigate to="/vendor/dashboard" replace />;
   }
+
   return children;
 };
 
