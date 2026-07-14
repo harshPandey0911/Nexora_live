@@ -113,6 +113,15 @@ exports.getSubscriptionStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
 
+    // Auto-expire subscription if current date has passed the expiryDate
+    if (vendor.subscription && vendor.subscription.status === 'active' && vendor.subscription.expiryDate) {
+      const now = new Date();
+      if (now > new Date(vendor.subscription.expiryDate)) {
+        vendor.subscription.status = 'expired';
+        await vendor.save();
+      }
+    }
+
     res.status(200).json({
       success: true,
       subscription: vendor.subscription || { status: 'inactive' }

@@ -2,7 +2,16 @@ import axios from 'axios';
 import { apiCache } from '../utils/apiCache';
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// Dynamic fallback for production build: if hostname is not localhost but API URL points to localhost,
+// use the current window domain's /api to communicate with the server.
+if (typeof window !== 'undefined' && 
+    window.location.hostname !== 'localhost' && 
+    window.location.hostname !== '127.0.0.1' && 
+    API_BASE_URL.includes('localhost:5000')) {
+  API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
+}
 
 // Create axios instance
 const api = axios.create({
