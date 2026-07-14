@@ -122,7 +122,7 @@ const addWorker = async (req, res) => {
     // Create worker
     worker = await Worker.create({
       name,
-      email: email || null, // Handle empty string as null for sparse index
+      email: email || undefined, // Handle empty string as undefined for sparse index
       phone,
       password,
       profilePhoto: profilePhoto || null,
@@ -232,7 +232,7 @@ const updateWorker = async (req, res) => {
 
     // Update fields
     if (updateData.name) worker.name = updateData.name;
-    if (updateData.email !== undefined) worker.email = updateData.email || null;
+    if (updateData.email !== undefined) worker.email = updateData.email || undefined;
     if (updateData.serviceCategories) worker.serviceCategories = updateData.serviceCategories;
     if (updateData.address) worker.address = { ...worker.address, ...updateData.address };
     if (updateData.status) worker.status = updateData.status;

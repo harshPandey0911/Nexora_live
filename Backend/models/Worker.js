@@ -13,8 +13,7 @@ const workerSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // Allow multiple nulls
     trim: true,
-    lowercase: true,
-    default: null
+    lowercase: true
   },
   phone: {
     type: String,
