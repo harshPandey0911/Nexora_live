@@ -71,6 +71,8 @@ const WorkersList = lazyLoad(() => import('../pages/WorkersList'));
 const AddEditWorker = lazyLoad(() => import('../pages/AddEditWorker'));
 const AssignWorker = lazyLoad(() => import('../pages/AssignWorker'));
 const Subscribe = lazyLoad(() => import('../pages/Subscribe/Subscribe'));
+const TermsConditions = lazyLoad(() => import('../pages/TermsConditions'));
+const PrivacyPolicy = lazyLoad(() => import('../pages/PrivacyPolicy'));
 
 const LoadingFallback = () => (
   <LogoLoader />
@@ -184,6 +186,8 @@ const VendorRoutes = () => {
           <Route path="/training" element={<PublicRoute userType="vendor"><Training /></PublicRoute>} />
           <Route path="/forgot-password" element={<PublicRoute userType="vendor"><ForgotPassword /></PublicRoute>} />
           <Route path="/reset-password/:token" element={<PublicRoute userType="vendor"><ResetPassword /></PublicRoute>} />
+          <Route path="/terms" element={<TermsConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
 
           {/* Subscription payment screen */}
           <Route path="/subscribe" element={<ProtectedRoute userType="vendor"><SubscribeGuard><Subscribe /></SubscribeGuard></ProtectedRoute>} />

@@ -6,7 +6,7 @@ import { configService } from '../../../../services/configService';
 import { publicCatalogService } from '../../../../services/catalogService';
 import api from '../../../../services/api';
 
-const Footer = () => {
+const Footer = ({ hasBottomNav }) => {
   const location = useLocation();
   const currentYear = new Date().getFullYear();
   const [settings, setSettings] = useState(null);
@@ -87,7 +87,7 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="bg-gray-50 border-t border-gray-100 pt-10 pb-20 lg:pb-12 mt-4 relative overflow-hidden group">
+    <footer className={`bg-gray-50 border-t border-gray-100 pt-16 ${hasBottomNav ? 'pb-28' : 'pb-8'} lg:pb-12 mt-20 relative overflow-hidden group`}>
       {/* Decorative Background Elements */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-teal-500/10" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl -ml-32 -mb-32 transition-colors group-hover:bg-orange-500/10" />
@@ -144,8 +144,8 @@ const Footer = () => {
             © {currentYear} {settings?.companyName || 'Nexora Go'}. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <Link to="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Privacy</Link>
-            <Link to="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Terms</Link>
+            <Link to="/user/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Privacy</Link>
+            <Link to="/user/terms" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Terms</Link>
             <Link to="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cookies</Link>
           </div>
         </div>

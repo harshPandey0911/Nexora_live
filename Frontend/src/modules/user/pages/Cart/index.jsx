@@ -17,11 +17,15 @@ import { toast } from 'react-hot-toast';
 import { useCart } from '../../../../context/CartContext';
 import Header from '../../components/layout/Header';
 import { publicCatalogService } from '../../../../services/catalogService';
+import { getPlans } from '../../services/planService';
+import { userAuthService } from '../../../../services/authService';
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, isLoading: loading, removeItem, updateItem } = useCart();
   const [homeContent, setHomeContent] = useState(null);
+  const [planBenefits, setPlanBenefits] = useState({ name: '', freeCategories: [], freeBrands: [], freeServices: [] });
+  const [userPlanActive, setUserPlanActive] = useState(false);
 
   useEffect(() => {
     const fetchHome = async () => {
@@ -29,6 +33,36 @@ const Cart = () => {
       if (res.success) setHomeContent(res.homeContent);
     };
     fetchHome();
+  }, []);
+
+  useEffect(() => {
+    const fetchBenefits = async () => {
+      try {
+        const [plansRes, userRes] = await Promise.all([
+          getPlans(),
+          userAuthService.getProfile()
+        ]);
+
+        if (plansRes.success && userRes.success && userRes.user?.plans?.isActive) {
+          const userPlanName = userRes.user.plans.name;
+          const activePlan = plansRes.data.find(p => p.name === userPlanName);
+
+          if (activePlan) {
+            setUserPlanActive(true);
+            setPlanBenefits({
+              name: activePlan.name,
+              freeCategories: activePlan.freeCategories || [],
+              freeBrands: activePlan.freeBrands || [],
+              freeServices: activePlan.freeServices || []
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load plan benefits in Cart', e);
+      }
+    };
+
+    fetchBenefits();
   }, []);
 
   const toAssetUrl = (url) => {
@@ -39,15 +73,58 @@ const Cart = () => {
     return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
   };
 
+  const normalizeId = (id) => {
+    if (!id) return '';
+    if (typeof id === 'object') {
+      return id._id ? id._id.toString() : (id.$oid ? id.$oid.toString() : JSON.stringify(id));
+    }
+    return id.toString();
+  };
+
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce((sum, item) => sum + (item.price || 0), 0);
-    const tax = subtotal * 0.18; // 18% GST
-    const delivery = subtotal > 0 ? 49 : 0;
+    
+    // Calculate Prime savings
+    let primeSavings = 0;
+    if (userPlanActive) {
+      cartItems.forEach(item => {
+        const itemCatId = normalizeId(item.categoryId);
+        const itemBrandId = normalizeId(item.sectionId);
+        const itemServiceId = normalizeId(item.serviceId);
+
+        const isFreeCategory = itemCatId && planBenefits.freeCategories.some(cat => normalizeId(cat) === itemCatId);
+        const isFreeBrand = itemBrandId && planBenefits.freeBrands.some(brand => normalizeId(brand) === itemBrandId);
+        const isFreeService = itemServiceId && planBenefits.freeServices.some(svc => normalizeId(svc) === itemServiceId);
+
+        if (isFreeCategory || isFreeBrand || isFreeService) {
+          primeSavings += (item.price || 0);
+        }
+      });
+    }
+
+    const tax = cartItems.reduce((sum, item) => {
+      const itemCatId = normalizeId(item.categoryId);
+      const itemBrandId = normalizeId(item.sectionId);
+      const itemServiceId = normalizeId(item.serviceId);
+
+      const isFreeCategory = itemCatId && planBenefits.freeCategories.some(cat => normalizeId(cat) === itemCatId);
+      const isFreeBrand = itemBrandId && planBenefits.freeBrands.some(brand => normalizeId(brand) === itemBrandId);
+      const isFreeService = itemServiceId && planBenefits.freeServices.some(svc => normalizeId(svc) === itemServiceId);
+
+      const itemPrice = userPlanActive && (isFreeCategory || isFreeBrand || isFreeService) ? 0 : (item.price || 0);
+      const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : 18;
+      return sum + (itemPrice * (itemGst / 100));
+    }, 0);
+
+    const netSubtotal = subtotal - primeSavings;
+    const delivery = netSubtotal > 0 ? 49 : 0;
+    
     return {
       subtotal,
-      tax,
+      primeSavings,
+      tax: Math.round(tax),
       delivery,
-      total: subtotal + tax + delivery
+      total: Math.max(0, netSubtotal + Math.round(tax) + delivery)
     };
   }, [cartItems]);
 
@@ -224,8 +301,14 @@ const Cart = () => {
                     <span className="font-semibold text-gray-400 uppercase tracking-wider">Basket Subtotal</span>
                     <span className="font-bold text-gray-900">₹{totals.subtotal.toLocaleString()}</span>
                   </div>
+                  {totals.primeSavings > 0 && (
+                    <div className="flex justify-between items-center text-xs text-emerald-600">
+                      <span className="font-semibold uppercase tracking-wider">Prime Discount</span>
+                      <span className="font-bold">-₹{totals.primeSavings.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-semibold text-gray-400 uppercase tracking-wider">GST (18%)</span>
+                    <span className="font-semibold text-gray-400 uppercase tracking-wider">GST</span>
                     <span className="font-bold text-gray-900">₹{totals.tax.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
@@ -256,13 +339,15 @@ const Cart = () => {
               </div>
  
               {/* Promo Section */}
-              <div className="bg-emerald-500 rounded-2xl p-4 sm:p-5 text-white relative overflow-hidden shadow-md">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12" />
-                <h4 className="text-xs font-bold uppercase tracking-widest mb-1">Nexus Prime Discount</h4>
-                <p className="text-[10px] font-semibold opacity-90 uppercase leading-normal">
-                  You are saving ₹540 on this order with your Prime status.
-                </p>
-              </div>
+              {userPlanActive && totals.primeSavings > 0 && (
+                <div className="bg-emerald-500 rounded-2xl p-4 sm:p-5 text-white relative overflow-hidden shadow-md">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12" />
+                  <h4 className="text-xs font-bold uppercase tracking-widest mb-1">Nexus Prime Discount</h4>
+                  <p className="text-[10px] font-semibold opacity-90 uppercase leading-normal">
+                    You are saving ₹{totals.primeSavings.toLocaleString()} on this order with your Prime status.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

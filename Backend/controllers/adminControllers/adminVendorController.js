@@ -1,4 +1,5 @@
 const Vendor = require('../../models/Vendor');
+const User = require('../../models/User');
 const Booking = require('../../models/Booking');
 const VendorBill = require('../../models/VendorBill');
 const { validationResult } = require('express-validator');
@@ -379,18 +380,33 @@ const getAllVendorBookings = async (req, res) => {
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // If search is provided, we need to find vendors by business name or name first
+    // If search is provided, we find matching vendors, matching users, or matching booking numbers
     if (search) {
-      const vendors = await Vendor.find({
-        $or: [
-          { businessName: { $regex: search, $options: 'i' } },
-          { name: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } }
-        ]
-      }).select('_id');
+      const [vendors, users] = await Promise.all([
+        Vendor.find({
+          $or: [
+            { businessName: { $regex: search, $options: 'i' } },
+            { name: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } }
+          ]
+        }).select('_id'),
+        User.find({
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { phone: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } }
+          ]
+        }).select('_id')
+      ]);
 
       const vendorIds = vendors.map(v => v._id);
-      query.vendorId = { $in: vendorIds };
+      const userIds = users.map(u => u._id);
+
+      query.$or = [
+        { vendorId: { $in: vendorIds } },
+        { userId: { $in: userIds } },
+        { bookingNumber: { $regex: search, $options: 'i' } }
+      ];
     }
 
     const bookings = await Booking.find(query)

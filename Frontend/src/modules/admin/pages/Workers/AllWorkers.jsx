@@ -515,8 +515,19 @@ const AllWorkers = () => {
             <label className="block text-sm font-semibold text-gray-700 mb-1">Amount (₹)</label>
             <input
               type="number"
+              min="0"
               value={payAmount}
-              onChange={(e) => setPayAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || parseFloat(val) >= 0) {
+                  setPayAmount(val);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === '+') {
+                  e.preventDefault();
+                }
+              }}
               placeholder="Enter amount"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />

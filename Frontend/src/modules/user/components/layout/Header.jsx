@@ -228,8 +228,8 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
             {/* Profile / Account Link (Desktop only) */}
             <Link to="/user/account" className="hidden lg:flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-black/[0.03]">
               <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all duration-300 shadow-sm overflow-hidden border border-black/[0.03]">
-                {user?.photo ? (
-                  <img src={user.photo} alt="Profile" className="w-full h-full object-cover" />
+                {user?.profilePhoto || user?.photo ? (
+                  <img src={user.profilePhoto || user.photo} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <HiOutlineUser className="w-5 h-5" />
                 )}

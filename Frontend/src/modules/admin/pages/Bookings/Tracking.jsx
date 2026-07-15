@@ -12,12 +12,29 @@ const Tracking = () => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(search), 500);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1); // reset to page 1 on new search
+    }, 500);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // Parse ID from URL and auto-select booking
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id && bookings.length > 0) {
+      const order = bookings.find(b => b._id === id);
+      if (order) {
+        setSelectedOrder(order);
+      }
+    }
+  }, [bookings]);
 
   // Fetch bookings
   useEffect(() => {
@@ -25,13 +42,14 @@ const Tracking = () => {
       try {
         setLoading(true);
         const params = {
-          page: 1,
-          limit: 20, // get more for tracking list
+          page,
+          limit: 20,
           search: debouncedSearch,
         };
         const res = await adminBookingService.getAllBookings(params);
         if (res.success) {
           setBookings(res.data);
+          setTotalPages(res.pagination?.pages || 1);
           // Automatically select first order if none selected and data exists (optional)
           // if (res.data.length > 0 && !selectedOrder) setSelectedOrder(res.data[0]);
         }
@@ -43,7 +61,8 @@ const Tracking = () => {
       }
     };
     fetchData();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, page]);
+
 
   const getStatusStep = (status) => {
     // Map status to step index based on project workflow
@@ -106,8 +125,8 @@ const Tracking = () => {
       <div className="flex flex-col lg:flex-row gap-6 items-start h-[calc(100vh-250px)]">
         {/* Left: Orders Table */}
         <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden h-full flex flex-col">
-          <div className="overflow-y-auto flex-1">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-auto flex-1">
+            <table className="w-full text-left border-collapse min-w-[750px]">
               <thead className="sticky top-0 bg-white z-10 shadow-sm">
                 <tr className="bg-gray-50/50">
                   <th className="p-4 text-xs font-bold text-gray-500 uppercase tracking-wider">BOOKING ID</th>
@@ -143,15 +162,19 @@ const Tracking = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white uppercase tracking-wide
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white uppercase tracking-wide whitespace-nowrap
                                     ${getStatusColor(booking.status)}`}>
                           {booking.status?.replace('_', ' ')}
                         </span>
                       </td>
                       <td className="p-4 text-gray-600 text-sm">
-                        {new Date(booking.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                        })}
+                        {(() => {
+                          const d = new Date(booking.createdAt);
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const year = d.getFullYear();
+                          return `${day}/${month}/${year}`;
+                        })()}
                       </td>
                       <td className="p-4 text-right">
                         <button
@@ -170,6 +193,28 @@ const Tracking = () => {
               </tbody>
             </table>
           </div>
+          {/* Pagination Footer */}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Page {page} of {totalPages}</p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right: Tracking Details Panel */}

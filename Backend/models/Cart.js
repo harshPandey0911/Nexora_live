@@ -58,6 +58,10 @@ const cartItemSchema = new mongoose.Schema({
     default: 1,
     min: 1
   },
+  gstPercentage: {
+    type: Number,
+    default: 18
+  },
   rating: {
     type: String,
     default: '4.8'

@@ -6,8 +6,8 @@ import { serviceService } from '../../../../../services/catalogService';
 import { z } from 'zod';
 
 const serviceSchema = z.object({
-  title: z.string().min(2, "Title is required"),
-  basePrice: z.number().min(0, "Price must be non-negative"),
+  title: z.string().trim().min(2, "Title is required"),
+  basePrice: z.number().gt(0, "Price must be greater than 0"),
   gstPercentage: z.number().min(0).max(100).default(18),
   discountPrice: z.number().optional()
 });
@@ -150,8 +150,20 @@ const BrandServicesModal = ({ isOpen, onClose, brand }) => {
               <label className="block text-xs font-semibold text-gray-600 mb-1">Base Price (₹)</label>
               <input
                 type="number"
+                min="0.01"
+                step="any"
                 value={form.basePrice}
-                onChange={e => setForm(p => ({ ...p, basePrice: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || parseFloat(val) >= 0) {
+                    setForm(p => ({ ...p, basePrice: val }));
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
                 placeholder="0"
                 className="w-full px-3 py-2 border rounded-lg text-sm"
               />

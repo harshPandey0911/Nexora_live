@@ -7,8 +7,8 @@ import { vendorCatalogService, categoryService } from "../../../../../services/c
 import { z } from "zod";
 
 const schema = z.object({
-  name: z.string().min(2, "Name is required"),
-  basePrice: z.number().min(0, "Price must be non-negative"),
+  name: z.string().trim().min(2, "Service Name must be at least 2 characters"),
+  basePrice: z.number().gt(0, "Base Price must be greater than 0"),
   description: z.string().optional(),
   categoryId: z.string().min(1, "Category is required")
 });
@@ -247,8 +247,20 @@ const VendorServicesPage = () => {
             <label className="block text-sm font-bold mb-1">Base Price (₹)</label>
             <input
               type="number"
+              min="0.01"
+              step="any"
               value={form.basePrice}
-              onChange={(e) => setForm(p => ({ ...p, basePrice: e.target.value }))}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || parseFloat(val) >= 0) {
+                  setForm(p => ({ ...p, basePrice: val }));
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-4 py-2 border rounded-xl"
               placeholder="0"
             />

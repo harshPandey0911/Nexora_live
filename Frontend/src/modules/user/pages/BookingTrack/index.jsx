@@ -607,7 +607,7 @@ const BookingTrack = () => {
       {/* Top Floating Header - Always Visible */}
       <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
         <button
-          onClick={() => navigate(`/user/booking/${id}`)}
+          onClick={() => navigate(-1)}
           className="pointer-events-auto bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg text-gray-700 hover:bg-white transition-all active:scale-95"
         >
           <FiArrowLeft className="w-6 h-6" />
@@ -947,12 +947,16 @@ const BookingTrack = () => {
 
             {/* Call Button */}
             {provider.phone && (
-              <a
-                href={`tel:${provider.phone}`}
-                className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const cleanPhone = provider.phone.replace(/[^\d+]/g, '');
+                  window.location.href = `tel:${cleanPhone}`;
+                }}
+                className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm cursor-pointer"
               >
                 <FiPhone className="w-5 h-5" />
-              </a>
+              </button>
             )}
           </div>
         )}

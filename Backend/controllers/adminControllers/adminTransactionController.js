@@ -26,8 +26,8 @@ const getAllTransactions = async (req, res) => {
       if (search) {
         const searchRegex = new RegExp(search, 'i');
         const [users, vendors] = await Promise.all([
-          User.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-          Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
+          User.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+          Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
         ]);
 
         bookingQuery.$or = [
@@ -164,9 +164,9 @@ const getAllTransactions = async (req, res) => {
 
       // We need to find matching users, vendors, workers and bookings first
       const [users, vendors, workers, bookings] = await Promise.all([
-        User.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-        Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-        Worker.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
+        User.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+        Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+        Worker.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
         Booking.find({ bookingNumber: searchRegex }).select('_id')
       ]);
 

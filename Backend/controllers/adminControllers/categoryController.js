@@ -21,6 +21,7 @@ const getAllCategories = async (req, res) => {
     if (req.query.isVendor === 'false') query.vendorId = null;
 
     const categories = await Category.find(query)
+      .populate('vendorId', 'name businessName')
       .select('-__v')
       .sort({ homeOrder: 1, createdAt: -1 })
       .lean();

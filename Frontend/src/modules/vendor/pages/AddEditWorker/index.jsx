@@ -12,20 +12,27 @@ import { z } from "zod";
 
 // Zod schemas
 const addWorkerSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  phone: z.string().regex(/^\d{10}$/, "Enter valid 10-digit phone number"),
+  name: z.string().trim().min(2, "Name is required"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit phone number starting with 6, 7, 8, or 9"),
+  email: z.string().trim().email("Enter a valid email address").optional().or(z.literal('')),
   password: z.string().min(6, "Password must be at least 6 characters"),
   serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
   aadhar: z.object({
     number: z.string().regex(/^\d{12}$/, "Aadhar must be 12 digits"),
     // document: z.any() 
   }),
-  // address: z.any().optional() // Make address optional or strict as needed
+  address: z.object({
+    addressLine1: z.string().trim().min(1, "Please set location coordinates"),
+    city: z.string().trim().min(1, "City is required"),
+    state: z.string().trim().min(1, "State is required"),
+    pincode: z.string().regex(/^\d{6}$/, "Pincode must be 6 digits")
+  })
 });
 
 const editWorkerSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  phone: z.string().regex(/^\d{10}$/, "Enter valid 10-digit phone number"),
+  name: z.string().trim().min(2, "Name is required"),
+  phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit phone number starting with 6, 7, 8, or 9"),
+  email: z.string().trim().email("Enter a valid email address").optional().or(z.literal('')),
   serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
 });
 
@@ -184,14 +191,27 @@ const AddEditWorker = () => {
   };
 
   const handleInputChange = (field, value) => {
+    let filteredValue = value;
+    if (field === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+    } else if (field === 'phone') {
+      const digits = value.replace(/\D/g, '');
+      if (digits.length > 0 && !['6', '7', '8', '9'].includes(digits[0])) {
+        filteredValue = formData.phone;
+      } else {
+        filteredValue = digits.slice(0, 10);
+      }
+    } else if (field === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setFormData(prev => ({
         ...prev,
-        [parent]: { ...prev[parent], [child]: value }
+        [parent]: { ...prev[parent], [child]: filteredValue }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData(prev => ({ ...prev, [field]: filteredValue }));
     }
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   };
@@ -250,8 +270,18 @@ const AddEditWorker = () => {
     const validationData = {
       name: formData.name,
       phone: formData.phone,
+      email: formData.email,
       serviceCategories: formData.serviceCategories,
-      ...(isEdit ? {} : { password: formData.password, aadhar: { number: formData.aadhar.number } })
+      ...(isEdit ? { email: formData.email } : { 
+        password: formData.password, 
+        aadhar: { number: formData.aadhar.number },
+        address: {
+          addressLine1: formData.address.addressLine1,
+          city: formData.address.city,
+          state: formData.address.state,
+          pincode: formData.address.pincode
+        }
+      })
     };
 
     const validationResult = schema.safeParse(validationData);

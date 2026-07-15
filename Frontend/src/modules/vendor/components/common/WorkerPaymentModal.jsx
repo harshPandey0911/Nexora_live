@@ -115,8 +115,19 @@ const WorkerPaymentModal = ({ isOpen, onClose, workerName, amountDue = 0, onConf
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-normal text-gray-400">₹</span>
                   <input
                     type="number"
+                    min="0"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === '' || parseFloat(val) >= 0) {
+                        setAmount(val);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+') {
+                        e.preventDefault();
+                      }
+                    }}
                     placeholder="0.00"
                     required
                     className="w-full pl-10 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all font-normal text-xl"

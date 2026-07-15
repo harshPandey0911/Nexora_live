@@ -123,11 +123,11 @@ const WorkerJobs = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <FiCalendar className="w-4 h-4" />
-                            <span>Date: {new Date(job.bookingDate).toLocaleDateString()}</span>
+                            <span>Date: {job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-GB') : 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <FiClock className="w-4 h-4" />
-                            <span>Time: {job.bookingTime}</span>
+                            <span>Time: {job.scheduledTime || 'N/A'}</span>
                           </div>
                         </div>
                       </div>

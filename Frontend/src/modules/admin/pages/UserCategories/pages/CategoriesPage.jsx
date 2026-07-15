@@ -533,8 +533,8 @@ const CategoriesPage = () => {
                     <td className="py-4 px-4 text-center">
                       {c.vendorId ? (
                         <div className="flex flex-col items-center">
-                          <span className="inline-block px-2 py-1 text-[10px] font-bold bg-orange-100 text-orange-700 rounded border border-orange-200">
-                            VENDOR
+                          <span className="inline-block px-2 py-1 text-[10px] font-bold bg-orange-100 text-orange-700 rounded border border-orange-200 max-w-[150px] truncate" title={typeof c.vendorId === 'object' ? (c.vendorId.businessName || c.vendorId.name) : 'Vendor'}>
+                            {typeof c.vendorId === 'object' ? (c.vendorId.businessName || c.vendorId.name) : 'VENDOR'}
                           </span>
                         </div>
                       ) : (

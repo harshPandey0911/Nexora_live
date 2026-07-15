@@ -165,11 +165,31 @@ const Plans = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let newValue = value;
+    if (name === 'validityMonths') {
+      const intVal = parseInt(value);
+      if (value !== '' && (isNaN(intVal) || intVal < 1)) {
+        newValue = 1;
+      }
+    } else if (name === 'price') {
+      const floatVal = parseFloat(value);
+      if (value !== '' && (isNaN(floatVal) || floatVal < 0)) {
+        newValue = 0;
+      }
+    }
+    setFormData(prev => ({ ...prev, [name]: newValue }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.validityMonths || parseInt(formData.validityMonths) < 1) {
+      toast.error('Validity must be at least 1 month');
+      return;
+    }
+    if (formData.price === '' || Number(formData.price) < 0) {
+      toast.error('Price cannot be negative');
+      return;
+    }
     try {
       // Create a clean payload with only IDs for benefit arrays
       const payload = {
@@ -455,6 +475,11 @@ const Plans = () => {
                       name="price"
                       value={formData.price}
                       onChange={handleInputChange}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === '+') {
+                          e.preventDefault();
+                        }
+                      }}
                       className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all font-bold text-gray-800"
                       required
                       placeholder="999"
@@ -470,6 +495,11 @@ const Plans = () => {
                     name="validityMonths"
                     value={formData.validityMonths}
                     onChange={handleInputChange}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === '+' || e.key === '.') {
+                        e.preventDefault();
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all font-bold text-gray-800"
                     required
                     placeholder="1"

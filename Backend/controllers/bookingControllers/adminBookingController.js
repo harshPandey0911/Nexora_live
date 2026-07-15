@@ -1,4 +1,5 @@
 const Booking = require('../../models/Booking');
+const User = require('../../models/User');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS } = require('../../utils/constants');
 
@@ -48,15 +49,33 @@ const getAllBookings = async (req, res) => {
 
     if (startDate || endDate) {
       query.scheduledDate = {};
-      if (startDate) query.scheduledDate.$gte = new Date(startDate);
-      if (endDate) query.scheduledDate.$lte = new Date(endDate);
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        query.scheduledDate.$gte = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.scheduledDate.$lte = end;
+      }
     }
 
-    // Search by booking number or service name
+    // Search by booking number, service name, or customer details
     if (search) {
+      const users = await User.find({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = users.map(u => u._id);
+
       query.$or = [
         { bookingNumber: { $regex: search, $options: 'i' } },
-        { serviceName: { $regex: search, $options: 'i' } }
+        { serviceName: { $regex: search, $options: 'i' } },
+        { userId: { $in: userIds } }
       ];
     }
 

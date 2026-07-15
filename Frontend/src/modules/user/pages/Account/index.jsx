@@ -120,6 +120,7 @@ const Account = () => {
   };
 
   const handleLogout = async () => {
+    if (!window.confirm('Are you sure you want to logout?')) return;
     try {
       await userAuthService.logout();
       toast.success('Logged out successfully');
@@ -346,15 +347,9 @@ const Account = () => {
 
           {/* Menu Groups */}
 
-          {/* Plans & Rewards */}
+          {/* Plans */}
           <motion.div variants={itemVariants} className="mb-6">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-2">Plans & Rewards</h3>
-            <MenuItem
-              icon={FiGift}
-              label="Refer & Earn"
-              onClick={() => navigate('/user/rewards')}
-              color="text-teal-600"
-            />
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 pl-2">Plans</h3>
             <MenuItem
               icon={FiFileText}
               label="My Plans"

@@ -53,15 +53,16 @@ const CommissionSettings = () => {
       ...prev,
       [category]: {
         ...prev[category],
-        [level]: numValue
+        [level]: numValue < 0 ? 0 : numValue
       }
     }));
   };
 
   const handleTdsChange = (value) => {
+    const numValue = parseFloat(value) || 0;
     setSettings(prev => ({
       ...prev,
-      tdsPercentage: parseFloat(value) || 0
+      tdsPercentage: numValue < 0 ? 0 : numValue
     }));
   };
 
@@ -118,6 +119,7 @@ const CommissionSettings = () => {
                   <div className="relative">
                     <input
                       type="number"
+                      min="0"
                       value={settings.commissionRates[`level${level}`]}
                       onChange={(e) => handleRateChange('commissionRates', `level${level}`, e.target.value)}
                       className="w-24 pl-4 pr-8 py-2 bg-white border border-gray-200 rounded-lg font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -146,6 +148,7 @@ const CommissionSettings = () => {
                   <div className="relative">
                     <input
                       type="number"
+                      min="0"
                       value={settings.tdsPercentage}
                       onChange={(e) => handleTdsChange(e.target.value)}
                       className="w-24 pl-4 pr-8 py-2 bg-white border border-emerald-200 rounded-lg font-bold text-emerald-800 focus:outline-none"
@@ -165,6 +168,7 @@ const CommissionSettings = () => {
                       <input
                         type="number"
                         step="0.1"
+                        min="0"
                         value={settings.platformFeeRates[`level${level}`]}
                         onChange={(e) => handleRateChange('platformFeeRates', `level${level}`, e.target.value)}
                         className="w-20 pl-3 pr-7 py-1.5 bg-white border border-blue-100 rounded-md font-bold text-blue-700 focus:outline-none text-xs"

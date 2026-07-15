@@ -39,9 +39,9 @@ const BottomNav = React.memo(() => {
   };
 
   return (
-    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center lg:hidden px-4">
+    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center lg:hidden px-4 pointer-events-none">
       <div
-        className="flex items-center justify-between bg-white/90 backdrop-blur-xl px-2 py-2 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-gray-100/50 w-full max-w-sm"
+        className="flex items-center justify-between bg-white/90 backdrop-blur-xl px-2 py-2 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-gray-100/50 w-full max-w-sm pointer-events-auto"
       >
         {navItems.map((item) => {
           const isActive = activeTab === item.id;

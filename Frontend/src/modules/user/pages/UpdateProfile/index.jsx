@@ -12,7 +12,7 @@ import { z } from "zod";
 // Zod schema
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Please enter a valid email address").refine(val => val.includes('@'), "Invalid email address"),
+  email: z.string().email("Please enter a valid email address").or(z.literal('')),
 });
 
 const UpdateProfile = () => {
@@ -156,17 +156,26 @@ const UpdateProfile = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let filteredValue = value;
+    if (name === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (name === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: filteredValue
     }));
   };
 
   const handleSave = async () => {
+    const nameVal = (formData.name || '').trim();
+    const emailVal = (formData.email || '').trim();
+
     // Zod Validation
     const validationResult = profileSchema.safeParse({
-      name: formData.name.trim(),
-      email: formData.email.trim()
+      name: nameVal,
+      email: emailVal
     });
 
     if (!validationResult.success) {
@@ -193,8 +202,8 @@ const UpdateProfile = () => {
       }
 
       const response = await userAuthService.updateProfile({
-        name: formData.name.trim(),
-        email: formData.email.trim() || null,
+        name: nameVal,
+        email: emailVal || null,
         profilePhoto: photoUrl
       });
 
@@ -212,7 +221,8 @@ const UpdateProfile = () => {
             localStorage.setItem('userData', JSON.stringify(response.user));
           }
         }
-        navigate('/user/account');
+        window.dispatchEvent(new Event('userAuthUpdated'));
+        navigate('/user/account', { replace: true });
       } else {
         toast.error(response.message || 'Failed to update profile');
       }
@@ -226,7 +236,7 @@ const UpdateProfile = () => {
   };
 
   const handleBack = () => {
-    navigate('/user/account');
+    navigate(-1);
   };
 
   return (
@@ -280,6 +290,15 @@ const UpdateProfile = () => {
                   id="user-photo-upload"
                   type="file"
                   accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoChange}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <input
+                  id="user-camera-upload"
+                  type="file"
+                  accept="image/*"
+                  capture="user"
                   className="hidden"
                   onChange={handlePhotoChange}
                   onClick={(e) => e.stopPropagation()}
@@ -447,10 +466,7 @@ const UpdateProfile = () => {
                     if (isFlutter) {
                       handleNativeCamera();
                     } else {
-                      // On web, if they want camera specifically we'd need another input, 
-                      // but standard input with capture="environment" works for mobile browsers.
-                      // For now, let's just trigger the same input which allows both on most browsers.
-                      document.getElementById('user-photo-upload')?.click();
+                      document.getElementById('user-camera-upload')?.click();
                     }
                   }}
                   className="flex flex-col items-center gap-3 p-6 rounded-2xl border border-teal-100 active:scale-95 transition-all"

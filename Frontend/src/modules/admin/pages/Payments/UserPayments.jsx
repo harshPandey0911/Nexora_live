@@ -208,12 +208,15 @@ const UserPayments = () => {
       {/* Filters & Search */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-96">
+          <label htmlFor="user-payments-search" className="sr-only">Search user payments</label>
           <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
+            id="user-payments-search"
             type="text"
             placeholder="Search by transaction ID, order ID, or customer..."
             value={filters.search}
             onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+            aria-label="Search user payments"
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
         </div>

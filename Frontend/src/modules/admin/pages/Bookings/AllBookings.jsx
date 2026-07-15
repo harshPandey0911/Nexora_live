@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   FiSearch, FiCalendar, FiDownload, FiMoreVertical,
-  FiClock, FiCheckCircle, FiBox, FiTruck, FiXCircle, FiRefreshCw, FiShoppingBag, FiUserCheck
+  FiClock, FiCheckCircle, FiBox, FiTruck, FiXCircle, FiRefreshCw, FiShoppingBag, FiUserCheck, FiUser
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { io } from 'socket.io-client';
 import { adminBookingService } from '../../../../services/adminBookingService';
 import { getDashboardStats } from '../../../../services/adminDashboardService';
 import adminVendorService from '../../../../services/adminVendorService';
+import { CustomDateInput } from '../../../../components/common';
+import Modal from '../UserCategories/components/Modal';
 
 const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => (
   <div className={`p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
@@ -24,8 +27,48 @@ const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => 
 );
 
 const AllBookings = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal and Dropdown states
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
+
+  // Auto-open booking details modal if ID is in the URL
+  useEffect(() => {
+    if (id && id !== 'tracking' && id !== 'notifications') {
+      const found = bookings.find(b => b._id === id);
+      if (found) {
+        setSelectedBooking(found);
+        setIsModalOpen(true);
+      } else {
+        const fetchSingleBooking = async () => {
+          try {
+            const res = await adminBookingService.getBookingById(id);
+            if (res.success && res.data) {
+              setSelectedBooking(res.data);
+              setIsModalOpen(true);
+            } else {
+              toast.error('Booking not found');
+            }
+          } catch (err) {
+            console.error(err);
+          }
+        };
+        fetchSingleBooking();
+      }
+    }
+  }, [id, bookings]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const closeDropdown = () => setActiveDropdownId(null);
+    document.addEventListener('click', closeDropdown);
+    return () => document.removeEventListener('click', closeDropdown);
+  }, []);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -196,19 +239,28 @@ const AllBookings = () => {
           </select>
 
           <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
-            <FiCalendar className="text-gray-400 w-3.5 h-3.5" />
-            <input
-              type="date"
+            <FiCalendar className="w-3.5 h-3.5 text-gray-400 mr-0.5" />
+            <CustomDateInput
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-transparent text-[11px] text-gray-600 focus:outline-none w-20"
+              max={endDate || new Date().toISOString().split('T')[0]}
+              onChange={(val) => {
+                setStartDate(val);
+                if (endDate && val > endDate) setEndDate(val);
+              }}
+              placeholder="dd/mm/yyyy"
+              showIcon={false}
             />
             <span className="text-gray-400 text-[10px]">to</span>
-            <input
-              type="date"
+            <CustomDateInput
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="bg-transparent text-[11px] text-gray-600 focus:outline-none w-20"
+              min={startDate || undefined}
+              max={new Date().toISOString().split('T')[0]}
+              onChange={(val) => {
+                setEndDate(val);
+                if (startDate && val < startDate) setStartDate(val);
+              }}
+              placeholder="dd/mm/yyyy"
+              showIcon={false}
             />
           </div>
 
@@ -293,10 +345,43 @@ const AllBookings = () => {
                         })}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                    <td className="px-4 py-3 text-right relative">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdownId(activeDropdownId === booking._id ? null : booking._id);
+                        }}
+                        className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      >
                         <FiMoreVertical className="w-4 h-4" />
                       </button>
+
+                      {/* Dropdown Menu */}
+                      {activeDropdownId === booking._id && (
+                        <div className="absolute right-4 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-50 text-left">
+                          <button
+                            onClick={() => {
+                              setSelectedBooking(booking);
+                              setIsModalOpen(true);
+                              setActiveDropdownId(null);
+                            }}
+                            className="w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer font-semibold"
+                          >
+                            <FiShoppingBag className="w-3.5 h-3.5 text-blue-500" />
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => {
+                              navigate(`/admin/bookings/tracking?id=${booking._id}`);
+                              setActiveDropdownId(null);
+                            }}
+                            className="w-full px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 flex items-center gap-2 cursor-pointer font-semibold"
+                          >
+                            <FiTruck className="w-3.5 h-3.5 text-green-500" />
+                            Track Booking
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -307,22 +392,101 @@ const AllBookings = () => {
 
         {/* Pagination Footer */}
         {!loading && bookings.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">Showing {bookings.length} of {stats.total} entries</p>
-            <div className="flex gap-1.5">
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30 flex-wrap gap-2">
+            {/* Entry count */}
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">
+              Showing {((page - 1) * 10) + 1}–{Math.min(page * 10, stats.total)} of {stats.total} entries
+            </p>
+
+            {/* Page pages */}
+            <div className="flex items-center gap-1">
+              {/* First page */}
+              <button
+                onClick={() => setPage(1)}
+                disabled={page === 1}
+                className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
+                title="First page"
+              >
+                «
+              </button>
+
+              {/* Prev */}
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
               >
                 Prev
               </button>
+
+              {/* Page number buttons with ellipsis */}
+              {(() => {
+                const pages = [];
+                const delta = 2;
+                const left = Math.max(2, page - delta);
+                const right = Math.min(totalPages - 1, page + delta);
+
+                // Always show page 1
+                pages.push(
+                  <button
+                    key={1}
+                    onClick={() => setPage(1)}
+                    className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === 1 ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
+                  >1</button>
+                );
+
+                // Left ellipsis
+                if (left > 2) {
+                  pages.push(<span key="left-ellipsis" className="px-1 text-gray-400 text-xs">...</span>);
+                }
+
+                // Middle pages
+                for (let i = left; i <= right; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      onClick={() => setPage(i)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === i ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
+                    >{i}</button>
+                  );
+                }
+
+                // Right ellipsis
+                if (right < totalPages - 1) {
+                  pages.push(<span key="right-ellipsis" className="px-1 text-gray-400 text-xs">...</span>);
+                }
+
+                // Always show last page if > 1
+                if (totalPages > 1) {
+                  pages.push(
+                    <button
+                      key={totalPages}
+                      onClick={() => setPage(totalPages)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === totalPages ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
+                    >{totalPages}</button>
+                  );
+                }
+
+                return pages;
+              })()}
+
+              {/* Next */}
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-50 hover:bg-white transition-all"
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
               >
                 Next
+              </button>
+
+              {/* Last page */}
+              <button
+                onClick={() => setPage(totalPages)}
+                disabled={page === totalPages}
+                className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
+                title="Last page"
+              >
+                »
               </button>
             </div>
           </div>
@@ -330,6 +494,151 @@ const AllBookings = () => {
       </div>
 
     </motion.div>
+
+    {/* Booking Details Modal */}
+    <Modal
+      isOpen={isModalOpen}
+      onClose={() => {
+        setIsModalOpen(false);
+        setSelectedBooking(null);
+        if (id) navigate('/admin/bookings/all');
+      }}
+      title="Booking Details"
+      size="md"
+    >
+      {selectedBooking && (
+        <div className="space-y-6">
+          {/* Booking Header Info */}
+          <div className="flex justify-between items-start border-b border-gray-100 pb-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">
+                {selectedBooking.serviceId?.title || 'General Service'}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Booking ID: <span className="font-mono font-semibold">{selectedBooking.bookingNumber || selectedBooking._id}</span>
+              </p>
+              <p className="text-xs text-gray-500">
+                Date: <span className="font-semibold">{selectedBooking.scheduledDate ? new Date(selectedBooking.scheduledDate).toLocaleDateString('en-GB') : 'N/A'}</span>
+              </p>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
+              ${selectedBooking.status === 'completed' ? 'bg-green-100 text-green-700' :
+                selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                selectedBooking.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
+                'bg-yellow-100 text-yellow-700'}`}
+            >
+              {selectedBooking.status?.toUpperCase()}
+            </span>
+          </div>
+
+          {/* Core Details Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column: Customer & Service Info */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Customer Details</h4>
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <p className="font-semibold text-gray-800">{selectedBooking.userId?.name || 'Verified Customer'}</p>
+                  <p className="text-gray-600">{selectedBooking.userId?.phone || selectedBooking.customerPhone || 'No Phone'}</p>
+                  <p className="text-gray-600 truncate">{selectedBooking.userId?.email || 'No Email'}</p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Schedule Details</h4>
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <p className="text-gray-600">
+                    Service Date: <span className="font-semibold text-gray-800">{selectedBooking.scheduledDate ? new Date(selectedBooking.scheduledDate).toLocaleDateString('en-GB') : 'N/A'}</span>
+                  </p>
+                  <p className="text-gray-600">
+                    Time Slot: <span className="font-semibold text-gray-800">{selectedBooking.scheduledTime || 'N/A'}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Worker & Vendor Info */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Service Execution</h4>
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <p className="text-gray-600">
+                    Assigned Worker: <span className="font-semibold text-gray-800">{selectedBooking.workerId?.name || 'Pending Assignment'}</span>
+                  </p>
+                  {selectedBooking.workerId?.phone && (
+                    <p className="text-gray-600">
+                      Worker Phone: <span className="font-semibold text-gray-800">{selectedBooking.workerId.phone}</span>
+                    </p>
+                  )}
+                  <p className="text-gray-600 mt-1 border-t border-gray-200/60 pt-1.5">
+                    Assigned Vendor: <span className="font-semibold text-gray-800">{selectedBooking.vendorId?.businessName || selectedBooking.vendorId?.name || 'Unassigned'}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment Info</h4>
+                <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-sm">
+                  <p className="text-gray-600">
+                    Method: <span className="font-semibold text-gray-800 capitalize">{selectedBooking.paymentMethod?.replace('_', ' ') || 'COD'}</span>
+                  </p>
+                  <p className="text-gray-600">
+                    Status: <span className={`font-semibold capitalize ${selectedBooking.paymentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'}`}>{selectedBooking.paymentStatus || 'Pending'}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Financial Summary */}
+          <div className="border-t border-gray-100 pt-4">
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Financial Breakdown</h4>
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span>₹{selectedBooking.subTotal || selectedBooking.finalAmount}</span>
+              </div>
+              {selectedBooking.gstAmount > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>GST</span>
+                  <span>₹{selectedBooking.gstAmount}</span>
+                </div>
+              )}
+              {selectedBooking.discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Coupon Discount</span>
+                  <span>-₹{selectedBooking.discountAmount}</span>
+                </div>
+              )}
+              {selectedBooking.penaltyAmount > 0 && (
+                <div className="flex justify-between text-red-600">
+                  <span>Cancellation / Delay Penalty</span>
+                  <span>+₹{selectedBooking.penaltyAmount}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-bold text-gray-900">
+                <span>Final Amount</span>
+                <span>₹{selectedBooking.finalAmount}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal Actions */}
+          <div className="border-t border-gray-100 pt-4 flex justify-end">
+            <button
+              onClick={() => {
+                setIsModalOpen(false);
+                setSelectedBooking(null);
+                if (id) navigate('/admin/bookings/all');
+              }}
+              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 };
 

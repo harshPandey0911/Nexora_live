@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { FiUser, FiMail, FiPhone, FiLock, FiArrowRight, FiChevronLeft, FiCheckCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiLock, FiArrowRight, FiChevronLeft, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
 import { userAuthService } from '../../../services/authService';
@@ -27,6 +27,9 @@ const Signup = () => {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Refs for auto-focus
   const nameInputRef = useRef(null);
@@ -47,10 +50,19 @@ const Signup = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let filteredValue = value;
+    if (name === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (name === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: filteredValue
     }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -60,9 +72,21 @@ const Signup = () => {
     const validationResult = signupSchema.safeParse(formData);
 
     if (!validationResult.success) {
-      validationResult.error.errors.forEach(err => toast.error(err.message));
+      const errMsgs = {};
+      validationResult.error.errors.forEach(err => {
+        errMsgs[err.path[0]] = err.message;
+        toast.error(err.message);
+      });
+      setErrors(errMsgs);
       return;
     }
+
+    if (!agreeToTerms) {
+      setErrors(prev => ({ ...prev, agreeToTerms: 'You must agree to the Terms & Conditions and Privacy Policy' }));
+      toast.error('You must agree to the Terms & Conditions and Privacy Policy');
+      return;
+    }
+    setErrors({});
 
     setIsLoading(true);
 
@@ -163,12 +187,21 @@ const Signup = () => {
                   type="tel"
                   required
                   value={formData.phoneNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData(prev => ({ ...prev, phoneNumber: val }));
+                    if (errors.phoneNumber) {
+                      setErrors(prev => ({ ...prev, phoneNumber: null }));
+                    }
+                  }}
                   className="block w-full pl-24 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
                   placeholder="9876543210"
                   style={{ '--tw-ring-color': brandColor }}
                 />
               </div>
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-xs mt-1 ml-1">{errors.phoneNumber}</p>
+              )}
             </div>
 
             <div>
@@ -182,14 +215,25 @@ const Signup = () => {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
+                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
                   placeholder="Set your password"
                   style={{ '--tw-ring-color': brandColor }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <FiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <FiEye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -211,6 +255,40 @@ const Signup = () => {
                   placeholder="you@example.com"
                   style={{ '--tw-ring-color': brandColor }}
                 />
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="agreeToTerms"
+                  name="agreeToTerms"
+                  type="checkbox"
+                  checked={agreeToTerms}
+                  onChange={(e) => {
+                    setAgreeToTerms(e.target.checked);
+                    if (errors.agreeToTerms) {
+                      setErrors(prev => ({ ...prev, agreeToTerms: null }));
+                    }
+                  }}
+                  className="h-4 w-4 rounded cursor-pointer"
+                  style={{ accentColor: brandColor }}
+                />
+              </div>
+              <div className="ml-3 text-xs">
+                <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
+                  I agree to the{' '}
+                  <Link to="/user/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                    Terms & Conditions
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/user/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                    Privacy Policy
+                  </Link>
+                </label>
+                {errors.agreeToTerms && (
+                  <p className="text-red-500 text-xs mt-1">{errors.agreeToTerms}</p>
+                )}
               </div>
             </div>
 
