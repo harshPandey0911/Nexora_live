@@ -31,9 +31,9 @@ const WorkerSignup = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpToken, setOtpToken] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [documentPreview, setDocumentPreview] = useState({});
   const [resendTimer, setResendTimer] = useState(0);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   // Timer countdown effect
   useEffect(() => {
@@ -130,8 +130,15 @@ const WorkerSignup = () => {
     }));
   };
 
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
+
+    if (!agreeToTerms) {
+      toast.error('You must agree to the Terms & Conditions and Privacy Policy');
+      return;
+    }
 
     // Zod Validation
     const validationResult = workerSignupSchema.safeParse({
@@ -434,6 +441,33 @@ const WorkerSignup = () => {
                     </label>
                   </div>
                 )}
+              </div>
+
+              {/* Terms and conditions */}
+              <div className="flex items-start mt-6 mb-6">
+                <div className="flex items-center h-5">
+                  <input
+                    id="agreeToTerms"
+                    name="agreeToTerms"
+                    type="checkbox"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    className="h-4 w-4 rounded cursor-pointer"
+                    style={{ accentColor: brandColor }}
+                  />
+                </div>
+                <div className="ml-3 text-xs">
+                  <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
+                    I agree to the{' '}
+                    <Link to="/worker/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                      Terms & Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/worker/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                      Privacy Policy
+                    </Link>
+                  </label>
+                </div>
               </div>
 
               <div className="animate-stagger-[6] animate-fade-in">

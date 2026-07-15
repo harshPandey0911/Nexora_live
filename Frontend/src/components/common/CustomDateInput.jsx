@@ -8,7 +8,7 @@ const isoToDisplay = (iso) => {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 };
 
-const CustomDateInput = ({ value, onChange, max, min, placeholder, className, inputClassName }) => {
+const CustomDateInput = ({ value, onChange, max, min, placeholder, className, inputClassName, showIcon = true }) => {
   const nativeRef = useRef(null);
 
   const handleTextChange = (e) => {
@@ -32,18 +32,21 @@ const CustomDateInput = ({ value, onChange, max, min, placeholder, className, in
         type="text"
         defaultValue={isoToDisplay(value)}
         onChange={handleTextChange}
+        onClick={() => nativeRef.current?.showPicker?.()}
         placeholder={placeholder || 'dd/mm/yyyy'}
         maxLength={10}
-        className={`bg-transparent focus:outline-none placeholder:text-gray-400 ${inputClassName || 'text-[11px] text-gray-600 w-[76px]'}`}
+        className={`bg-transparent focus:outline-none placeholder:text-gray-400 cursor-pointer ${inputClassName || 'text-[11px] text-gray-600 w-[76px]'}`}
       />
-      <button
-        type="button"
-        onClick={() => nativeRef.current?.showPicker?.()}
-        className="text-gray-400 hover:text-gray-600 transition-colors"
-        title="Open calendar"
-      >
-        <FiCalendar className="w-3.5 h-3.5" />
-      </button>
+      {showIcon && (
+        <button
+          type="button"
+          onClick={() => nativeRef.current?.showPicker?.()}
+          className="text-gray-400 hover:text-gray-600 transition-colors"
+          title="Open calendar"
+        >
+          <FiCalendar className="w-3.5 h-3.5" />
+        </button>
+      )}
       <input
         ref={nativeRef}
         type="date"

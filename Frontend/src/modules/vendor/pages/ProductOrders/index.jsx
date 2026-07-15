@@ -108,12 +108,15 @@ const ProductOrders = memo(() => {
         </div>
 
         <div className="relative group flex-1 max-w-md">
+          <label htmlFor="vendor-product-orders-search" className="sr-only">Search order ID or customer</label>
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
           <input 
+            id="vendor-product-orders-search"
             type="text"
             placeholder="Search order ID or customer..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search order ID or customer"
             className="w-full bg-white border border-gray-200 rounded-2xl py-3 pl-11 pr-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
           />
         </div>

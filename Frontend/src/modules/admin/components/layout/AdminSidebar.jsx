@@ -23,6 +23,7 @@ import {
 } from "react-icons/fi";
 import adminMenu from "../../config/adminMenu.json";
 import dashboardService from "../../services/dashboardService";
+import Logo from "../../../../components/common/Logo";
 
 // Icon mapping for menu items
 const iconMap = {
@@ -380,23 +381,31 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   // Sidebar content
   const sidebarContent = (
     <div className="h-full w-full flex flex-col bg-slate-800">
+      {/* Brand Header */}
+      <div className="px-5 py-4 border-b border-slate-700/50 bg-slate-900 flex items-center gap-3">
+        <Logo className="h-9 w-9 object-cover rounded-xl shadow-md border border-slate-700" />
+        <span className="font-black text-white text-base tracking-widest uppercase">
+          Nexora Go
+        </span>
+      </div>
+
       {/* Header Section */}
-      <div className="px-4 py-6 border-b border-slate-700 bg-slate-900">
+      <div className="px-4 py-5 border-b border-slate-700 bg-slate-800">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md flex-shrink-0"
               style={{
                 background: 'linear-gradient(135deg, #2874F0 0%, #4787F7 100%)',
               }}
             >
-              <FiUser className="text-white text-xl" />
+              <FiUser className="text-white text-lg" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="font-semibold text-white text-base truncate">
+              <h2 className="font-semibold text-white text-sm truncate">
                 {adminUser.name}
               </h2>
-              <p className="text-xs text-gray-400 truncate">
+              <p className="text-[10px] text-gray-400 truncate">
                 {adminUser.role === 'super_admin' ? '⭐ Super Admin' : 'Admin'}
               </p>
             </div>
@@ -413,7 +422,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 overflow-y-auto p-3 scrollbar-admin lg:pb-3">
+      <nav className="flex-1 overflow-y-auto overscroll-contain p-3 scrollbar-admin lg:pb-3">
         {filteredMenu.map((item) => renderMenuItem(item))}
       </nav>
     </div>

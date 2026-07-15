@@ -1388,39 +1388,20 @@ const BookingDetails = () => {
           <div className="grid grid-cols-2 gap-4">
             {/* Support */}
             {/* Support */}
-            <button
-              onClick={() => {
-                const phone = supportInfo.phone || '+919999999999';
-                if (phone) {
-                  // Use native anchor click for better WebView compatibility
-                  const link = document.createElement('a');
-                  link.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                } else {
-                  toast.error('Support phone number not available');
-                }
-              }}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95"
+            <a
+              href={`tel:${(supportInfo.phone || '+919999999999').replace(/[^\d+]/g, '')}`}
+              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
               <FiPhone className="w-6 h-6 text-gray-700" />
               <span className="text-sm font-bold text-gray-700">Call Support</span>
-            </button>
-            <button
-              onClick={() => {
-                const email = supportInfo.email || 'help@homestr.in';
-                const link = document.createElement('a');
-                link.href = `mailto:${email}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95"
+            </a>
+            <a
+              href={`mailto:${supportInfo.email || 'help@homestr.in'}`}
+              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
               <FiMail className="w-6 h-6 text-gray-700" />
               <span className="text-sm font-bold text-gray-700">Email Help</span>
-            </button>
+            </a>
 
             {/* Cancel */}
             {!['cancelled', 'completed', 'work_done'].includes(booking.status?.toLowerCase()) && (

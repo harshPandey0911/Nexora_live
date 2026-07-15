@@ -13,7 +13,6 @@ const UserCategories = lazy(() => import('../pages/UserCategories'));
 const Bookings = lazy(() => import('../pages/Bookings'));
 const Tracking = lazy(() => import('../pages/Bookings/Tracking'));
 const BookingNotifications = lazy(() => import('../pages/Bookings/BookingNotifications'));
-const ScrapItems = lazy(() => import('../pages/Scrap'));
 const Payments = lazy(() => import('../pages/Payments'));
 const Settlements = lazy(() => import('../pages/Settlements'));
 const Reports = lazy(() => import('../pages/Reports'));
@@ -81,7 +80,6 @@ const AdminRoutes = () => {
           <Route path="bookings/tracking" element={<Tracking />} />
           <Route path="bookings/notifications" element={<BookingNotifications />} />
           <Route path="bookings/:id" element={<Bookings />} />
-          <Route path="scrap" element={<ScrapItems />} />
           <Route path="payments/*" element={<Payments />} />
           <Route path="settlements/*" element={<Settlements />} />
           <Route path="reports/*" element={<Reports />} />

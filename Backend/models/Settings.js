@@ -264,6 +264,90 @@ const settingsSchema = new mongoose.Schema({
         }
       ]
     }
+  },
+  workerTermsAndConditions: {
+    title: { type: String, default: 'Nexora Go Worker Terms of Service' },
+    lastUpdated: { type: String, default: 'July 15, 2026' },
+    introduction: { type: String, default: 'Please read these Terms & Conditions carefully before joining our platform as a service professional.' },
+    sections: {
+      type: [
+        {
+          title: { type: String },
+          content: { type: String },
+          iconType: { type: String }
+        }
+      ],
+      default: [
+        {
+          title: "1. Worker Obligations",
+          content: "As an independent service professional, you agree to maintain high standards of service, punctuality, and professionalism.",
+          iconType: "user"
+        }
+      ]
+    }
+  },
+  workerPrivacyPolicy: {
+    title: { type: String, default: 'Nexora Go Worker Privacy Policy' },
+    lastUpdated: { type: String, default: 'July 15, 2026' },
+    introduction: { type: String, default: 'This Privacy Policy details how we handle the personal information of our service professionals.' },
+    sections: {
+      type: [
+        {
+          title: { type: String },
+          content: { type: String },
+          iconType: { type: String }
+        }
+      ],
+      default: [
+        {
+          title: "1. Data Collection for Professionals",
+          content: "We collect information necessary to verify your identity, background, and facilitate service bookings.",
+          iconType: "lock"
+        }
+      ]
+    }
+  },
+  vendorTermsAndConditions: {
+    title: { type: String, default: 'Nexora Go Vendor Terms of Service' },
+    lastUpdated: { type: String, default: 'July 15, 2026' },
+    introduction: { type: String, default: 'Please read these Terms & Conditions carefully before registering as a Vendor/Agency on our platform.' },
+    sections: {
+      type: [
+        {
+          title: { type: String },
+          content: { type: String },
+          iconType: { type: String }
+        }
+      ],
+      default: [
+        {
+          title: "1. Agency Responsibilities",
+          content: "Agencies are responsible for the vetting, management, and performance of the workers operating under their vendor account.",
+          iconType: "shield"
+        }
+      ]
+    }
+  },
+  vendorPrivacyPolicy: {
+    title: { type: String, default: 'Nexora Go Vendor Privacy Policy' },
+    lastUpdated: { type: String, default: 'July 15, 2026' },
+    introduction: { type: String, default: 'This Privacy Policy explains how we collect and process data for Vendor/Agency accounts.' },
+    sections: {
+      type: [
+        {
+          title: { type: String },
+          content: { type: String },
+          iconType: { type: String }
+        }
+      ],
+      default: [
+        {
+          title: "1. Business Data Processing",
+          content: "We process business registration details and payout information to facilitate secure transactions and compliance.",
+          iconType: "payment"
+        }
+      ]
+    }
   }
 }, { timestamps: true });
 

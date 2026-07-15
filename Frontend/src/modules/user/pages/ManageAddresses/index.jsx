@@ -101,11 +101,21 @@ const ManageAddresses = () => {
         ...addressData,
         lat: locationObj.lat,
         lng: locationObj.lng,
-        isDefault: addresses.length === 0 // Make first address default
+        isDefault: editingAddress ? editingAddress.isDefault : addresses.length === 0
       };
 
-      // ENFORCE SINGLE ADDRESS: Replace existing if adding new
-      const updatedAddresses = [newAddress];
+      // Support multiple addresses: append if new, edit if existing
+      let updatedAddresses;
+      if (editingAddress) {
+        const editId = editingAddress._id || editingAddress.id;
+        updatedAddresses = addresses.map(addr =>
+          (addr._id === editId || addr.id === editId)
+            ? { ...addr, ...newAddress, _id: editId, id: editId }
+            : addr
+        );
+      } else {
+        updatedAddresses = [...addresses, newAddress];
+      }
 
       // Call API
       toast.loading('Saving address...');
@@ -185,16 +195,14 @@ const ManageAddresses = () => {
 
         {/* Saved Addresses Section */}
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Saved Address</h2>
-          {addresses.length === 0 && (
-            <button
-              onClick={handleAddAddress}
-              className="flex items-center gap-1.5 text-sm font-bold text-purple-600"
-            >
-              <FiPlus className="w-4 h-4" />
-              Add Address
-            </button>
-          )}
+          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Saved Addresses</h2>
+          <button
+            onClick={handleAddAddress}
+            className="flex items-center gap-1.5 text-sm font-bold text-purple-600"
+          >
+            <FiPlus className="w-4 h-4" />
+            Add Address
+          </button>
         </div>
 
         {/* Loading State */}

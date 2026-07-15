@@ -5,7 +5,10 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
   React.useEffect(() => {
     if (isOpen) {
       const originalBodyOverflow = window.getComputedStyle(document.body).overflow;
+      const originalHtmlOverflow = window.getComputedStyle(document.documentElement).overflow;
+      
       document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
 
       const mainEl = document.querySelector("main");
       let originalMainOverflow = "";
@@ -16,6 +19,7 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
 
       return () => {
         document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
         if (mainEl) {
           mainEl.style.overflow = originalMainOverflow;
         }

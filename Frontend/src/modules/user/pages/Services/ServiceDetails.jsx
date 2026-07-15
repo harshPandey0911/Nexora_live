@@ -79,6 +79,7 @@ const ServiceDetailsPage = () => {
         serviceCount: quantity,
         vendorId: service.vendorId,
         vendorName: service.vendorName,
+        gstPercentage: service.gstPercentage
       };
 
       const res = await addToCart(cartItemData);
@@ -199,7 +200,9 @@ const ServiceDetailsPage = () => {
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full">
                   <FiStar className="w-4 h-4 fill-current" />
-                  <span className="text-xs font-black">4.8 (500+ Bookings)</span>
+                  <span className="text-xs font-black">
+                    {service.rating || '5.0'} ({service.bookingsCount || 0} Bookings)
+                  </span>
                 </div>
               </div>
 

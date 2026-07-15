@@ -96,6 +96,7 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
         rating: "4.8",
         reviews: "1k+",
         vendorId: service.vendorId || selectedBrand?.vendorId || null,
+        gstPercentage: service.gstPercentage,
         card: {
           title: service.title,
           subtitle: service.description || '',

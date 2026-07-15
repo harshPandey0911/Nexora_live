@@ -152,10 +152,12 @@ const ServicesPage = () => {
         title: service.title,
         description: service.description || '',
         icon: toAssetUrl(service.icon || ''),
+        category: service.categoryTitle || 'General',
         price: service.basePrice,
         unitPrice: service.basePrice,
         serviceCount: 1,
         vendorId: service.vendorId,
+        gstPercentage: service.gstPercentage,
         card: {
           title: service.title,
           subtitle: service.description || '',
@@ -291,7 +293,7 @@ const ServicesPage = () => {
                       />
                       <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
                         <FiStar className="fill-current w-2.5 h-2.5 text-orange-400" />
-                        <span className="text-[10px] font-black text-gray-900">4.8</span>
+                        <span className="text-[10px] font-black text-gray-900">{svc.rating || '5.0'}</span>
                       </div>
                     </div>
                     

@@ -1,7 +1,10 @@
+const mongoose = require('mongoose');
 const Category = require('../../models/Category');
 const Brand = require('../../models/Brand');
 const Service = require('../../models/UserService');
 const HomeContent = require('../../models/HomeContent');
+const Booking = require('../../models/Booking');
+const Review = require('../../models/Review');
 
 /**
  * Public Catalog Controllers
@@ -262,21 +265,65 @@ const getPublicBrandBySlug = async (req, res) => {
     // Fetch services associated with this brand
     const brandServices = await Service.find({ brandId: brand._id, status: 'active' }).lean();
 
+    const serviceIds = brandServices.map(svc => svc._id);
+
+    // Get average ratings and total reviews count grouped by serviceId
+    const [reviewStats, bookingStats] = await Promise.all([
+      Review.aggregate([
+        { $match: { serviceId: { $in: serviceIds }, status: 'active' } },
+        {
+          $group: {
+            _id: '$serviceId',
+            avgRating: { $avg: '$rating' },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]),
+      Booking.aggregate([
+        { $match: { serviceId: { $in: serviceIds } } },
+        {
+          $group: {
+            _id: '$serviceId',
+            totalBookings: { $sum: 1 }
+          }
+        }
+      ])
+    ]);
+
+    const ratingMap = {};
+    const bookingCountMap = {};
+    
+    reviewStats.forEach(stat => {
+      if (stat._id) {
+        ratingMap[stat._id.toString()] = stat.avgRating;
+      }
+    });
+
+    bookingStats.forEach(stat => {
+      if (stat._id) {
+        bookingCountMap[stat._id.toString()] = stat.totalBookings;
+      }
+    });
+
     // Map services to a default section structure for the frontend
     const servicesSection = {
       title: brand.title,
       subtitle: 'Available Services',
-      cards: brandServices.map(svc => ({
-        id: svc._id.toString(),
-        title: svc.title,
-        subtitle: svc.description || '',
-        price: svc.basePrice,
-        rating: "4.8", // Default rating
-        reviews: "1k+", // Default reviews
-        imageUrl: svc.iconUrl || brand.iconUrl || '',
-        features: svc.description ? [svc.description] : [],
-        duration: "60 min" // Default duration
-      }))
+      cards: brandServices.map(svc => {
+        const ratingVal = ratingMap[svc._id.toString()];
+        const bookingsVal = bookingCountMap[svc._id.toString()] || 0;
+        return {
+          id: svc._id.toString(),
+          title: svc.title,
+          subtitle: svc.description || '',
+          price: svc.basePrice,
+          rating: ratingVal ? ratingVal.toFixed(1) : "5.0",
+          reviews: bookingsVal > 0 ? `${bookingsVal}+ Bookings` : "New",
+          imageUrl: svc.iconUrl || brand.iconUrl || '',
+          features: svc.description ? [svc.description] : [],
+          duration: "60 min" // Default duration
+        };
+      })
     };
 
     const formattedBrand = {
@@ -379,25 +426,71 @@ const getPublicServices = async (req, res) => {
       return true;
     });
 
+    const finalServiceIds = finalServices.map(svc => svc._id);
+
+    // Get average ratings and total reviews count grouped by serviceId
+    const [reviewStats, bookingStats] = await Promise.all([
+      Review.aggregate([
+        { $match: { serviceId: { $in: finalServiceIds }, status: 'active' } },
+        {
+          $group: {
+            _id: '$serviceId',
+            avgRating: { $avg: '$rating' },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]),
+      Booking.aggregate([
+        { $match: { serviceId: { $in: finalServiceIds } } },
+        {
+          $group: {
+            _id: '$serviceId',
+            totalBookings: { $sum: 1 }
+          }
+        }
+      ])
+    ]);
+
+    const ratingMap = {};
+    const bookingCountMap = {};
+    
+    reviewStats.forEach(stat => {
+      if (stat._id) {
+        ratingMap[stat._id.toString()] = stat.avgRating;
+      }
+    });
+
+    bookingStats.forEach(stat => {
+      if (stat._id) {
+        bookingCountMap[stat._id.toString()] = stat.totalBookings;
+      }
+    });
+
     res.status(200).json({
       success: true,
-      services: finalServices.map(svc => ({
-        id: svc._id.toString(),
-        title: svc.title,
-        slug: svc.slug,
-        icon: svc.iconUrl,
-        basePrice: svc.basePrice,
-        gstPercentage: svc.gstPercentage,
-        description: svc.description,
-        brandId: svc.brandId?._id,
-        brandName: svc.brandId?.title,
-        brandIcon: svc.brandId?.iconUrl,
-        vendorId: svc.vendorId?._id,
-        vendorName: svc.vendorId?.businessName || svc.vendorId?.name,
-        vendorPhoto: svc.vendorId?.profilePhoto,
-        categoryId: svc.categoryId?._id,
-        categoryTitle: svc.categoryId?.title
-      }))
+      services: finalServices.map(svc => {
+        const ratingVal = ratingMap[svc._id.toString()];
+        const bookingsVal = bookingCountMap[svc._id.toString()] || 0;
+        return {
+          id: svc._id.toString(),
+          title: svc.title,
+          slug: svc.slug,
+          icon: svc.iconUrl,
+          basePrice: svc.basePrice,
+          gstPercentage: svc.gstPercentage,
+          description: svc.description,
+          brandId: svc.brandId?._id,
+          brandName: svc.brandId?.title,
+          brandIcon: svc.brandId?.iconUrl,
+          vendorId: svc.vendorId?._id,
+          vendorName: svc.vendorId?.businessName || svc.vendorId?.name,
+          vendorPhoto: svc.vendorId?.profilePhoto,
+          categoryId: svc.categoryId?._id,
+          categoryTitle: svc.categoryId?.title,
+          rating: ratingVal ? ratingVal.toFixed(1) : "5.0",
+          bookingsCount: bookingsVal
+        };
+      })
     });
   } catch (error) {
     console.error('Get public services error:', error);
@@ -431,6 +524,24 @@ const getPublicServiceById = async (req, res) => {
       });
     }
 
+    // Fetch average rating and total bookings count for this specific service
+    const [reviewStats, totalBookings] = await Promise.all([
+      Review.aggregate([
+        { $match: { serviceId: new mongoose.Types.ObjectId(id), status: 'active' } },
+        {
+          $group: {
+            _id: null,
+            avgRating: { $avg: '$rating' },
+            totalReviews: { $sum: 1 }
+          }
+        }
+      ]),
+      Booking.countDocuments({ serviceId: id })
+    ]);
+
+    const avgRating = reviewStats[0]?.avgRating;
+    const totalReviews = reviewStats[0]?.totalReviews || 0;
+
     res.status(200).json({
       success: true,
       service: {
@@ -448,7 +559,10 @@ const getPublicServiceById = async (req, res) => {
         vendorName: svc.vendorId?.businessName || svc.vendorId?.name,
         vendorPhoto: svc.vendorId?.profilePhoto,
         categoryId: svc.categoryId?._id,
-        categoryTitle: svc.categoryId?.title
+        categoryTitle: svc.categoryId?.title,
+        rating: avgRating ? avgRating.toFixed(1) : "5.0",
+        bookingsCount: totalBookings,
+        reviewsCount: totalReviews
       }
     });
   } catch (error) {

@@ -184,7 +184,9 @@ const WorkersList = () => {
                       <h3 className="text-lg font-bold text-gray-800 truncate tracking-tight">{worker.name}</h3>
                       <div className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
                         <FiStar className="w-3 h-3 text-amber-500 fill-amber-500" />
-                        <span className="text-[11px] font-bold text-amber-600">{worker.rating || '4.5'}</span>
+                        <span className="text-[11px] font-bold text-amber-600">
+                          {worker.rating > 0 ? worker.rating.toFixed(1) : 'N/A'}
+                        </span>
                       </div>
                     </div>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{worker.phone}</p>

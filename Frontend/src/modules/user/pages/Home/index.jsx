@@ -439,7 +439,8 @@ const Home = () => {
           rating: service.rating || "4.8",
           reviews: service.reviews || "10k+",
           vendorId: service.vendorId || null,
-          sectionId: service.sectionId || null // VITAL: Added for plan benefits
+          sectionId: service.sectionId || null, // VITAL: Added for plan benefits
+          gstPercentage: service.gstPercentage
         };
 
         const response = await addToCart(cartItemData);

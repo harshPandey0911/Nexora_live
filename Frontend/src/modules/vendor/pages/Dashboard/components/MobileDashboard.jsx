@@ -139,10 +139,14 @@ const MobileDashboard = memo(({
 
           <div className="grid grid-cols-2 gap-6">
             {[
-              { label: 'Deployed', value: stats?.completedJobs || 0, icon: FiCheckCircle, color: 'text-blue-500' },
-              { label: 'Reputation', value: (stats?.rating > 0) ? stats.rating.toFixed(1) : '5.0', icon: FiStar, color: 'text-amber-500' },
+              { label: 'Deployed', value: stats?.completedJobs || 0, icon: FiCheckCircle, color: 'text-blue-500', onClick: () => navigate('/vendor/jobs') },
+              { label: 'Reputation', value: (stats?.rating > 0) ? stats.rating.toFixed(1) : '5.0', icon: FiStar, color: 'text-amber-500', onClick: () => navigate('/vendor/my-ratings') },
             ].map((stat, idx) => (
-              <div key={idx} className="bg-white rounded-[32px] p-6 border border-gray-100 flex flex-col items-center text-center group hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 shadow-sm">
+              <div 
+                key={idx} 
+                onClick={stat.onClick}
+                className="bg-white rounded-[32px] p-6 border border-gray-100 flex flex-col items-center text-center group hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-500 shadow-sm cursor-pointer"
+              >
                 <div className={`w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center mb-4 ${stat.color} group-hover:scale-110 transition-transform shadow-inner border border-gray-100`}>
                   <stat.icon className="w-6 h-6" />
                 </div>

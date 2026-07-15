@@ -150,10 +150,12 @@ const ProductsPage = () => {
         title: service.title,
         description: service.description || '',
         icon: toAssetUrl(service.icon || ''),
+        category: service.categoryTitle || 'General',
         price: service.basePrice,
         unitPrice: service.basePrice,
         serviceCount: 1,
         vendorId: service.vendorId,
+        gstPercentage: service.gstPercentage,
         card: {
           title: service.title,
           subtitle: service.description || '',

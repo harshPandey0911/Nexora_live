@@ -318,6 +318,17 @@ const WorkerLogin = () => {
             Register as Xpert
           </Link>
         </p>
+
+        <div className="mt-4 text-center text-xs text-gray-400 animate-fade-in">
+          By signing in, you agree to our{' '}
+          <Link to="/worker/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+            Terms &amp; Conditions
+          </Link>{' '}
+          and{' '}
+          <Link to="/worker/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );

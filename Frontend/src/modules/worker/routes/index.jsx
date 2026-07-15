@@ -49,6 +49,8 @@ const JobMap = lazyLoad(() => import('../pages/JobMap'));
 const JobTimeline = lazyLoad(() => import('../pages/JobTimeline'));
 const Wallet = lazyLoad(() => import('../pages/Wallet'));
 const BillingPage = lazyLoad(() => import('../pages/BillingPage'));
+const TermsConditions = lazyLoad(() => import('../pages/TermsConditions'));
+const PrivacyPolicy = lazyLoad(() => import('../pages/PrivacyPolicy'));
 
 // Loading fallback component
 import LogoLoader from '../../../components/common/LogoLoader';
@@ -70,6 +72,8 @@ const WorkerRoutes = () => {
   const shouldHideBottomNav =
     location.pathname === '/worker/login' ||
     location.pathname === '/worker/signup' ||
+    location.pathname === '/worker/terms' ||
+    location.pathname === '/worker/privacy' ||
     location.pathname.endsWith('/map') ||
     location.pathname.includes('/billing');
 
@@ -85,6 +89,8 @@ const WorkerRoutes = () => {
               {/* Public routes */}
               <Route path="/login" element={<PublicRoute userType="worker"><Login /></PublicRoute>} />
               <Route path="/signup" element={<PublicRoute userType="worker"><Signup /></PublicRoute>} />
+              <Route path="/terms" element={<TermsConditions />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
 
               {/* Protected routes (auth required) */}
               <Route path="/" element={<ProtectedRoute userType="worker"><Navigate to="dashboard" replace /></ProtectedRoute>} />

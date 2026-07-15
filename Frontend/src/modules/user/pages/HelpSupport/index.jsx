@@ -15,8 +15,8 @@ const HelpSupport = () => {
   const [showContactForm, setShowContactForm] = useState(false);
   const [supportInfo, setSupportInfo] = useState({
     email: 'support@homestr.com',
-    phone: '',
-    whatsapp: ''
+    phone: '+919999999999',
+    whatsapp: '+919999999999'
   });
 
   useEffect(() => {
@@ -27,8 +27,8 @@ const HelpSupport = () => {
           const { supportEmail, supportPhone, supportWhatsapp } = response.data.settings;
           setSupportInfo({
             email: supportEmail || 'support@homestr.com',
-            phone: supportPhone || '',
-            whatsapp: supportWhatsapp || ''
+            phone: supportPhone || '+919999999999',
+            whatsapp: supportWhatsapp || '+919999999999'
           });
         }
       } catch (error) {
@@ -220,7 +220,7 @@ const HelpSupport = () => {
               } else if (action.id === 'email' && supportInfo.email) {
                 href = `mailto:${supportInfo.email}`;
               } else if (action.id === 'call' && supportInfo.phone) {
-                href = `tel:${supportInfo.phone.replace(/\D/g, '')}`;
+                href = `tel:${supportInfo.phone.replace(/[^\d+]/g, '')}`;
               }
 
               const Component = href ? 'a' : 'button';

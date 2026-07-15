@@ -1026,7 +1026,13 @@ const Checkout = () => {
   }, 0);
 
   const savings = totalOriginalPrice - itemTotal;
-  const taxesAndFee = Math.round((itemTotal * gstPercentage) / 100);
+  const taxesAndFee = Math.round(
+    cartItems.reduce((sum, item) => {
+      const price = calculateItemPrice(item);
+      const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
+      return sum + (price * (itemGst / 100));
+    }, 0)
+  );
   // Visited fee logic: if Total is 0 (All free), user might still pay visited fee?
   // User says "no payemtn". So maybe visited fee also waived? Or user pays visited fee?
   // "ask direct servicebooking" -> implies fully free.
@@ -1040,7 +1046,15 @@ const Checkout = () => {
 
   // Helper for Free Plan Full Breakdown Display
   // If the booking is free, we still want to show what the Tax/Fee WOULD have been
-  const displayTax = totalAmount === 0 ? Math.round((totalOriginalPrice * gstPercentage) / 100) : taxesAndFee;
+  const displayTax = totalAmount === 0 
+    ? Math.round(
+        cartItems.reduce((sum, item) => {
+          const original = (item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1);
+          const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
+          return sum + (original * (itemGst / 100));
+        }, 0)
+      )
+    : taxesAndFee;
   const displayFee = totalAmount === 0 ? visitedFee : finalVisitedFee;
   const displaySavings = totalAmount === 0 ? (totalOriginalPrice + displayTax + displayFee) : savings;
 
@@ -1347,7 +1361,7 @@ const Checkout = () => {
             {/* Taxes */}
             {displayTax > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-sm text-slate-500">GST ({gstPercentage}%)</span>
+                <span className="text-sm text-slate-500">GST</span>
                 <span className="text-sm font-medium text-slate-700">₹{displayTax.toLocaleString('en-IN')}</span>
               </div>
             )}

@@ -64,6 +64,8 @@ const TicketDetails = lazyLoad(() => import('../pages/Support/TicketDetails'));
 const MyServices = lazyLoad(() => import('../pages/MyServices'));
 const MyProducts = lazyLoad(() => import('../pages/MyProducts'));
 const AddCustomContent = lazyLoad(() => import('../pages/AddCustomContent'));
+const TermsConditions = lazyLoad(() => import('../pages/TermsConditions'));
+const PrivacyPolicy = lazyLoad(() => import('../pages/PrivacyPolicy'));
 
 const LoadingFallback = () => (
   <LogoLoader />
@@ -83,6 +85,8 @@ const VendorRoutes = () => {
                 <Route path="/login" element={<PublicRoute userType="vendor"><Login /></PublicRoute>} />
                 <Route path="/signup" element={<PublicRoute userType="vendor"><Signup /></PublicRoute>} />
                 <Route path="/training" element={<PublicRoute userType="vendor"><Training /></PublicRoute>} />
+                <Route path="/terms" element={<TermsConditions />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
 
                 {/* Protected routes */}
                 <Route path="/" element={<ProtectedRoute userType="vendor"><Navigate to="dashboard" replace /></ProtectedRoute>} />

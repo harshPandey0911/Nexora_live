@@ -381,6 +381,17 @@ const VendorLogin = () => {
             Apply Now
           </Link>
         </p>
+
+        <div className="mt-4 text-center text-xs text-white/60">
+          By signing in, you agree to our{' '}
+          <Link to="/vendor/terms" className="font-semibold hover:underline text-white/80">
+            Terms &amp; Conditions
+          </Link>{' '}
+          and{' '}
+          <Link to="/vendor/privacy" className="font-semibold hover:underline text-white/80">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );

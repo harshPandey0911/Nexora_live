@@ -662,13 +662,29 @@ export default function BookingDetails() {
                 <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1">Verified Network</p>
               </div>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={handleCallUser}
-              className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
-            >
-              <FiPhone className="w-6 h-6 text-white" />
-            </motion.button>
+            {(() => {
+              const phone = booking.user?.phone || booking.customerPhone;
+              if (phone) {
+                return (
+                  <motion.a
+                    whileTap={{ scale: 0.9 }}
+                    href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+                    className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all cursor-pointer"
+                  >
+                    <FiPhone className="w-6 h-6 text-white" />
+                  </motion.a>
+                );
+              }
+              return (
+                <button
+                  onClick={() => alert('Phone number not available')}
+                  className="w-14 h-14 rounded-2xl bg-gray-200 cursor-not-allowed flex items-center justify-center"
+                  title="Phone number not available"
+                >
+                  <FiPhone className="w-6 h-6 text-gray-400" />
+                </button>
+              );
+            })()}
           </div>
         </div>
 

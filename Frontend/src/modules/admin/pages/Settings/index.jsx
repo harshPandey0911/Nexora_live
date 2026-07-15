@@ -64,10 +64,15 @@ const AdminSettings = () => {
       lastUpdated: 'July 15, 2026',
       introduction: 'Your privacy is highly important to us. This Privacy Policy details the types of personal information we collect, how we use it, and the safeguards in place to protect your data.',
       sections: []
-    }
+    },
+    workerTermsAndConditions: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    workerPrivacyPolicy: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    vendorTermsAndConditions: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    vendorPrivacyPolicy: { title: '', lastUpdated: '', introduction: '', sections: [] }
   });
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyActiveTab, setPolicyActiveTab] = useState('terms'); // 'terms', 'privacy'
+  const [policyTarget, setPolicyTarget] = useState('user'); // 'user', 'worker', 'vendor'
 
   const [profile, setProfile] = useState({
     name: '',
@@ -172,6 +177,18 @@ const AdminSettings = () => {
               ...prev,
               privacyPolicy: res.settings.privacyPolicy
             }));
+          }
+          if (res.settings.workerTermsAndConditions) {
+            setPolicySettings(prev => ({ ...prev, workerTermsAndConditions: res.settings.workerTermsAndConditions }));
+          }
+          if (res.settings.workerPrivacyPolicy) {
+            setPolicySettings(prev => ({ ...prev, workerPrivacyPolicy: res.settings.workerPrivacyPolicy }));
+          }
+          if (res.settings.vendorTermsAndConditions) {
+            setPolicySettings(prev => ({ ...prev, vendorTermsAndConditions: res.settings.vendorTermsAndConditions }));
+          }
+          if (res.settings.vendorPrivacyPolicy) {
+            setPolicySettings(prev => ({ ...prev, vendorPrivacyPolicy: res.settings.vendorPrivacyPolicy }));
           }
         }
       } catch (error) {
@@ -634,6 +651,12 @@ const AdminSettings = () => {
       )}
     </div>
   );
+  const activePolicyKey = policyTarget === 'user'
+    ? (policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy')
+    : policyTarget === 'worker'
+    ? (policyActiveTab === 'terms' ? 'workerTermsAndConditions' : 'workerPrivacyPolicy')
+    : (policyActiveTab === 'terms' ? 'vendorTermsAndConditions' : 'vendorPrivacyPolicy');
+  const activePolicy = policySettings[activePolicyKey] || { title: '', lastUpdated: '', introduction: '', sections: [] };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -1203,7 +1226,7 @@ const AdminSettings = () => {
               className="space-y-6">
               
               {/* Tab Navigation */}
-              <div className="flex bg-gray-100 p-1.5 rounded-xl w-fit">
+              <div className="flex items-center gap-2 p-1 bg-gray-100/50 rounded-xl w-fit">
                 <button
                   type="button"
                   onClick={() => setPolicyActiveTab('terms')}
@@ -1222,7 +1245,7 @@ const AdminSettings = () => {
 
               {/* Editor Card */}
               <form onSubmit={handlePolicySave} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-rose-50 rounded-lg">
                       <FiFileText className="w-5 h-5 text-rose-600" />
@@ -1242,14 +1265,30 @@ const AdminSettings = () => {
                 </div>
 
                 <div className="p-6 space-y-6">
+                  {/* Target Audience Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target Audience</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setPolicyTarget('user')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'user' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Customer App
+                      </button>
+                      <button type="button" onClick={() => setPolicyTarget('worker')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'worker' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Xpert App
+                      </button>
+                      <button type="button" onClick={() => setPolicyTarget('vendor')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'vendor' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Vendor App
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Basic page config */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Page Title</label>
                       <input
                         type="text"
-                        value={policyActiveTab === 'terms' ? policySettings.termsAndConditions.title : policySettings.privacyPolicy.title}
-                        onChange={(e) => handlePolicyBaseChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', 'title', e.target.value)}
+                        value={activePolicy.title || ''}
+                        onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'title', e.target.value)}
                         placeholder="Enter page title"
                         required
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
@@ -1259,8 +1298,8 @@ const AdminSettings = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Last Updated Date</label>
                       <input
                         type="text"
-                        value={policyActiveTab === 'terms' ? policySettings.termsAndConditions.lastUpdated : policySettings.privacyPolicy.lastUpdated}
-                        onChange={(e) => handlePolicyBaseChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', 'lastUpdated', e.target.value)}
+                        value={activePolicy.lastUpdated || ''}
+                        onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'lastUpdated', e.target.value)}
                         placeholder="e.g. July 15, 2026"
                         required
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
@@ -1272,8 +1311,8 @@ const AdminSettings = () => {
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Page Introduction Text</label>
                     <textarea
                       rows={3}
-                      value={policyActiveTab === 'terms' ? policySettings.termsAndConditions.introduction : policySettings.privacyPolicy.introduction}
-                      onChange={(e) => handlePolicyBaseChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', 'introduction', e.target.value)}
+                      value={activePolicy.introduction || ''}
+                      onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'introduction', e.target.value)}
                       placeholder="Enter policy introduction text"
                       required
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm resize-none"
@@ -1285,7 +1324,7 @@ const AdminSettings = () => {
                       <h3 className="text-lg font-bold text-gray-800">Policy Sections</h3>
                       <button
                         type="button"
-                        onClick={() => addPolicySection(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy')}
+                        onClick={() => addPolicySection(activePolicyKey)}
                         className="px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600 flex items-center gap-1.5 transition-all font-medium"
                       >
                         <FiPlus className="w-4 h-4" /> Add Section
@@ -1294,13 +1333,13 @@ const AdminSettings = () => {
 
                     {/* Sections list */}
                     <div className="space-y-4">
-                      {((policyActiveTab === 'terms' ? policySettings.termsAndConditions.sections : policySettings.privacyPolicy.sections) || []).map((section, idx) => (
+                      {(activePolicy.sections || []).map((section, idx) => (
                         <div key={idx} className="bg-gray-50 rounded-xl p-5 border border-gray-100 relative">
                           <div className="flex justify-between items-center pb-3 border-b border-gray-200/50 mb-4">
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Section #{idx + 1}</span>
                             <button
                               type="button"
-                              onClick={() => removePolicySection(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', idx)}
+                              onClick={() => removePolicySection(activePolicyKey, idx)}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                               title="Delete Section"
                             >
@@ -1314,7 +1353,7 @@ const AdminSettings = () => {
                               <input
                                 type="text"
                                 value={section.title || ''}
-                                onChange={(e) => handlePolicySectionChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', idx, 'title', e.target.value)}
+                                onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'title', e.target.value)}
                                 placeholder="e.g. 1. Account Creation"
                                 required
                                 className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
@@ -1324,7 +1363,7 @@ const AdminSettings = () => {
                               <label className="block text-xs font-medium text-gray-500 mb-1">Section Icon</label>
                               <select
                                 value={section.iconType || ''}
-                                onChange={(e) => handlePolicySectionChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', idx, 'iconType', e.target.value)}
+                                onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'iconType', e.target.value)}
                                 className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
                               >
                                 {policyActiveTab === 'terms' ? (
@@ -1352,7 +1391,7 @@ const AdminSettings = () => {
                             <textarea
                               rows={3}
                               value={section.content || ''}
-                              onChange={(e) => handlePolicySectionChange(policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy', idx, 'content', e.target.value)}
+                              onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'content', e.target.value)}
                               placeholder="Enter section description content details..."
                               required
                               className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm resize-none"
@@ -1360,7 +1399,7 @@ const AdminSettings = () => {
                           </div>
                         </div>
                       ))}
-                      {((policyActiveTab === 'terms' ? policySettings.termsAndConditions.sections : policySettings.privacyPolicy.sections) || []).length === 0 && (
+                      {(activePolicy.sections || []).length === 0 && (
                         <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-400">
                           No sections defined. Click "Add Section" to create one.
                         </div>

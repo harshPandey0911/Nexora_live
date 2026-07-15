@@ -246,6 +246,7 @@ const Bookings = () => {
           </select>
 
           <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
+            <FiCalendar className="w-3.5 h-3.5 text-gray-400 mr-0.5" />
             <CustomDateInput
               value={startDate}
               max={endDate || todayStr}
@@ -254,6 +255,7 @@ const Bookings = () => {
                 if (endDate && val > endDate) setEndDate(val);
               }}
               placeholder="dd/mm/yyyy"
+              showIcon={false}
             />
             <span className="text-gray-400 text-[10px]">to</span>
             <CustomDateInput
@@ -265,8 +267,24 @@ const Bookings = () => {
                 if (startDate && val < startDate) setStartDate(val);
               }}
               placeholder="dd/mm/yyyy"
+              showIcon={false}
             />
           </div>
+
+          {(search || statusFilter !== 'All Status' || startDate || endDate) && (
+            <button
+              onClick={() => {
+                setSearch('');
+                setStatusFilter('All Status');
+                setStartDate('');
+                setEndDate('');
+                setPage(1);
+              }}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-lg transition-colors border border-gray-200"
+            >
+              Clear Filters
+            </button>
+          )}
 
           <button
             onClick={handleExport}

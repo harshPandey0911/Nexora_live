@@ -24,8 +24,11 @@ const AppDownloadBanner = ({ appData }) => {
           
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-3 lg:gap-4">
             <a 
-              href={playStoreUrl} 
-              className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center"
+              href={playStoreUrl !== '#' ? playStoreUrl : undefined}
+              target={playStoreUrl !== '#' ? '_blank' : undefined}
+              rel="noopener noreferrer"
+              onClick={(e) => { if (playStoreUrl === '#') e.preventDefault(); }}
+              className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center cursor-pointer"
             >
               <div className="text-left">
                 <div className="text-[8px] lg:text-[9px] uppercase font-bold leading-none">Get it on</div>
@@ -33,8 +36,11 @@ const AppDownloadBanner = ({ appData }) => {
               </div>
             </a>
             <a 
-              href={appStoreUrl} 
-              className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center"
+              href={appStoreUrl !== '#' ? appStoreUrl : undefined}
+              target={appStoreUrl !== '#' ? '_blank' : undefined}
+              rel="noopener noreferrer"
+              onClick={(e) => { if (appStoreUrl === '#') e.preventDefault(); }}
+              className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center cursor-pointer"
             >
               <div className="text-left">
                 <div className="text-[8px] lg:text-[9px] uppercase font-bold leading-none">Download on the</div>
