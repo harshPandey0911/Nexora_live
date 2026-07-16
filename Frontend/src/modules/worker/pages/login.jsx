@@ -214,6 +214,7 @@ const WorkerLogin = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

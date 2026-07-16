@@ -393,6 +393,25 @@ const AdminSettings = () => {
   // Save support settings
   const handleSupportSave = async (e) => {
     e.preventDefault();
+
+    if (supportSettings.supportEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(supportSettings.supportEmail)) {
+        toast.error('Please enter a valid support email address');
+        return;
+      }
+    }
+
+    if (supportSettings.supportPhone && supportSettings.supportPhone.length !== 10) {
+      toast.error('Support Phone must be exactly 10 digits');
+      return;
+    }
+
+    if (supportSettings.supportWhatsapp && supportSettings.supportWhatsapp.length !== 10) {
+      toast.error('Support WhatsApp must be exactly 10 digits');
+      return;
+    }
+
     setSupportLoading(true);
     try {
       await updateSettings(supportSettings);

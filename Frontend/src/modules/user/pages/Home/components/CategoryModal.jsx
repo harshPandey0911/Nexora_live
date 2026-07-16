@@ -93,8 +93,8 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
         originalPrice: service.discountPrice ? service.basePrice : null,
         unitPrice: service.discountPrice || service.basePrice,
         serviceCount: 1,
-        rating: "4.8",
-        reviews: "1k+",
+        rating: service.rating || "4.8",
+        reviews: service.reviews || "1k+",
         vendorId: service.vendorId || selectedBrand?.vendorId || null,
         gstPercentage: service.gstPercentage,
         card: {
@@ -241,7 +241,7 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
                                     </div>
                                   )}
                                   <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-gray-900">4.5</span>
+                                    <span className="text-[10px] font-black text-gray-900">{svc.rating || '5.0'}</span>
                                     <span className="text-orange-400 text-[8px]">★</span>
                                   </div>
                                 </div>

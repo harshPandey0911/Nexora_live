@@ -146,7 +146,7 @@ const Footer = ({ hasBottomNav }) => {
           <div className="flex items-center gap-6">
             <Link to="/user/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Privacy</Link>
             <Link to="/user/terms" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Terms</Link>
-            <Link to="#" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cookies</Link>
+            <Link to="/user/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

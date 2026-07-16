@@ -324,7 +324,11 @@ const BillingPage = () => {
   const updateCustomItem = (index, field, value) => {
     setCustomItems(prev => {
       const newItems = [...prev];
-      const newItem = { ...newItems[index], [field]: value };
+      let finalVal = value;
+      if (field === 'price' || field === 'quantity') {
+        finalVal = Math.max(0, Number(value) || 0);
+      }
+      const newItem = { ...newItems[index], [field]: finalVal };
       const baseTotal = newItem.price * newItem.quantity;
       newItem.gstAmount = newItem.gstApplicable ? baseTotal * (newItem.gstPercentage / 100) : 0;
       newItem.total = baseTotal + newItem.gstAmount;
@@ -939,9 +943,11 @@ const BillingPage = () => {
                           <label className="text-[9px] md:text-xs font-medium text-gray-400 capitalize tracking-widest ml-1">Unit Valuation (₹)</label>
                           <input
                             type="number"
+                            min="0"
                             placeholder="0"
                             value={item.price || ''}
-                            onChange={e => updateCustomItem(idx, 'price', Number(e.target.value))}
+                            onChange={e => updateCustomItem(idx, 'price', e.target.value)}
+                            onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl md:rounded-2xl px-4 py-3 md:px-6 md:py-4 text-sm md:text-base font-medium text-gray-900 outline-none focus:border-blue-500/50 transition-all"
                           />
                         </div>
@@ -950,8 +956,10 @@ const BillingPage = () => {
                           <label className="text-[9px] md:text-xs font-medium text-gray-400 capitalize tracking-widest ml-1">Quantum</label>
                           <input
                             type="number"
+                            min="1"
                             value={item.quantity}
-                            onChange={e => updateCustomItem(idx, 'quantity', Number(e.target.value))}
+                            onChange={e => updateCustomItem(idx, 'quantity', e.target.value)}
+                            onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                             className="w-full bg-gray-50 border border-gray-100 rounded-xl md:rounded-2xl px-4 py-3 md:px-6 md:py-4 text-sm md:text-base font-medium text-gray-900 outline-none focus:border-blue-500/50 transition-all"
                           />
                         </div>

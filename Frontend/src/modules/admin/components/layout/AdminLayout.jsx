@@ -45,6 +45,7 @@ const AdminLayout = () => {
     if (mainEl) {
       mainEl.scrollTop = 0;
     }
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   // Bottom nav height is 64px (h-16)
