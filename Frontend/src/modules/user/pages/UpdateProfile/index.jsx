@@ -15,6 +15,14 @@ const profileSchema = z.object({
   email: z.string().email("Please enter a valid email address").or(z.literal('')),
 });
 
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  const clean = url.replace('/api/upload', '/upload');
+  if (clean.startsWith('http')) return clean;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
+
 const UpdateProfile = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -269,7 +277,7 @@ const UpdateProfile = () => {
               >
                 {photoPreview || formData.profilePhoto ? (
                   <img
-                    src={photoPreview || formData.profilePhoto}
+                    src={photoPreview || toAssetUrl(formData.profilePhoto)}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />

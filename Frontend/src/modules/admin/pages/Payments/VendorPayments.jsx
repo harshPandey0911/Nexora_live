@@ -47,6 +47,11 @@ const VendorPayments = () => {
     return () => clearTimeout(timer);
   }, [filters.search]);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [pagination.page, debouncedSearch, filters.status, filters.type]);

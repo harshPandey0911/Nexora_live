@@ -42,6 +42,10 @@ const ServiceDetailsPage = () => {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
+  useEffect(() => {
     const fetchDetails = async () => {
       try {
         setLoading(true);

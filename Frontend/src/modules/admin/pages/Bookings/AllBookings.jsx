@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  FiSearch, FiCalendar, FiDownload, FiMoreVertical,
+  FiSearch, FiCalendar, FiDownload, FiMoreVertical, FiX,
   FiClock, FiCheckCircle, FiBox, FiTruck, FiXCircle, FiRefreshCw, FiShoppingBag, FiUserCheck, FiUser
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
@@ -98,6 +98,14 @@ const AllBookings = () => {
     const timer = setTimeout(() => setDebouncedSearch(search), 500);
     return () => clearTimeout(timer);
   }, [search]);
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setStatusFilter('All Status');
+    setStartDate('');
+    setEndDate('');
+    setPage(1);
+  };
 
   // Load Data
   const fetchData = async () => {
@@ -217,7 +225,7 @@ const AllBookings = () => {
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search bookings..."
+            placeholder="Search by customer name, Booking ID or service..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-xs"
@@ -265,6 +273,15 @@ const AllBookings = () => {
             />
           </div>
 
+          {(search || statusFilter !== 'All Status' || startDate || endDate) && (
+            <button
+              onClick={handleClearFilters}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+            >
+              <FiX className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
+
           <button
             onClick={handleExport}
             className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors shadow-sm shadow-green-200"
@@ -275,7 +292,7 @@ const AllBookings = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

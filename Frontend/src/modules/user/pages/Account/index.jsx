@@ -29,6 +29,14 @@ import { MdAccountBalanceWallet } from 'react-icons/md';
 import NotificationBell from '../../components/common/NotificationBell';
 import Logo from '../../../../components/common/Logo';
 
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  const clean = url.replace('/api/upload', '/upload');
+  if (clean.startsWith('http')) return clean;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${clean.startsWith('/') ? '' : '/'}${clean}`;
+};
+
 const Account = () => {
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState({
@@ -199,7 +207,7 @@ const Account = () => {
           <div className="flex items-center gap-4">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/user')}
               className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.02]"
             >
               <FiArrowLeft className="w-5 h-5 text-gray-800" />
@@ -233,7 +241,7 @@ const Account = () => {
                 <div className="w-20 h-20 rounded-2xl p-1 bg-white shadow-xl rotate-2">
                   {userProfile.profilePhoto ? (
                     <img
-                      src={userProfile.profilePhoto}
+                      src={toAssetUrl(userProfile.profilePhoto)}
                       alt={userProfile.name}
                       className="w-full h-full rounded-[14px] object-cover"
                     />

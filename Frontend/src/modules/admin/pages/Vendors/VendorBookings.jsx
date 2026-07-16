@@ -209,7 +209,7 @@ const VendorBookings = () => {
                   Booking ID: <span className="font-mono font-semibold">{selectedBooking.bookingNumber || selectedBooking._id}</span>
                 </p>
                 <p className="text-xs text-gray-500">
-                  Date: <span className="font-semibold">{new Date(selectedBooking.createdAt).toLocaleString()}</span>
+                  Date: <span className="font-semibold">{selectedBooking.createdAt && !isNaN(new Date(selectedBooking.createdAt)) ? new Date(selectedBooking.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
                 </p>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider

@@ -650,7 +650,7 @@ const ServicesPage = () => {
                 value={form.basePrice}
                 onChange={e => {
                   const val = e.target.value;
-                  if (val === '' || parseFloat(val) >= 0) {
+                  if (val === '' || parseFloat(val) > 0) {
                     setForm({ ...form, basePrice: val });
                   }
                 }}
@@ -659,7 +659,7 @@ const ServicesPage = () => {
                     e.preventDefault();
                   }
                 }}
-                placeholder="0"
+                placeholder="e.g. 100"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 required
               />

@@ -516,40 +516,35 @@ const EditProfile = () => {
             {/* Phone Input */}
             <div className="group">
               <label className="block text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-2 px-1">
-                Encryption Link (Mobile) <span className="text-rose-500">*</span>
+                Encryption Link (Mobile) <span className="text-rose-500">*</span> (Identity Details cannot be edited)
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100/50 text-teal-600">
-                  <FiPhone className="w-4 h-4" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-black/[0.02]">
+                  <FiPhone className="w-4 h-4 text-gray-400" />
                 </div>
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="Enter contact number"
-                  className={`w-full pl-16 pr-4 py-4 bg-white/70 backdrop-blur-md rounded-3xl border transition-all focus:outline-none focus:ring-4 focus:ring-teal-500/5 ${
-                    errors.phone ? 'border-rose-200 text-rose-900' : 'border-white/60 focus:border-teal-500/30'
-                  } font-[1000] text-gray-900 text-sm tracking-tight`}
+                  disabled
+                  className="w-full pl-16 pr-4 py-4 bg-gray-100 rounded-3xl border border-gray-200 outline-none font-[1000] text-gray-400 text-sm tracking-tight cursor-not-allowed"
                 />
               </div>
-              {errors.phone && <p className="text-rose-500 text-[9px] font-medium capitalize tracking-widest mt-2 px-1">{errors.phone}</p>}
             </div>
 
             {/* Email Input */}
             <div className="group">
               <label className="block text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-2 px-1">
-                Network Access (Email)
+                Network Access (Email) <span className="text-rose-500">*</span> (Identity Details cannot be edited)
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100/50 text-teal-600">
-                  <FiMail className="w-4 h-4" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-black/[0.02]">
+                  <FiMail className="w-4 h-4 text-gray-400" />
                 </div>
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter email address"
-                  className={`w-full pl-16 pr-4 py-4 bg-white/70 backdrop-blur-md rounded-3xl border border-white/60 focus:border-teal-500/30 transition-all focus:outline-none focus:ring-4 focus:ring-teal-500/5 font-[1000] text-gray-900 text-sm tracking-tight`}
+                  disabled
+                  className="w-full pl-16 pr-4 py-4 bg-gray-100 rounded-3xl border border-gray-200 outline-none font-[1000] text-gray-400 text-sm tracking-tight cursor-not-allowed"
                 />
               </div>
             </div>

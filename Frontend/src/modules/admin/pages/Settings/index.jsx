@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSettings, FiGrid, FiDollarSign, FiSave, FiUser, FiMail, FiTrash2, FiPlus, FiUsers, FiShield, FiFileText, FiMapPin, FiPhone, FiHeadphones, FiMessageCircle, FiEdit, FiLock, FiUnlock, FiX } from 'react-icons/fi';
+import { FiSettings, FiGrid, FiDollarSign, FiSave, FiUser, FiMail, FiTrash2, FiPlus, FiUsers, FiShield, FiFileText, FiMapPin, FiPhone, FiHeadphones, FiMessageCircle, FiEdit, FiLock, FiUnlock, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import { getSettings, updateSettings, updateAdminProfile, getAdminProfile, getAllAdmins, createAdmin, deleteAdmin, updateAdminDetails, toggleAdminStatus } from '../../services/settingsService';
 import { cityService } from '../../services/cityService';
 import CityManagement from '../Cities';
@@ -89,6 +89,10 @@ const AdminSettings = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Admin Management State
   const [admins, setAdmins] = useState([]);
@@ -261,7 +265,11 @@ const AdminSettings = () => {
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
-    setProfile(prev => ({ ...prev, [name]: value }));
+    let newValue = value;
+    if (name === 'email') {
+      newValue = value.toLowerCase();
+    }
+    setProfile(prev => ({ ...prev, [name]: newValue }));
   };
 
   const handleFinancialSave = async (e) => {
@@ -744,16 +752,43 @@ const AdminSettings = () => {
                 <div className="pt-6 border-t border-gray-100 space-y-4">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Change Password</h3>
                   <div className="space-y-4">
-                    <input type="password" name="currentPassword" value={profile.currentPassword} onChange={handleProfileChange}
-                      placeholder="Current Password"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                    <div className="relative">
+                      <input type={showCurrentPassword ? "text" : "password"} name="currentPassword" value={profile.currentPassword} onChange={handleProfileChange}
+                        placeholder="Current Password"
+                        className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showCurrentPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="password" name="newPassword" value={profile.newPassword} onChange={handleProfileChange}
-                        placeholder="New Password"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
-                      <input type="password" name="confirmPassword" value={profile.confirmPassword} onChange={handleProfileChange}
-                        placeholder="Confirm New Password"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                      <div className="relative">
+                        <input type={showNewPassword ? "text" : "password"} name="newPassword" value={profile.newPassword} onChange={handleProfileChange}
+                          placeholder="New Password"
+                          className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showNewPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={profile.confirmPassword} onChange={handleProfileChange}
+                          placeholder="Confirm New Password"
+                          className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showConfirmPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

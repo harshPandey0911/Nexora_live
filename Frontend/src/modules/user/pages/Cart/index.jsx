@@ -182,7 +182,7 @@ const Cart = () => {
           
           {cartItems.length > 0 && (
             <button 
-              onClick={() => navigate('/user/products')}
+              onClick={() => navigate('/user/services')}
               className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
             >
               <FiPlus className="w-3.5 h-3.5" />
@@ -207,7 +207,7 @@ const Cart = () => {
                   <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2 uppercase tracking-tight">Empty Basket</h2>
                   <p className="text-gray-400 font-semibold text-xs sm:text-sm mb-6 sm:mb-8">Looks like you haven't added anything yet.</p>
                   <button 
-                    onClick={() => navigate('/user/products')}
+                    onClick={() => navigate('/user/services')}
                     className="px-6 py-3 sm:px-10 sm:py-4 bg-[#00246b] text-white rounded-xl sm:rounded-2xl font-bold uppercase tracking-widest text-[9px] sm:text-[10px] shadow-xl active:scale-95 transition-all"
                   >
                     Start Shopping

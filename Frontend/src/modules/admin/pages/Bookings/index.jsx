@@ -14,7 +14,7 @@ const Bookings = () => {
       <Route path="tracking" element={<Tracking />} />
       <Route path="notifications" element={<BookingNotifications />} />
       <Route path="manual" element={<ManualAssignment />} />
-      <Route path="*" element={<Navigate to="all" replace />} />
+      <Route path="*" element={<Navigate to="/admin/bookings/all" replace />} />
     </Routes>
   );
 };

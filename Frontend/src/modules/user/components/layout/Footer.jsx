@@ -89,8 +89,8 @@ const Footer = ({ hasBottomNav }) => {
   return (
     <footer className={`bg-gray-50 border-t border-gray-100 pt-16 ${hasBottomNav ? 'pb-28' : 'pb-8'} lg:pb-12 mt-20 relative overflow-hidden group`}>
       {/* Decorative Background Elements */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-teal-500/10" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl -ml-32 -mb-32 transition-colors group-hover:bg-orange-500/10" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl -mr-32 -mt-32 transition-colors group-hover:bg-teal-500/10 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl -ml-32 -mb-32 transition-colors group-hover:bg-orange-500/10 pointer-events-none" />
 
       <div className="max-w-[1400px] mx-auto px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">

@@ -173,8 +173,9 @@ const Plans = () => {
       }
     } else if (name === 'price') {
       const floatVal = parseFloat(value);
-      if (value !== '' && (isNaN(floatVal) || floatVal < 0)) {
-        newValue = 0;
+      if (value !== '' && (isNaN(floatVal) || floatVal <= 0)) {
+        // Don't allow 0 or negative — clear back to empty so user can retype
+        newValue = '';
       }
     }
     setFormData(prev => ({ ...prev, [name]: newValue }));
@@ -186,8 +187,8 @@ const Plans = () => {
       toast.error('Validity must be at least 1 month');
       return;
     }
-    if (formData.price === '' || Number(formData.price) < 0) {
-      toast.error('Price cannot be negative');
+    if (formData.price === '' || Number(formData.price) <= 0) {
+      toast.error('Price must be greater than 0');
       return;
     }
     try {
@@ -476,14 +477,14 @@ const Plans = () => {
                       value={formData.price}
                       onChange={handleInputChange}
                       onKeyDown={(e) => {
-                        if (e.key === '-' || e.key === '+') {
+                        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
                           e.preventDefault();
                         }
                       }}
                       className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all font-bold text-gray-800"
                       required
                       placeholder="999"
-                      min="0"
+                      min="0.01"
                     />
                   </div>
                 </div>
@@ -496,7 +497,7 @@ const Plans = () => {
                     value={formData.validityMonths}
                     onChange={handleInputChange}
                     onKeyDown={(e) => {
-                      if (e.key === '-' || e.key === '+' || e.key === '.') {
+                      if (e.key === '-' || e.key === '+' || e.key === '.' || e.key === 'e' || e.key === 'E') {
                         e.preventDefault();
                       }
                     }}

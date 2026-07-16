@@ -7,7 +7,7 @@ import { vendorCatalogService, categoryService } from "../../../../../services/c
 import { z } from "zod";
 
 const schema = z.object({
-  name: z.string().trim().min(2, "Part Name must be at least 2 characters"),
+  name: z.string().trim().min(2, "Part Name must be at least 2 characters").regex(/^[a-zA-Z0-9\s().\-]+$/, "Part Name must contain only letters, numbers and basic punctuation"),
   hsnCode: z.string().regex(/^\d*$/, "HSN Code must contain only numbers").optional(),
   basePrice: z.number().gt(0, "Base Price must be greater than 0"),
   description: z.string().optional(),
@@ -25,6 +25,7 @@ const VendorPartsPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", hsnCode: "", basePrice: "", description: "", categoryId: "" });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     loadData();
@@ -63,9 +64,16 @@ const VendorPartsPage = () => {
 
     const result = schema.safeParse(data);
     if (!result.success) {
+      const fieldErrors = {};
+      result.error.errors.forEach(err => {
+        const field = err.path[0];
+        fieldErrors[field] = err.message;
+      });
+      setErrors(fieldErrors);
       toast.error(result.error.errors[0].message);
       return;
     }
+    setErrors({});
 
     try {
       setLoading(true);
@@ -111,6 +119,7 @@ const VendorPartsPage = () => {
   const reset = () => {
     setEditingId(null);
     setForm({ name: "", hsnCode: "", basePrice: "", description: "", categoryId: "" });
+    setErrors({});
     setIsModalOpen(false);
   };
 
@@ -224,26 +233,32 @@ const VendorPartsPage = () => {
       <Modal isOpen={isModalOpen} onClose={reset} title={editingId ? "Edit Vendor Part" : "Add Vendor Part"}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold mb-1">Category</label>
+            <label className="block text-sm font-bold mb-1">Category <span className="text-red-500">*</span></label>
             <select
               value={form.categoryId}
-              onChange={(e) => setForm(p => ({ ...p, categoryId: e.target.value }))}
-              className="w-full px-4 py-2 border rounded-xl bg-white"
+              onChange={(e) => { setForm(p => ({ ...p, categoryId: e.target.value })); setErrors(p => ({ ...p, categoryId: '' })); }}
+              className={`w-full px-4 py-2 border rounded-xl bg-white ${errors.categoryId ? 'border-red-500 bg-red-50' : ''}`}
             >
               <option value="">Select Category</option>
               {categories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.title}</option>
               ))}
             </select>
+            {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>}
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1">Part Name</label>
+            <label className="block text-sm font-bold mb-1">Part Name <span className="text-red-500">*</span></label>
             <input
               value={form.name}
-              onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full px-4 py-2 border rounded-xl"
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^a-zA-Z0-9\s().\-]/g, '');
+                setForm(p => ({ ...p, name: val }));
+                setErrors(p => ({ ...p, name: '' }));
+              }}
+              className={`w-full px-4 py-2 border rounded-xl ${errors.name ? 'border-red-500 bg-red-50' : ''}`}
               placeholder="e.g. Copper Pipe (1m)"
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
           <div>
             <label className="block text-sm font-bold mb-1">HSN Number (Optional)</label>
@@ -258,7 +273,7 @@ const VendorPartsPage = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1">Base Price (₹)</label>
+            <label className="block text-sm font-bold mb-1">Base Price (₹) <span className="text-red-500">*</span></label>
             <input
               type="number"
               min="0.01"
@@ -266,8 +281,9 @@ const VendorPartsPage = () => {
               value={form.basePrice}
               onChange={(e) => {
                 const val = e.target.value;
-                if (val === '' || parseFloat(val) >= 0) {
+                if (val === '' || parseFloat(val) > 0) {
                   setForm(p => ({ ...p, basePrice: val }));
+                  setErrors(p => ({ ...p, basePrice: '' }));
                 }
               }}
               onKeyDown={(e) => {
@@ -275,9 +291,10 @@ const VendorPartsPage = () => {
                   e.preventDefault();
                 }
               }}
-              className="w-full px-4 py-2 border rounded-xl"
-              placeholder="0"
+              className={`w-full px-4 py-2 border rounded-xl ${errors.basePrice ? 'border-red-500 bg-red-50' : ''}`}
+              placeholder="Enter price (e.g. 499)"
             />
+            {errors.basePrice && <p className="text-red-500 text-xs mt-1">{errors.basePrice}</p>}
           </div>
           <div>
             <label className="block text-sm font-bold mb-1">Description (Optional)</label>
@@ -286,6 +303,7 @@ const VendorPartsPage = () => {
               onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
               className="w-full px-4 py-2 border rounded-xl"
               rows={3}
+              placeholder="Brief description of the part..."
             />
           </div>
           <button

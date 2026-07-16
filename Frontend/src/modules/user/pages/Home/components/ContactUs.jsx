@@ -122,7 +122,7 @@ const ContactUs = ({ data }) => {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder:text-blue-200 outline-none focus:bg-white/20 transition-all resize-none"
               ></textarea>
-              <button type="button" onClick={handleSubmit} className="w-full py-4 bg-white text-blue-600 rounded-2xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Send Message</button>
+              <button type="submit" className="w-full py-4 bg-white text-blue-600 rounded-2xl font-black text-lg shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Send Message</button>
             </form>
           </motion.div>
         </div>

@@ -36,6 +36,17 @@ const ServiceRequestsPage = () => {
 
   useEffect(() => { loadRequests(); }, [filterStatus]);
 
+  useEffect(() => {
+    if (actionModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [actionModal]);
+
   const handleAction = async () => {
     if (!actionModal) return;
     setIsActing(true);

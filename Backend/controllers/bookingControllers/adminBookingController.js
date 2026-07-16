@@ -22,43 +22,46 @@ const getAllBookings = async (req, res) => {
     } = req.query;
 
     // Build query
-    const query = {};
+    const conditions = [];
 
     if (status) {
       if (status.toUpperCase() === 'MANUAL_ASSIGNMENT') {
         // Show ALL admin-assigned bookings across full lifecycle (escalated → confirmed → work_done)
-        query.$or = [
-          { status: 'escalated' },                                          // Not yet assigned by admin
-          { status: 'requested', assignedByAdmin: true },                   // Assigned, vendor hasn't responded
-          { status: 'confirmed', assignedByAdmin: true },                   // Vendor accepted
-          { status: 'awaiting_payment', assignedByAdmin: true },
-          { status: 'assigned', assignedByAdmin: true },                    // Worker assigned
-          { status: 'journey_started', assignedByAdmin: true },             // Worker on way
-          { status: 'visited', assignedByAdmin: true },                     // Worker arrived
-          { status: 'in_progress', assignedByAdmin: true },                 // Work in progress
-          { status: 'work_done', assignedByAdmin: true }                    // Work done (awaiting completion)
-        ];
+        conditions.push({
+          $or: [
+            { status: 'escalated' },                                          // Not yet assigned by admin
+            { status: 'requested', assignedByAdmin: true },                   // Assigned, vendor hasn't responded
+            { status: 'confirmed', assignedByAdmin: true },                   // Vendor accepted
+            { status: 'awaiting_payment', assignedByAdmin: true },
+            { status: 'assigned', assignedByAdmin: true },                    // Worker assigned
+            { status: 'journey_started', assignedByAdmin: true },             // Worker on way
+            { status: 'visited', assignedByAdmin: true },                     // Worker arrived
+            { status: 'in_progress', assignedByAdmin: true },                 // Work in progress
+            { status: 'work_done', assignedByAdmin: true }                    // Work done (awaiting completion)
+          ]
+        });
       } else {
-        query.status = status.toLowerCase();
+        conditions.push({ status: status.toLowerCase() });
       }
     }
-    if (paymentStatus) query.paymentStatus = paymentStatus;
-    if (userId) query.userId = userId;
-    if (vendorId) query.vendorId = vendorId;
-    if (workerId) query.workerId = workerId;
+    if (paymentStatus) conditions.push({ paymentStatus });
+    if (userId) conditions.push({ userId });
+    if (vendorId) conditions.push({ vendorId });
+    if (workerId) conditions.push({ workerId });
 
     if (startDate || endDate) {
-      query.scheduledDate = {};
+      const dateQuery = {};
       if (startDate) {
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
-        query.scheduledDate.$gte = start;
+        dateQuery.$gte = start;
       }
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        query.scheduledDate.$lte = end;
+        dateQuery.$lte = end;
       }
+      conditions.push({ scheduledDate: dateQuery });
     }
 
     // Search by booking number, service name, or customer details
@@ -72,12 +75,16 @@ const getAllBookings = async (req, res) => {
       }).select('_id');
       const userIds = users.map(u => u._id);
 
-      query.$or = [
-        { bookingNumber: { $regex: search, $options: 'i' } },
-        { serviceName: { $regex: search, $options: 'i' } },
-        { userId: { $in: userIds } }
-      ];
+      conditions.push({
+        $or: [
+          { bookingNumber: { $regex: search, $options: 'i' } },
+          { serviceName: { $regex: search, $options: 'i' } },
+          { userId: { $in: userIds } }
+        ]
+      });
     }
+
+    const query = conditions.length > 0 ? { $and: conditions } : {};
 
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);

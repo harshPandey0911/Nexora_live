@@ -270,7 +270,7 @@ const Tracking = () => {
 
               <div className="pt-6 border-t border-gray-100 mt-auto">
                 <button
-                  onClick={() => navigate(`/admin/bookings/${selectedOrder._id}`)}
+                  onClick={() => navigate(`/admin/bookings/all/${selectedOrder._id}`)}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
                 >
                   View Full Details

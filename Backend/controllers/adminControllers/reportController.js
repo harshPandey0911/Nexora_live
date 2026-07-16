@@ -131,7 +131,7 @@ const getFinanceOverview = async (req, res) => {
  */
 const getPaymentTransactions = async (req, res) => {
   try {
-    const { startDate, endDate, paymentMethod, status, page = 1, limit = 50, format = 'json' } = req.query;
+    const { startDate, endDate, paymentMethod, status, page = 1, limit = 1000, format = 'json' } = req.query;
 
     const query = {};
 
@@ -654,7 +654,15 @@ const sendCSV = (res, data, filename) => {
   // Data rows
   data.forEach(row => {
     const values = headers.map(header => {
-      const val = row[header] !== undefined ? row[header] : '';
+      let val = row[header] !== undefined ? row[header] : '';
+      
+      // Force text format in Excel to prevent ##### for date columns
+      const isDateHeader = /date|createdat|updatedat|paidat/i.test(header);
+      const isDateValue = typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val);
+      if ((isDateHeader || isDateValue) && val) {
+        val = '\t' + val;
+      }
+
       return `"${String(val).replace(/"/g, '""')}"`;
     });
     csvRows.push(values.join(','));
