@@ -18,8 +18,8 @@ const loginSchema = z.object({
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    phone: '9876543210',
-    password: 'password123'
+    phone: '',
+    password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);

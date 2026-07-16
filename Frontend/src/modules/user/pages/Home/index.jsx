@@ -436,8 +436,8 @@ const Home = () => {
           originalPrice: service.originalPrice ? parseInt(service.originalPrice.toString().replace(/,/g, '')) : null,
           unitPrice: parseInt(service.price?.toString().replace(/,/g, '') || 0),
           serviceCount: 1,
-          rating: service.rating || "4.8",
-          reviews: service.reviews || "10k+",
+          rating: service.rating || null,
+          reviews: service.reviews || null,
           vendorId: service.vendorId || null,
           sectionId: service.sectionId || null, // VITAL: Added for plan benefits
           gstPercentage: service.gstPercentage
@@ -742,8 +742,8 @@ const Home = () => {
                     return {
                       id: card._id || cIdx,
                       title: card.title,
-                      rating: card.rating || "4.8",
-                      reviews: card.reviews || "10k+",
+                      rating: card.rating || null,
+                      reviews: card.reviews || null,
                       price: card.price,
                       originalPrice: card.originalPrice,
                       discount: card.discount,

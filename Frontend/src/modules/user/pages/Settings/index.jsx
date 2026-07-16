@@ -7,6 +7,7 @@ import { themeColors } from '../../../../theme';
 import { userAuthService } from '../../../../services/authService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
 import BottomNav from '../../components/layout/BottomNav';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const Settings = () => {
     push: true,
     email: true,
   });
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Load user settings on mount
   useEffect(() => {
@@ -82,6 +84,15 @@ const Settings = () => {
     }
   };
 
+  const confirmLogout = async () => {
+    try {
+      await userAuthService.logout();
+      navigate('/user/login');
+      toast.success('Logged out successfully');
+    } catch (e) {
+      toast.error('Logout failed');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white pb-32">
@@ -163,15 +174,8 @@ const Settings = () => {
           <h2 className="text-base font-bold text-black mb-4">Account</h2>
           <div className="space-y-3">
             <button
-              onClick={async () => {
-                const confirmed = window.confirm('Are you sure you want to log out?');
-                if (confirmed) {
-                  await userAuthService.logout();
-                  navigate('/user/login');
-                  toast.success('Logged out successfully');
-                }
-              }}
-              className="w-full bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:bg-gray-50 active:scale-[0.98] transition-all"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="w-full bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3 hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer"
             >
               <div className="w-8 h-8 rounded-full flex items-center justify-center bg-red-50">
                 <FiLogOut className="w-5 h-5 text-red-500" />
@@ -205,8 +209,8 @@ const Settings = () => {
 
         {/* Privacy & Data Section */}
         <div className="space-y-4 mb-6">
-          <Link
-            to="/user/privacy"
+          <button
+            onClick={() => navigate('/user/privacy')}
             className="w-full bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer text-left flex"
           >
             <div className="flex items-center gap-3">
@@ -216,10 +220,20 @@ const Settings = () => {
               <span className="text-sm font-medium text-black">Privacy & data</span>
             </div>
             <FiChevronRight className="w-5 h-5 text-gray-400" />
-          </Link>
-
+          </button>
         </div>
       </main>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Log Out"
+        message="Are you sure you want to log out of Nexora Go?"
+        confirmLabel="Log Out"
+        cancelLabel="Cancel"
+        type="danger"
+      />
 
       {/* BottomNav hidden on this page */}
     </div>

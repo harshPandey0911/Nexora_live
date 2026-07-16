@@ -39,6 +39,33 @@ const CityManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!formData.name?.trim()) {
+      toast.error('City Name is required');
+      return;
+    }
+    if (!nameRegex.test(formData.name.trim())) {
+      toast.error('City Name should only contain letters and spaces');
+      return;
+    }
+    if (!formData.state?.trim()) {
+      toast.error('State is required');
+      return;
+    }
+    if (!nameRegex.test(formData.state.trim())) {
+      toast.error('State should only contain letters and spaces');
+      return;
+    }
+    if (!formData.country?.trim()) {
+      toast.error('Country/County is required');
+      return;
+    }
+    if (!nameRegex.test(formData.country.trim())) {
+      toast.error('Country/County should only contain letters and spaces');
+      return;
+    }
+
     try {
       if (editingCity) {
         await cityService.update(editingCity._id, formData);

@@ -119,7 +119,7 @@ const HelpSupport = () => {
       action: () => {
         if (supportInfo.whatsapp) {
           const cleanNumber = supportInfo.whatsapp.replace(/\D/g, '');
-          window.location.href = `whatsapp://send?phone=${cleanNumber}`;
+          window.location.href = `https://wa.me/${cleanNumber}`;
         } else {
           toast('WhatsApp support is currently unavailable');
         }
@@ -156,6 +156,25 @@ const HelpSupport = () => {
 
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {
       toast.error('Please fill all fields');
+      return;
+    }
+
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error('Please enter your name');
+      return;
+    }
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(trimmedName)) {
+      toast.error('Name should only contain letters and spaces');
+      return;
+    }
+
+    const trimmedEmail = formData.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error('Please enter a valid email address');
       return;
     }
 
@@ -216,7 +235,7 @@ const HelpSupport = () => {
             {quickActions.map(action => {
               let href = null;
               if (action.id === 'chat' && supportInfo.whatsapp) {
-                href = `whatsapp://send?phone=${supportInfo.whatsapp.replace(/\D/g, '')}`;
+                href = `https://wa.me/${supportInfo.whatsapp.replace(/\D/g, '')}`;
               } else if (action.id === 'email' && supportInfo.email) {
                 href = `mailto:${supportInfo.email}`;
               } else if (action.id === 'call' && supportInfo.phone) {
@@ -230,7 +249,7 @@ const HelpSupport = () => {
                   key={action.id}
                   href={href}
                   onClick={!href ? action.action : undefined}
-                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all active:scale-98 border border-gray-100 flex items-center gap-4 w-full"
+                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all active:scale-98 border border-gray-100 flex items-center gap-4 w-full cursor-pointer"
                 >
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"

@@ -345,8 +345,12 @@ const AdminSettings = () => {
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!companyPhone || !phoneRegex.test(companyPhone)) return "Invalid Phone Number (must be 10 digits)";
 
+    const nameRegex = /^[a-zA-Z\s]+$/;
     if (!companyCity?.trim()) return "City is required";
+    if (!nameRegex.test(companyCity.trim())) return "City should only contain letters and spaces";
+    
     if (!companyState?.trim()) return "State is required";
+    if (!nameRegex.test(companyState.trim())) return "State should only contain letters and spaces";
 
     const pincodeRegex = /^[1-9][0-9]{5}$/;
     if (!companyPincode || !pincodeRegex.test(companyPincode)) return "Invalid Pincode (must be 6 digits)";

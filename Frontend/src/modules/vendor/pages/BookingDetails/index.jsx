@@ -672,13 +672,26 @@ export default function BookingDetails() {
                 <p className="text-[9px] md:text-[10px] font-normal text-blue-600 capitalize tracking-widest mt-0.5 md:mt-1">Verified Network</p>
               </div>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={handleCallUser}
-              className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
-            >
-              <FiPhone className="w-4.5 h-4.5 md:w-6 md:h-6 text-white" />
-            </motion.button>
+            {(() => {
+              const phone = booking.user?.phone || booking.customerPhone;
+              const isPhoneValid = phone && phone !== 'Hidden' && phone !== 'hidden';
+              return isPhoneValid ? (
+                <a
+                  href={`tel:${phone}`}
+                  className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all cursor-pointer"
+                >
+                  <FiPhone className="w-4.5 h-4.5 md:w-6 md:h-6 text-white" />
+                </a>
+              ) : (
+                <button
+                  onClick={() => toast.error('Phone number not available or hidden before booking is accepted')}
+                  className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gray-300 flex items-center justify-center cursor-not-allowed shadow-none"
+                  title="Phone number hidden"
+                >
+                  <FiPhone className="w-4.5 h-4.5 md:w-6 md:h-6 text-gray-500" />
+                </button>
+              );
+            })()}
           </div>
         </div>
 

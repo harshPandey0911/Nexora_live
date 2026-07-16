@@ -259,7 +259,11 @@ const Cart = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 sm:gap-4">
                             <span className="text-base sm:text-2xl font-bold text-gray-900">₹{item.price}</span>
-                            <span className="text-[10px] sm:text-xs font-semibold text-gray-300 line-through">₹{item.price + 200}</span>
+                            {item.originalPrice && item.originalPrice > item.price && (
+                              <span className="text-[10px] sm:text-xs font-semibold text-gray-300 line-through">
+                                ₹{item.originalPrice}
+                              </span>
+                            )}
                           </div>
  
                           {/* Quantity Selector */}

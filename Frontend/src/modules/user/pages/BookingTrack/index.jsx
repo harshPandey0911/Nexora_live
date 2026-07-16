@@ -947,16 +947,13 @@ const BookingTrack = () => {
 
             {/* Call Button */}
             {provider.phone && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const cleanPhone = provider.phone.replace(/[^\d+]/g, '');
-                  window.location.href = `tel:${cleanPhone}`;
-                }}
+              <a
+                href={`tel:${provider.phone.replace(/[^\d+]/g, '')}`}
+                onClick={(e) => e.stopPropagation()}
                 className="w-12 h-12 bg-green-100 text-green-700 rounded-full flex items-center justify-center active:scale-90 transition-transform shadow-sm cursor-pointer"
               >
                 <FiPhone className="w-5 h-5" />
-              </button>
+              </a>
             )}
           </div>
         )}

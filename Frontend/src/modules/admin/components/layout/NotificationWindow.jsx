@@ -51,9 +51,6 @@ const NotificationWindow = ({
       }
     }
 
-    if (notification.relatedType === 'scrap') {
-      navigate('/admin/scrap');
-    }
     onClose();
   };
 

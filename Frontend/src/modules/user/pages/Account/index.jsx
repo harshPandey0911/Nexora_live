@@ -28,6 +28,7 @@ import {
 import { MdAccountBalanceWallet } from 'react-icons/md';
 import NotificationBell from '../../components/common/NotificationBell';
 import Logo from '../../../../components/common/Logo';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -49,6 +50,7 @@ const Account = () => {
     plans: null
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Fetch user profile from database
   useEffect(() => {
@@ -127,8 +129,11 @@ const Account = () => {
     return 'VC';
   };
 
-  const handleLogout = async () => {
-    if (!window.confirm('Are you sure you want to logout?')) return;
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await userAuthService.logout();
       toast.success('Logged out successfully');
@@ -434,6 +439,16 @@ const Account = () => {
 
         </motion.main>
       </div>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Log Out"
+        message="Are you sure you want to log out of Nexora Go?"
+        confirmLabel="Log Out"
+        cancelLabel="Cancel"
+        type="danger"
+      />
     </div>
   );
 };

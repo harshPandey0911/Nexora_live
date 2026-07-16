@@ -291,10 +291,12 @@ const ServicesPage = () => {
                           e.target.src = 'https://ui-avatars.com/api/?name=' + svc.title + '&background=f0f9ff&color=2563eb&bold=true';
                         }}
                       />
-                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
-                        <FiStar className="fill-current w-2 h-2 text-orange-400" />
-                        <span className="text-[9px] font-bold text-gray-900">{svc.rating || '5.0'}</span>
-                      </div>
+                      {svc.rating && (
+                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                          <FiStar className="fill-current w-2 h-2 text-orange-400" />
+                          <span className="text-[9px] font-bold text-gray-900">{svc.rating}</span>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Right/Bottom: Content */}

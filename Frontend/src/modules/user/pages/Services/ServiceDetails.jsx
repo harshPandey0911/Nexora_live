@@ -202,14 +202,16 @@ const ServiceDetailsPage = () => {
           <div className="lg:col-span-6 flex flex-col">
             <div className="bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 lg:p-8 border border-gray-100 shadow-sm flex-1 lg:h-[480px] flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between mb-3 lg:mb-4">
-                  <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full">
-                    <FiStar className="w-3.5 h-3.5 fill-current" />
-                    <span className="text-[11px] font-bold">
-                      {service.rating || '5.0'} ({service.bookingsCount || 0} Bookings)
-                    </span>
+                {service.rating && (
+                  <div className="flex items-center justify-between mb-3 lg:mb-4">
+                    <div className="flex items-center gap-2 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full">
+                      <FiStar className="w-3.5 h-3.5 fill-current" />
+                      <span className="text-[11px] font-bold">
+                        {service.rating} ({service.bookingsCount || 0} Bookings)
+                      </span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <h1 className="text-xl sm:text-4xl font-bold text-gray-900 tracking-tight leading-tight mb-2 sm:mb-3 uppercase">
                   {service.title}

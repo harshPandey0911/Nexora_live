@@ -124,8 +124,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     bookings: 0,
     vendors: 0,
     withdrawals: 0,
-    pendingSettlements: 0,
-    scraps: 0
+    pendingSettlements: 0
   });
 
   // Load admin user from storage
@@ -162,8 +161,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             bookings: stats.pendingBookings || 0,
             vendors: stats.pendingVendors || 0,
             withdrawals: stats.pendingWithdrawals || 0,
-            pendingSettlements: stats.pendingSettlements || 0,
-            scraps: stats.pendingScraps || 0
+            pendingSettlements: stats.pendingSettlements || 0
           });
         }
       } catch (error) {
@@ -316,11 +314,6 @@ const AdminSidebar = ({ isOpen, onClose }) => {
           {item.title === "Settlements" && (counts.withdrawals + counts.pendingSettlements) > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse mr-2">
               {(counts.withdrawals + counts.pendingSettlements) > 99 ? '99+' : (counts.withdrawals + counts.pendingSettlements)}
-            </span>
-          )}
-          {item.title === "Scrap Items" && counts.scraps > 0 && (
-            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse mr-2">
-              {counts.scraps > 99 ? '99+' : counts.scraps}
             </span>
           )}
 

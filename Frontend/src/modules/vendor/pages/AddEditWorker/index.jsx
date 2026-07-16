@@ -12,7 +12,7 @@ import { z } from "zod";
 
 // Zod schemas
 const addWorkerSchema = z.object({
-  name: z.string().trim().min(2, "Name is required"),
+  name: z.string().trim().min(2, "Name is required").regex(/^[a-zA-Z\s]+$/, "Name should only contain alphabets and spaces"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit phone number starting with 6, 7, 8, or 9"),
   email: z.string().trim().email("Enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -30,7 +30,7 @@ const addWorkerSchema = z.object({
 });
 
 const editWorkerSchema = z.object({
-  name: z.string().trim().min(2, "Name is required"),
+  name: z.string().trim().min(2, "Name is required").regex(/^[a-zA-Z\s]+$/, "Name should only contain alphabets and spaces"),
   phone: z.string().regex(/^[6-9]\d{9}$/, "Enter valid 10-digit phone number starting with 6, 7, 8, or 9"),
   email: z.string().trim().email("Enter a valid email address"),
   serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
