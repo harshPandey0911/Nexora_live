@@ -6,9 +6,11 @@ import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { vendorAuthService } from '../../../../services/authService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [settings, setSettings] = useState({
     notifications: true,
     soundAlerts: true,
@@ -66,13 +68,16 @@ const Settings = () => {
     localStorage.setItem('vendorSettings', JSON.stringify(updated));
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await vendorAuthService.logout();
       toast.success('Logged out successfully');
       navigate('/vendor/login');
     } catch (error) {
-      // Even if API call fails, clear local storage
       localStorage.removeItem('vendorAccessToken');
       localStorage.removeItem('vendorRefreshToken');
       localStorage.removeItem('vendorData');
@@ -253,6 +258,17 @@ const Settings = () => {
           De-authorize Identity
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Logout Session?"
+        message="Are you sure you want to logout from your vendor account?"
+        confirmLabel="Logout"
+        cancelLabel="Stay"
+        type="danger"
+      />
     </div>
   );
 };

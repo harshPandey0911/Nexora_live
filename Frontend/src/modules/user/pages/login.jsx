@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FiPhone, FiLock, FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
@@ -17,6 +17,7 @@ const loginSchema = z.object({
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     phone: '',
     password: ''
@@ -28,12 +29,18 @@ const Login = () => {
   // Refs for focus management
   const phoneInputRef = useRef(null);
 
-  // Auto-focus logic
+  // Auto-focus logic + restore phone from navigation state
   useEffect(() => {
     // Redirect if already logged in
     if (localStorage.getItem('accessToken')) {
       navigate('/user', { replace: true });
       return;
+    }
+
+    // Pre-fill phone if coming back from forgot-password
+    const prefilledPhone = location.state?.phone;
+    if (prefilledPhone) {
+      setFormData(prev => ({ ...prev, phone: prefilledPhone }));
     }
 
     if (phoneInputRef.current) {
@@ -59,7 +66,7 @@ const Login = () => {
     const validationResult = loginSchema.safeParse(formData);
     if (!validationResult.success) {
       const errMsgs = {};
-      validationResult.error.errors.forEach(err => {
+      validationResult.error.issues.forEach(err => {
         errMsgs[err.path[0]] = err.message;
         toast.error(err.message);
       });
@@ -160,6 +167,7 @@ const Login = () => {
                 </label>
                 <Link
                   to="/user/forgot-password"
+                  state={{ phone: formData.phone }}
                   className="text-xs font-semibold text-gray-500 hover:text-[var(--brand-teal)] transition-colors"
                 >
                   Forgot Password?

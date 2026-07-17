@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   FiSearch, FiCalendar, FiDownload, FiMoreVertical, FiX,
   FiClock, FiCheckCircle, FiBox, FiTruck, FiXCircle, FiRefreshCw, FiShoppingBag, FiUserCheck, FiUser
@@ -29,6 +29,10 @@ const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => 
 const AllBookings = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const urlStatus = queryParams.get('status');
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +76,7 @@ const AllBookings = () => {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All Status');
+  const [statusFilter, setStatusFilter] = useState(urlStatus || 'All Status');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 

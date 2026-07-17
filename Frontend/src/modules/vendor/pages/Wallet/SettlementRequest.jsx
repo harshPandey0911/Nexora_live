@@ -5,6 +5,7 @@ import vendorWalletService from '../../../../services/vendorWalletService';
 import { toast } from 'react-hot-toast';
 import flutterBridge from '../../../../utils/flutterBridge';
 import { uploadToCloudinary } from '../../../../utils/cloudinaryUpload';
+import { compressImage } from '../../../../utils/imageCompression';
 
 const SettlementRequest = () => {
   const navigate = useNavigate();
@@ -39,51 +40,7 @@ const SettlementRequest = () => {
     }
   };
 
-  const compressImage = (file) => {
-    return new Promise((resolve) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.src = url;
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          resolve(new File([blob], file.name.replace(/\.[^/.]+$/, ".jpg"), {
-            type: 'image/jpeg',
-            lastModified: Date.now()
-          }));
-        }, 'image/jpeg', 0.85);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(file);
-      };
-    });
-  };
 
   const handleNativeCamera = async () => {
     try {
@@ -119,8 +76,22 @@ const SettlementRequest = () => {
     let loadingToast;
     try {
       loadingToast = toast.loading('Optimizing & Uploading...');
-      const file = await compressImage(originalFile);
-      const secureUrl = await uploadToCloudinary(file);
+      
+      let fileToUpload = originalFile;
+      if (originalFile.type.startsWith('image/')) {
+        try {
+          fileToUpload = await compressImage(originalFile, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+            quality: 0.85
+          });
+        } catch (compressError) {
+          console.warn('Image compression failed, using original file:', compressError);
+          fileToUpload = originalFile;
+        }
+      }
+
+      const secureUrl = await uploadToCloudinary(fileToUpload);
       setFormData(prev => ({ ...prev, paymentProof: secureUrl }));
       toast.dismiss(loadingToast);
       toast.success('Proof uploaded successfully');

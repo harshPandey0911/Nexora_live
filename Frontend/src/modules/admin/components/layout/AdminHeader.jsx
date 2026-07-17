@@ -5,20 +5,25 @@ import toast from 'react-hot-toast';
 import Button from '../Button';
 import NotificationWindow from './NotificationWindow';
 import { adminAuthService } from '../../../../services/authService';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const AdminHeader = ({ onMenuClick }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await adminAuthService.logout();
       toast.success('Logged out successfully');
       navigate('/admin/login');
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if API call fails, clear local storage and redirect
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('adminData');
@@ -144,6 +149,7 @@ const AdminHeader = ({ onMenuClick }) => {
   };
 
   return (
+    <>
     <header
       className="bg-white fixed top-0 left-0 right-0 z-30 transition-all duration-300 lg:left-[278px] border-b border-gray-100 shadow-sm"
       style={{
@@ -206,6 +212,18 @@ const AdminHeader = ({ onMenuClick }) => {
         </div>
       </div>
     </header>
+
+    <ConfirmDialog
+      isOpen={showLogoutConfirm}
+      onClose={() => setShowLogoutConfirm(false)}
+      onConfirm={confirmLogout}
+      title="Logout?"
+      message="Are you sure you want to logout from your admin account?"
+      confirmLabel="Logout"
+      cancelLabel="Stay"
+      type="danger"
+    />
+    </>
   );
 };
 

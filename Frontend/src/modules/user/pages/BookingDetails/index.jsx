@@ -1387,17 +1387,33 @@ const BookingDetails = () => {
             {/* Support */}
             <a
               href={`tel:${(supportInfo.phone || '+919999999999').replace(/[^\d+]/g, '')}`}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
+              onClick={(e) => {
+                // Prevent default behavior to handle navigation explicitly
+                e.preventDefault();
+                window.location.href = `tel:${(supportInfo.phone || '+919999999999').replace(/[^\d+]/g, '')}`;
+              }}
+              className="col-span-1 flex flex-col items-center justify-center gap-1.5 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
-              <FiPhone className="w-6 h-6 text-gray-700" />
-              <span className="text-sm font-bold text-gray-700">Call Support</span>
+              <FiPhone className="w-5 h-5 text-gray-700" />
+              <span className="text-xs font-bold text-gray-700">Call Support</span>
+              <span className="text-[10px] text-gray-400 font-medium truncate max-w-full">
+                {supportInfo.phone || '+91 99999 99999'}
+              </span>
             </a>
             <a
               href={`mailto:${supportInfo.email || 'help@homestr.in'}`}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
+              onClick={(e) => {
+                // Prevent default behavior to handle navigation explicitly
+                e.preventDefault();
+                window.location.href = `mailto:${supportInfo.email || 'help@homestr.in'}`;
+              }}
+              className="col-span-1 flex flex-col items-center justify-center gap-1.5 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
-              <FiMail className="w-6 h-6 text-gray-700" />
-              <span className="text-sm font-bold text-gray-700">Email Help</span>
+              <FiMail className="w-5 h-5 text-gray-700" />
+              <span className="text-xs font-bold text-gray-700">Email Help</span>
+              <span className="text-[10px] text-gray-400 font-medium truncate max-w-full">
+                {supportInfo.email || 'help@homestr.in'}
+              </span>
             </a>
 
             {/* Cancel */}

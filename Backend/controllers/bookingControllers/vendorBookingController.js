@@ -1787,20 +1787,34 @@ const payWorker = async (req, res) => {
 const getVendorRatings = async (req, res) => {
   try {
     const vendorId = req.user._id || req.user.id;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, rating, sort = 'newest' } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
+    const query = { vendorId, rating: { $ne: null } };
+    if (rating && rating !== 'all') {
+      query.rating = parseInt(rating);
+    }
+
+    // Resolve sort order
+    const sortMap = {
+      newest:  { reviewedAt: -1 },
+      oldest:  { reviewedAt:  1 },
+      highest: { rating: -1, reviewedAt: -1 },
+      lowest:  { rating:  1, reviewedAt: -1 },
+    };
+    const sortOrder = sortMap[sort] || sortMap.newest;
+
     // Fetch bookings where rating is not null
-    const bookings = await Booking.find({ vendorId, rating: { $ne: null } })
+    const bookings = await Booking.find(query)
       .populate('userId', 'name profilePhoto')
       .populate('serviceId', 'title iconUrl')
       .populate('workerId', 'name profilePhoto')
-      .sort({ reviewedAt: -1 })
+      .sort(sortOrder)
       .skip(skip)
       .limit(parseInt(limit));
 
-    const total = await Booking.countDocuments({ vendorId, rating: { $ne: null } });
+    const total = await Booking.countDocuments(query);
 
     // Calculate average rating
     const stats = await Booking.aggregate([

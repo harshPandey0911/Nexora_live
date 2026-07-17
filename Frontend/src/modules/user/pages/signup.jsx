@@ -72,14 +72,14 @@ const Signup = () => {
     const validationResult = signupSchema.safeParse(formData);
 
     if (!validationResult.success) {
-      const errMsgs = {};
-      validationResult.error.errors.forEach(err => {
-        errMsgs[err.path[0]] = err.message;
-        toast.error(err.message);
-      });
-      setErrors(errMsgs);
-      return;
-    }
+       const errMsgs = {};
+       validationResult.error.issues.forEach(err => {
+         errMsgs[err.path[0]] = err.message;
+         toast.error(err.message);
+       });
+       setErrors(errMsgs);
+       return;
+     }
 
     if (!agreeToTerms) {
       setErrors(prev => ({ ...prev, agreeToTerms: 'You must agree to the Terms & Conditions and Privacy Policy' }));

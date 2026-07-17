@@ -161,7 +161,7 @@ const AdminDashboard = () => {
       bgColor: 'bg-gradient-to-br from-blue-500 to-indigo-600',
       cardBg: 'bg-gradient-to-br from-blue-50 to-indigo-50',
       iconBg: 'bg-white/20',
-      link: '/admin/reports/bookings'
+      link: '/admin/bookings/all?status=pending'
     },
     {
       title: 'Completed Bookings',

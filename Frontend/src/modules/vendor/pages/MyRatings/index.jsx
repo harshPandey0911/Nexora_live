@@ -1,21 +1,50 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiStar, FiUser, FiMessageSquare, FiFilter, FiLoader } from 'react-icons/fi';
+import { FiStar, FiUser, FiMessageSquare, FiFilter, FiLoader, FiChevronLeft, FiChevronRight, FiArrowUp, FiArrowDown, FiClock, FiTrendingUp } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
 import { getRatings } from '../../services/bookingService';
+
+const SORT_OPTIONS = [
+  { value: 'newest',  label: 'Newest First',  icon: FiClock },
+  { value: 'oldest',  label: 'Oldest First',  icon: FiClock },
+  { value: 'highest', label: 'Highest Rated', icon: FiArrowUp },
+  { value: 'lowest',  label: 'Lowest Rated',  icon: FiArrowDown },
+];
+
+const FILTER_OPTIONS = [
+  { value: 'all', label: 'All Reviews' },
+  { value: '5',   label: '5 Stars ⭐' },
+  { value: '4',   label: '4 Stars ⭐' },
+  { value: '3',   label: '3 Stars ⭐' },
+  { value: '2',   label: '2 Stars ⭐' },
+  { value: '1',   label: '1 Star ⭐'  },
+];
+
+const LIMIT = 6;
 
 const MyRatings = () => {
   const navigate = useNavigate();
-  const [ratings, setRatings] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [ratings, setRatings]     = useState([]);
+  const [stats, setStats]         = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: LIMIT, total: 0, pages: 1 });
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchRatings = async (page = 1) => {
+  const [filterRating, setFilterRating] = useState('all');
+  const [sortBy, setSortBy]             = useState('newest');
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortOpen,   setIsSortOpen]   = useState(false);
+
+  const fetchRatings = useCallback(async (page, rating, sort) => {
     try {
       setIsLoading(true);
-      const response = await getRatings({ page, limit: 10 });
+      const response = await getRatings({
+        page,
+        limit: LIMIT,
+        rating: rating === 'all' ? undefined : rating,
+        sort,
+      });
       if (response.success) {
         setRatings(response.data);
         setStats(response.stats);
@@ -29,18 +58,28 @@ const MyRatings = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchRatings();
-  }, []);
+    fetchRatings(currentPage, filterRating, sortBy);
+  }, [currentPage, filterRating, sortBy, fetchRatings]);
+
+  const handleFilterChange = (value) => {
+    setFilterRating(value);
+    setCurrentPage(1);
+    setIsFilterOpen(false);
+  };
+
+  const handleSortChange = (value) => {
+    setSortBy(value);
+    setCurrentPage(1);
+    setIsSortOpen(false);
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+      day: 'numeric', month: 'short', year: 'numeric'
     });
   };
 
@@ -49,26 +88,47 @@ const MyRatings = () => {
     return (
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1 w-8">
-          <span className="text-xs font-normal text-gray-600">{star}</span>
-          <FiStar className="w-3 h-3 text-black fill-black" />
+          <span className="text-xs font-semibold text-gray-600">{star}</span>
+          <FiStar className="w-3 h-3 text-amber-400 fill-amber-400" />
         </div>
         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-black rounded-full transition-all duration-500"
+            className="h-full bg-amber-400 rounded-full transition-all duration-500"
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <span className="text-xs font-medium text-gray-400 w-8 text-right">{count}</span>
+        <span className="text-xs font-bold text-gray-500 w-6 text-right">{count}</span>
       </div>
     );
   };
 
-  if (isLoading && pagination.page === 1) {
+  // ── Pagination helpers ──────────────────────────────────────────────────
+  const { page, pages, total } = pagination;
+
+  const buildPageNumbers = () => {
+    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+    const arr = [];
+    if (page <= 4) {
+      arr.push(1, 2, 3, 4, 5, '…', pages);
+    } else if (page >= pages - 3) {
+      arr.push(1, '…', pages - 4, pages - 3, pages - 2, pages - 1, pages);
+    } else {
+      arr.push(1, '…', page - 1, page, page + 1, '…', pages);
+    }
+    return arr;
+  };
+
+  const activeSortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort';
+  const activeFilterLabel = filterRating === 'all' ? 'All Reviews' : `${filterRating} Stars`;
+
+  if (isLoading && currentPage === 1 && !stats) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <FiLoader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-6" />
-          <p className="text-gray-400 font-normal text-[10px] capitalize tracking-[0.3em]">Analyzing Feedback Ecosystem...</p>
+          <p className="text-gray-400 font-bold text-[10px] capitalize tracking-[0.3em]">
+            Analyzing Feedback Ecosystem...
+          </p>
         </div>
       </div>
     );
@@ -76,44 +136,43 @@ const MyRatings = () => {
 
   return (
     <div className="space-y-5 pb-12">
-      {/* Header - White Style - Hidden on Mobile */}
+      {/* Page Header */}
       <div className="hidden md:flex bg-white p-5 rounded-2xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
         <div>
-          <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight leading-none">
             Reputation Hub
           </h2>
-          <p className="text-gray-500 text-[11px] font-medium mt-2">
+          <p className="text-gray-500 text-[11px] font-semibold mt-2">
             Monitor service quality and operational feedback scores
           </p>
         </div>
-        <div className="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shadow-inner group transition-all">
-          <FiStar className="w-6 h-6 text-amber-400 fill-amber-400/20 group-hover:fill-amber-400 transition-all" />
+        <div className="w-12 h-12 bg-amber-50 rounded-xl border border-amber-100 flex items-center justify-center shadow-inner">
+          <FiStar className="w-6 h-6 text-amber-400 fill-amber-400" />
         </div>
       </div>
 
       {/* Overall Rating Stats */}
       {stats && (
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/5 rounded-full blur-[80px] -mr-32 -mt-32" />
-          
+        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/5 rounded-full blur-[80px] -mr-32 -mt-32" />
           <div className="flex flex-col md:grid md:grid-cols-5 gap-4 relative z-10">
             <div className="md:col-span-2 flex flex-col items-center justify-center md:border-r border-gray-100 py-1">
-              <h2 className="text-3xl font-medium text-gray-900 mb-1 tracking-tighter">
+              <h2 className="text-4xl font-black text-gray-900 mb-1 tracking-tighter">
                 {stats.averageRating?.toFixed(1) || '0.0'}
               </h2>
-              <div className="flex gap-1 mb-1.5">
+              <div className="flex gap-1 mb-2">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <FiStar
                     key={s}
-                    className={`w-3.5 h-3.5 ${s <= Math.round(stats.averageRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
+                    className={`w-4 h-4 ${s <= Math.round(stats.averageRating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-100'}`}
                   />
                 ))}
               </div>
-              <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest">
-                {stats.totalReviews} Operational Audits
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                {stats.totalReviews} Reviews
               </p>
             </div>
-            <div className="md:col-span-3 space-y-1.5 py-1">
+            <div className="md:col-span-3 space-y-2 py-1">
               <RatingBar star={5} count={stats.star5} total={stats.totalReviews} />
               <RatingBar star={4} count={stats.star4} total={stats.totalReviews} />
               <RatingBar star={3} count={stats.star3} total={stats.totalReviews} />
@@ -126,20 +185,106 @@ const MyRatings = () => {
 
       {/* Reviews List */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-xs font-normal text-gray-800 capitalize tracking-widest">Customer Feedback</h3>
-          <button className="w-8 h-8 bg-white rounded-lg border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-colors shadow-sm">
-            <FiFilter className="w-3.5 h-3.5" />
-          </button>
+
+        {/* Toolbar: title + sort + filter */}
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 tracking-tight">Customer Feedback</h3>
+            <p className="text-[10px] font-semibold text-gray-400 mt-0.5">
+              {total > 0 ? `${total} review${total !== 1 ? 's' : ''}` : 'No reviews yet'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Sort dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => { setIsSortOpen(!isSortOpen); setIsFilterOpen(false); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                  isSortOpen || sortBy !== 'newest'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : 'bg-white text-gray-500 border-gray-200 hover:text-blue-600'
+                }`}
+              >
+                <FiTrendingUp className="w-3 h-3" />
+                {activeSortLabel}
+              </button>
+              {isSortOpen && (
+                <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-xl shadow-xl z-30 py-1.5 min-w-[160px]">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleSortChange(opt.value)}
+                      className={`w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2 transition-colors ${
+                        sortBy === opt.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <opt.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Filter dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => { setIsFilterOpen(!isFilterOpen); setIsSortOpen(false); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold transition-all shadow-sm ${
+                  isFilterOpen || filterRating !== 'all'
+                    ? 'bg-blue-50 text-blue-600 border-blue-200'
+                    : 'bg-white text-gray-500 border-gray-200 hover:text-blue-600'
+                }`}
+              >
+                <FiFilter className="w-3 h-3" />
+                {activeFilterLabel}
+              </button>
+              {isFilterOpen && (
+                <div className="absolute right-0 top-10 bg-white border border-gray-200 rounded-xl shadow-xl z-30 py-1.5 min-w-[150px]">
+                  {FILTER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleFilterChange(opt.value)}
+                      className={`w-full text-left px-4 py-2.5 text-xs font-bold transition-colors ${
+                        filterRating === opt.value ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        {ratings.length > 0 ? (
+        {/* Backdrop to close dropdowns */}
+        {(isFilterOpen || isSortOpen) && (
+          <div
+            className="fixed inset-0 z-20"
+            onClick={() => { setIsFilterOpen(false); setIsSortOpen(false); }}
+          />
+        )}
+
+        {/* Review Cards */}
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-20">
+            <FiLoader className="w-8 h-8 text-blue-600 animate-spin" />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Loading reviews...
+            </span>
+          </div>
+        ) : ratings.length > 0 ? (
           <div className="grid grid-cols-1 gap-4">
             {ratings.map((rating, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-3">
+              <div
+                key={rating._id || idx}
+                className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300"
+              >
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                   <div className="flex gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100 shrink-0 shadow-inner">
+                    <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100 shrink-0 shadow-inner">
                       {rating.userId?.profilePhoto ? (
                         <img src={rating.userId.profilePhoto} alt={rating.userId.name} className="w-full h-full object-cover" />
                       ) : (
@@ -147,32 +292,38 @@ const MyRatings = () => {
                       )}
                     </div>
                     <div>
-                      <h4 className="font-normal text-gray-800 text-xs tracking-tight capitalize">{rating.userId?.name || 'Authorized Client'}</h4>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <h4 className="font-bold text-gray-900 text-sm tracking-tight capitalize">
+                        {rating.userId?.name || 'Authorized Client'}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
                         <div className="flex gap-0.5">
                           {[1, 2, 3, 4, 5].map((s) => (
                             <FiStar
                               key={s}
-                              className={`w-2.5 h-2.5 ${s <= rating.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-100'}`}
+                              className={`w-3 h-3 ${s <= rating.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`}
                             />
                           ))}
                         </div>
-                        <span className="text-[8px] font-normal text-gray-400 capitalize tracking-widest">{formatDate(rating.reviewedAt)}</span>
+                        <span className="text-[10px] font-semibold text-gray-400">
+                          {formatDate(rating.reviewedAt)}
+                        </span>
                       </div>
                     </div>
                   </div>
-                  <div className="bg-blue-50 px-2 py-1 rounded-md border border-blue-100">
-                    <span className="text-[8px] font-normal text-blue-600 capitalize tracking-widest">{rating.serviceId?.title || rating.serviceName}</span>
+                  <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100 shrink-0">
+                    <span className="text-[10px] font-bold text-blue-600 capitalize">
+                      {rating.serviceId?.title || rating.serviceName || '—'}
+                    </span>
                   </div>
                 </div>
 
                 {rating.review && (
-                  <p className="text-gray-600 text-xs leading-relaxed font-medium mt-3 pl-3 border-l-2 border-blue-600/20 italic">
+                  <p className="text-gray-600 text-xs leading-relaxed font-medium mt-4 pl-3 border-l-2 border-blue-500/30 italic">
                     "{rating.review}"
                   </p>
                 )}
 
-                {rating.reviewImages && rating.reviewImages.length > 0 && (
+                {rating.reviewImages?.length > 0 && (
                   <div className="flex gap-2.5 overflow-x-auto mt-4 pb-1 scrollbar-hide">
                     {rating.reviewImages.map((img, i) => (
                       <img key={i} src={img} className="w-20 h-20 rounded-xl object-cover shrink-0 border border-gray-100 shadow-sm" alt="Review" />
@@ -181,12 +332,14 @@ const MyRatings = () => {
                 )}
 
                 {rating.workerId && (
-                  <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-[8px] font-normal text-gray-400 capitalize tracking-widest">Protocol Executed By:</span>
-                      <span className="text-[10px] font-normal text-gray-800 capitalize tracking-tight">{rating.workerId.name}</span>
+                  <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">By:</span>
+                      <span className="text-[11px] font-bold text-gray-700 capitalize">{rating.workerId.name}</span>
                     </div>
-                    <span className="text-[9px] font-normal text-gray-400 capitalize tracking-widest">Order ID: #{rating.bookingNumber}</span>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                      #{rating.bookingNumber}
+                    </span>
                   </div>
                 )}
               </div>
@@ -194,21 +347,66 @@ const MyRatings = () => {
           </div>
         ) : (
           <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
-            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-gray-100">
+            <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
               <FiMessageSquare className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-400 font-normal capitalize tracking-widest text-[10px]">No Operational Logs Found</p>
+            <p className="text-gray-400 font-bold capitalize tracking-widest text-[10px]">
+              {filterRating !== 'all' ? `No ${filterRating}-star reviews found` : 'No reviews yet'}
+            </p>
           </div>
         )}
 
-        {/* Load More */}
-        {pagination.total > ratings.length && (
-          <button
-            onClick={() => fetchRatings(pagination.page + 1)}
-            className="w-full py-5 bg-white rounded-[24px] border border-gray-100 text-blue-600 text-[10px] font-normal capitalize tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-          >
-            {isLoading ? <FiLoader className="animate-spin" /> : 'Synchronize More Logs'}
-          </button>
+        {/* ── Pagination Controls ─────────────────────────────────────────── */}
+        {pages > 1 && (
+          <div className="flex items-center justify-between gap-2 pt-2">
+            {/* Info */}
+            <p className="text-[11px] font-bold text-gray-400 hidden sm:block">
+              Page {page} of {pages} · {total} review{total !== 1 ? 's' : ''}
+            </p>
+
+            {/* Controls */}
+            <div className="flex items-center gap-1 mx-auto sm:mx-0">
+              {/* Prev */}
+              <button
+                disabled={page <= 1 || isLoading}
+                onClick={() => setCurrentPage(p => p - 1)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+              >
+                <FiChevronLeft className="w-4 h-4" />
+              </button>
+
+              {/* Page numbers */}
+              {buildPageNumbers().map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm font-bold">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    disabled={isLoading}
+                    onClick={() => setCurrentPage(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${
+                      currentPage === p
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              {/* Next */}
+              <button
+                disabled={page >= pages || isLoading}
+                onClick={() => setCurrentPage(p => p + 1)}
+                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+              >
+                <FiChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -143,6 +143,14 @@ const Cart = () => {
     }
   };
 
+  const handleItemClick = (item) => {
+    const rawId = item.serviceId;
+    const id = normalizeId(rawId);
+    if (!id) return;
+    const isProduct = item.serviceId?.offeringType === 'PRODUCT';
+    navigate(isProduct ? `/user/product/${id}` : `/user/service/${id}`);
+  };
+
   const handleRemove = async (itemId) => {
     try {
       const res = await removeItem(itemId);
@@ -221,7 +229,8 @@ const Cart = () => {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                    className="group bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden"
+                    onClick={() => handleItemClick(item)}
+                    className="group bg-white rounded-[1.5rem] sm:rounded-[2.5rem] p-4 sm:p-8 border border-gray-100 shadow-sm hover:shadow-md transition-all relative overflow-hidden cursor-pointer"
                   >
                     <div className="flex items-center gap-4 sm:gap-8">
                       {/* Image */}
@@ -245,7 +254,7 @@ const Cart = () => {
                             </h3>
                           </div>
                           <button 
-                            onClick={() => handleRemove(item.id || item._id)}
+                            onClick={(e) => { e.stopPropagation(); handleRemove(item.id || item._id); }}
                             className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-50 text-red-500 flex items-center justify-center transition-all hover:bg-red-500 hover:text-white"
                           >
                             <FiTrash2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -267,16 +276,19 @@ const Cart = () => {
                           </div>
  
                           {/* Quantity Selector */}
-                          <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100">
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100"
+                          >
                             <button 
-                              onClick={() => handleQuantityChange(item.id || item._id, item.serviceCount || 1, -1)}
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item.id || item._id, item.serviceCount || 1, -1); }}
                               className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
                             >
                               <FiMinus className="w-3 h-3" />
                             </button>
                             <span className="w-8 sm:w-12 text-center text-xs sm:text-sm font-bold">{item.serviceCount || 1}</span>
                             <button 
-                              onClick={() => handleQuantityChange(item.id || item._id, item.serviceCount || 1, 1)}
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item.id || item._id, item.serviceCount || 1, 1); }}
                               className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
                             >
                               <FiPlus className="w-3 h-3" />

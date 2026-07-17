@@ -1,8 +1,10 @@
 const cloudinary = require('cloudinary').v2;
 const { Readable } = require('stream');
 
+const Settings = require('../models/Settings');
+
 /**
- * Configure Cloudinary
+ * Configure Cloudinary Default
  */
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -18,6 +20,20 @@ cloudinary.config({
  */
 const uploadFile = async (file, options = {}) => {
   try {
+    // Dynamically configure Cloudinary using DB settings if available
+    try {
+      const settings = await Settings.findOne({ type: 'global' }).lean();
+      if (settings?.cloudinaryCloudName && settings?.cloudinaryApiKey && settings?.cloudinaryApiSecret) {
+        cloudinary.config({
+          cloud_name: settings.cloudinaryCloudName,
+          api_key: settings.apiKey || settings.cloudinaryApiKey,
+          api_secret: settings.cloudinaryApiSecret
+        });
+      }
+    } catch (dbError) {
+      console.warn('Failed to load dynamic Cloudinary settings, using process.env:', dbError.message);
+    }
+
     const {
       folder = 'appzeto',
       resource_type = 'auto',
@@ -83,6 +99,20 @@ const uploadFile = async (file, options = {}) => {
  */
 const deleteFile = async (publicId) => {
   try {
+    // Dynamically configure Cloudinary using DB settings if available
+    try {
+      const settings = await Settings.findOne({ type: 'global' }).lean();
+      if (settings?.cloudinaryCloudName && settings?.cloudinaryApiKey && settings?.cloudinaryApiSecret) {
+        cloudinary.config({
+          cloud_name: settings.cloudinaryCloudName,
+          api_key: settings.apiKey || settings.cloudinaryApiKey,
+          api_secret: settings.cloudinaryApiSecret
+        });
+      }
+    } catch (dbError) {
+      console.warn('Failed to load dynamic Cloudinary settings, using process.env:', dbError.message);
+    }
+
     const result = await cloudinary.uploader.destroy(publicId);
     return {
       success: result.result === 'ok',

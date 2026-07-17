@@ -12,6 +12,8 @@ const SettlementHistory = () => {
   const [loading, setLoading] = useState(true);
   const [settlements, setSettlements] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     loadSettlements();
@@ -24,6 +26,7 @@ const SettlementHistory = () => {
       const res = await vendorWalletService.getSettlements(params);
       if (res.success) {
         setSettlements(res.data || []);
+        setCurrentPage(1);
       }
     } catch (error) {
       toast.error('Failed to load settlements');
@@ -129,7 +132,9 @@ const SettlementHistory = () => {
           </div>
         ) : (
           <div className="space-y-6 pb-20">
-            {settlements.map((settlement) => {
+            {settlements
+              .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+              .map((settlement) => {
               const statusColors = getStatusColor(settlement.status);
               return (
                 <div
@@ -197,6 +202,31 @@ const SettlementHistory = () => {
                 </div>
               );
             })}
+
+            {/* Pagination */}
+            {Math.ceil(settlements.length / PAGE_SIZE) > 1 && (
+              <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                <p className="text-[9px] font-medium text-gray-400 capitalize tracking-widest">
+                  Page {currentPage} of {Math.ceil(settlements.length / PAGE_SIZE)} &bull; {settlements.length} records
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-6 py-3 rounded-2xl text-[9px] font-medium capitalize tracking-widest border border-gray-100 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(Math.ceil(settlements.length / PAGE_SIZE), p + 1))}
+                    disabled={currentPage === Math.ceil(settlements.length / PAGE_SIZE)}
+                    className="px-6 py-3 rounded-2xl text-[9px] font-medium capitalize tracking-widest border border-blue-100 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

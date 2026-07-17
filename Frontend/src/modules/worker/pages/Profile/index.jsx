@@ -7,6 +7,7 @@ import { workerAuthService } from '../../../../services/authService';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 import LogoLoader from '../../../../components/common/LogoLoader';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -107,14 +109,16 @@ const Profile = () => {
     fetchProfile();
   }, []);
 
-  const handleLogout = async () => {
-    if (!window.confirm('Are you sure you want to logout?')) return;
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await workerAuthService.logout();
       toast.success('Logged out successfully');
       navigate('/worker/login');
     } catch (error) {
-      // Even if API call fails, clear local storage
       localStorage.removeItem('workerAccessToken');
       localStorage.removeItem('workerRefreshToken');
       localStorage.removeItem('workerData');
@@ -345,6 +349,17 @@ const Profile = () => {
       </main>
 
       <BottomNav />
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Logout?"
+        message="Are you sure you want to logout from your worker account?"
+        confirmLabel="Logout"
+        cancelLabel="Stay"
+        type="danger"
+      />
     </div>
   );
 };

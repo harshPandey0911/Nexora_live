@@ -118,8 +118,11 @@ const HelpSupport = () => {
       color: '#25D366',
       action: () => {
         if (supportInfo.whatsapp) {
-          const cleanNumber = supportInfo.whatsapp.replace(/\D/g, '');
-          window.location.href = `https://wa.me/${cleanNumber}`;
+          let cleanNumber = supportInfo.whatsapp.replace(/\D/g, '');
+          if (cleanNumber.length === 10) {
+            cleanNumber = `91${cleanNumber}`;
+          }
+          window.open(`https://wa.me/${cleanNumber}`, '_blank');
         } else {
           toast('WhatsApp support is currently unavailable');
         }
@@ -232,22 +235,29 @@ const HelpSupport = () => {
         <div className="mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-3">Contact Us</h2>
           <div className="grid grid-cols-1 gap-3">
-            {quickActions.map(action => {
+             {quickActions.map(action => {
               let href = null;
               if (action.id === 'chat' && supportInfo.whatsapp) {
-                href = `https://wa.me/${supportInfo.whatsapp.replace(/\D/g, '')}`;
+                let cleanNumber = supportInfo.whatsapp.replace(/\D/g, '');
+                if (cleanNumber.length === 10) {
+                  cleanNumber = `91${cleanNumber}`;
+                }
+                href = `https://wa.me/${cleanNumber}`;
               } else if (action.id === 'email' && supportInfo.email) {
                 href = `mailto:${supportInfo.email}`;
               } else if (action.id === 'call' && supportInfo.phone) {
                 href = `tel:${supportInfo.phone.replace(/[^\d+]/g, '')}`;
               }
 
+              const isExternal = href && href.startsWith('http');
               const Component = href ? 'a' : 'button';
 
               return (
                 <Component
                   key={action.id}
                   href={href}
+                  target={isExternal ? '_blank' : undefined}
+                  rel={isExternal ? 'noopener noreferrer' : undefined}
                   onClick={!href ? action.action : undefined}
                   className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all active:scale-98 border border-gray-100 flex items-center gap-4 w-full cursor-pointer"
                 >

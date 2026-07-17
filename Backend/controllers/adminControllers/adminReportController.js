@@ -169,7 +169,7 @@ exports.getWorkerReport = async (req, res) => {
 
     // Worker availability distribution
     const availabilityDistribution = await Worker.aggregate([
-      { $group: { _id: '$isAvailable', count: { $sum: 1 } } }
+      { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
     res.status(200).json({

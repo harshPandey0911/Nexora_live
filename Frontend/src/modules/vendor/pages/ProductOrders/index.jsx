@@ -75,10 +75,10 @@ const ProductOrders = memo(() => {
       {/* Header - White Style - Hidden on Mobile */}
       <div className="hidden md:flex bg-white p-5 rounded-2xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
         <div>
-          <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight leading-none">
             Product Orders
           </h2>
-          <p className="text-gray-500 text-[11px] font-medium mt-2">
+          <p className="text-gray-500 text-[11px] font-semibold mt-2">
             Fulfillment Intelligence Hub • Manage shipments and delivery protocols
           </p>
         </div>
@@ -95,7 +95,7 @@ const ProductOrders = memo(() => {
               key={f}
               onClick={() => setFilter(f)}
               className={`
-                px-3.5 py-1.5 rounded-lg text-[10px] font-normal capitalize tracking-wider transition-all duration-300 whitespace-nowrap
+                px-3.5 py-1.5 rounded-lg text-[10px] font-bold capitalize tracking-wider transition-all duration-300 whitespace-nowrap
                 ${filter === f 
                   ? 'bg-[#2874F0] text-white shadow-lg shadow-blue-200' 
                   : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
@@ -129,11 +129,11 @@ const ProductOrders = memo(() => {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="px-6 py-5 text-[11px] font-normal text-gray-400 capitalize tracking-widest">Order Details</th>
-                <th className="px-6 py-5 text-[11px] font-normal text-gray-400 capitalize tracking-widest">Customer</th>
-                <th className="pl-6 pr-2 py-5 text-[11px] font-normal text-gray-400 capitalize tracking-widest">Amount</th>
-                <th className="px-2 py-5 text-[11px] font-normal text-gray-400 capitalize tracking-widest w-[160px]">Protocol Status</th>
-                <th className="px-4 py-5 text-[11px] font-normal text-gray-400 capitalize tracking-widest text-right w-[140px]">Actions</th>
+                <th className="px-6 py-5 text-[11px] font-bold text-gray-500 capitalize tracking-widest">Order Details</th>
+                <th className="px-6 py-5 text-[11px] font-bold text-gray-500 capitalize tracking-widest">Customer</th>
+                <th className="pl-6 pr-2 py-5 text-[11px] font-bold text-gray-500 capitalize tracking-widest">Amount</th>
+                <th className="px-2 py-5 text-[11px] font-bold text-gray-500 capitalize tracking-widest w-[160px]">Protocol Status</th>
+                <th className="px-4 py-5 text-[11px] font-bold text-gray-500 capitalize tracking-widest text-right w-[140px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -142,7 +142,7 @@ const ProductOrders = memo(() => {
                   <td colSpan="5" className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-[10px] font-normal text-gray-400 capitalize tracking-widest">Syncing Orders...</span>
+                      <span className="text-[10px] font-bold text-gray-500 capitalize tracking-widest">Syncing Orders...</span>
                     </div>
                   </td>
                 </tr>
@@ -153,8 +153,8 @@ const ProductOrders = memo(() => {
                       <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
                         <FiBox className="w-8 h-8 text-gray-300" />
                       </div>
-                      <h3 className="text-sm font-normal text-gray-800 capitalize">No Shipments Found</h3>
-                      <p className="text-[10px] text-gray-500 mt-1 font-normal capitalize tracking-widest">Awaiting new order protocols</p>
+                      <h3 className="text-sm font-bold text-gray-900 capitalize">No Shipments Found</h3>
+                      <p className="text-[10px] text-gray-500 mt-1 font-semibold capitalize tracking-widest">Awaiting new order protocols</p>
                     </div>
                   </td>
                 </tr>
@@ -163,26 +163,26 @@ const ProductOrders = memo(() => {
                   <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => navigate(`/vendor/booking/${order.id}`)}>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-normal text-blue-600 mb-0.5">#{order.id.slice(-8).toUpperCase()}</span>
-                        <p className="text-sm font-normal text-gray-800 capitalize truncate">{order.productName}</p>
-                        <span className="text-[10px] text-gray-400 font-normal mt-0.5 capitalize tracking-wider">{order.date}</span>
+                        <span className="text-[10px] font-bold text-blue-600 mb-0.5">#{order.id.slice(-8).toUpperCase()}</span>
+                        <p className="text-sm font-bold text-gray-900 capitalize truncate">{order.productName}</p>
+                        <span className="text-[10px] text-gray-400 font-semibold mt-0.5 capitalize tracking-wider">{order.date}</span>
                       </div>
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
-                        <span className="text-sm font-normal text-gray-700">{order.user.name}</span>
-                        <span className="text-[10px] text-gray-400 font-medium truncate max-w-[150px]">{order.location.address}</span>
+                        <span className="text-sm font-bold text-gray-800">{order.user.name}</span>
+                        <span className="text-[10px] text-gray-400 font-semibold truncate max-w-[150px]">{order.location.address}</span>
                       </div>
                     </td>
                     <td className="pl-6 pr-2 py-5">
-                      <span className="text-sm font-medium text-gray-900">₹{order.price}</span>
+                      <span className="text-sm font-bold text-gray-900">₹{order.price}</span>
                     </td>
                     <td className="px-2 py-5">
                       <select 
                         value={order.status}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => handleUpdateStatus(e, order.id, e.target.value)}
-                        className={`w-full text-[9px] font-medium capitalize tracking-widest px-3 py-2 rounded-xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-blue-500/10 cursor-pointer appearance-none ${
+                        className={`w-full text-[9px] font-bold capitalize tracking-widest px-3 py-2 rounded-xl border border-gray-100 shadow-sm focus:ring-2 focus:ring-blue-500/10 cursor-pointer appearance-none ${
                           order.status === 'delivered' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                           order.status === 'cancelled' ? 'bg-red-50 text-red-600 border-red-100' :
                           'bg-blue-50 text-blue-600 border-blue-100'
@@ -200,7 +200,7 @@ const ProductOrders = memo(() => {
                         {order.status === 'confirmed' && (
                           <button 
                             onClick={(e) => handleUpdateStatus(e, order.id, 'packed')}
-                            className="px-4 py-1.5 bg-blue-600 text-white text-[10px] font-medium rounded-xl capitalize tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
+                            className="px-4 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-xl capitalize tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 active:scale-95"
                           >
                             Pack
                           </button>
@@ -208,7 +208,7 @@ const ProductOrders = memo(() => {
                         {order.status === 'packed' && (
                           <button 
                             onClick={(e) => handleUpdateStatus(e, order.id, 'shipped')}
-                            className="px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-medium rounded-xl capitalize tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
+                            className="px-4 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-xl capitalize tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95"
                           >
                             Ship
                           </button>
@@ -216,7 +216,7 @@ const ProductOrders = memo(() => {
                         {order.status === 'shipped' && (
                           <button 
                             onClick={(e) => handleUpdateStatus(e, order.id, 'delivered')}
-                            className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-medium rounded-xl capitalize tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+                            className="px-4 py-1.5 bg-emerald-600 text-white text-[10px] font-bold rounded-xl capitalize tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
                           >
                             Deliver
                           </button>

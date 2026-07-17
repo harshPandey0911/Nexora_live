@@ -141,7 +141,7 @@ const CategoriesPage = () => {
 
     if (!validationResult.success) {
       // Show first error in toast
-      const firstError = validationResult.error.errors[0];
+      const firstError = validationResult.error.issues[0];
       toast.error(firstError.message);
       return;
     }

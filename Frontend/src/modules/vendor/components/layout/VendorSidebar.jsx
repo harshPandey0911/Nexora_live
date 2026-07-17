@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FiHome, FiShoppingBag, FiBox, FiPackage, 
@@ -8,10 +8,13 @@ import {
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../../services/authService';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
+import Logo from '../../../../components/common/Logo';
 
 const VendorSidebar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   const [stats, setStats] = React.useState(() => {
     const cached = localStorage.getItem('vendorDashboardStats');
@@ -78,31 +81,25 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
   });
 
   return (
+    <>
     <aside className={`w-[278px] h-screen bg-slate-800 border-r border-slate-700/50 flex flex-col shrink-0 fixed top-0 transition-all duration-300 overflow-hidden z-50 shadow-2xl ${isOpen ? 'left-0' : '-left-[278px] lg:left-0'}`}>
       {/* Header Section */}
       <div className="px-4 py-6 border-b border-slate-700 bg-slate-900">
         <div className="flex items-center justify-between gap-3 px-2">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #2874F0 0%, #4787F7 100%)',
-              }}
-            >
-              <FiUser className="text-white text-xl" />
-            </div>
+            <Logo className="w-12 h-12 object-cover rounded-xl shadow-lg border border-slate-700 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <h2 className="font-normal text-white text-sm tracking-tight truncate">
+              <h2 className="font-bold text-white text-sm tracking-tight truncate">
                 Verified Partner
               </h2>
-              <p className="text-[10px] font-normal text-gray-400 capitalize tracking-widest truncate flex items-center gap-1">
+              <p className="text-[10px] font-bold text-gray-400 capitalize tracking-widest truncate flex items-center gap-1">
                 <FiStar className="w-2.5 h-2.5 text-blue-400" /> ID: #V-7742
               </p>
             </div>
           </div>
         </div>
       </div>
-
+ 
       <nav className="flex-1 overflow-y-auto p-3 scrollbar-admin lg:pb-3 space-y-1 overscroll-contain">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -113,12 +110,7 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
               onClick={async () => {
                 setIsOpen?.(false);
                 if (item.id === 'logout') {
-                  try {
-                    await logout();
-                  } catch (e) {
-                    console.error('Logout failed:', e);
-                  }
-                  navigate('/vendor/login');
+                  setShowLogoutConfirm(true);
                 } else {
                   navigate(item.path);
                 }
@@ -134,11 +126,11 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
               `}
             >
               <item.icon className={`text-lg flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-white' : 'text-gray-500'}`} />
-              <span className={`font-normal flex-1 text-[13px] whitespace-nowrap ${isActive ? 'text-white' : ''}`}>
+              <span className={`font-semibold flex-1 text-sm whitespace-nowrap ${isActive ? 'text-white' : ''}`}>
                 {item.label}
               </span>
               {Number(item.badge) > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
                   {item.badge > 99 ? '99+' : item.badge}
                 </span>
               )}
@@ -146,15 +138,34 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
           );
         })}
       </nav>
-
+ 
       {/* Footer Branding */}
       <div className="p-6 border-t border-slate-700 bg-slate-900">
         <div className="flex flex-col gap-1 opacity-60">
-          <p className="text-[10px] font-normal text-gray-500 capitalize tracking-wider">Protocol v2.4.0</p>
-          <p className="text-[9px] font-normal text-blue-400 capitalize tracking-wide">Powered by Nexora</p>
+          <p className="text-[10px] font-bold text-gray-500 capitalize tracking-wider">Protocol v2.4.0</p>
+          <p className="text-[9px] font-black text-blue-400 capitalize tracking-wide">Powered by Nexora</p>
         </div>
       </div>
     </aside>
+
+    <ConfirmDialog
+      isOpen={showLogoutConfirm}
+      onClose={() => setShowLogoutConfirm(false)}
+      onConfirm={async () => {
+        try {
+          await logout();
+        } catch (e) {
+          console.error('Logout failed:', e);
+        }
+        navigate('/vendor/login');
+      }}
+      title="Logout?"
+      message="Are you sure you want to logout from your vendor account?"
+      confirmLabel="Logout"
+      cancelLabel="Stay"
+      type="danger"
+    />
+    </>
   );
 };
 
