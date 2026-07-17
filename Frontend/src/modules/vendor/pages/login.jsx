@@ -99,17 +99,9 @@ const VendorLogin = () => {
       <div className="w-full max-w-md">
         {/* White Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
-                boxShadow: `0 4px 12px rgba(30, 58, 138, 0.3)`
-              }}
-            >
-              <FiLock className="w-8 h-8 text-white" />
-            </div>
+            <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
           </div>
 
           {/* Title */}
@@ -234,13 +226,13 @@ const VendorLogin = () => {
           </Link>
         </p>
 
-        <div className="mt-4 text-center text-xs text-white/60">
+        <div className="mt-4 text-center text-xs text-gray-500">
           By signing in, you agree to our{' '}
-          <Link to="/vendor/terms" className="font-semibold hover:underline text-white/80">
+          <Link to="/vendor/terms" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
             Terms &amp; Conditions
           </Link>{' '}
           and{' '}
-          <Link to="/vendor/privacy" className="font-semibold hover:underline text-white/80">
+          <Link to="/vendor/privacy" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
             Privacy Policy
           </Link>
         </div>

@@ -241,17 +241,9 @@ const VendorSignup = () => {
       <div className="w-full max-w-4xl">
         {/* White Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
-          {/* Icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors.button} 0%, #008a8a 100%)`,
-                boxShadow: `0 4px 12px rgba(0, 166, 166, 0.3)`
-              }}
-            >
-              <FiUser className="w-8 h-8 text-white" />
-            </div>
+            <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
           </div>
 
           {/* Title */}
