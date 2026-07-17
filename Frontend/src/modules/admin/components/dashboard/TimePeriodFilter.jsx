@@ -1,5 +1,6 @@
 import React from 'react';
 import { FiCalendar, FiDownload } from 'react-icons/fi';
+import { CustomDateInput } from '../../../../components/common';
 
 const TimePeriodFilter = ({ selectedPeriod, onPeriodChange, onExport, customDates, onCustomDateChange }) => {
   const periods = [
@@ -49,18 +50,19 @@ const TimePeriodFilter = ({ selectedPeriod, onPeriodChange, onExport, customDate
 
           {selectedPeriod === 'custom' && (
             <div className="flex items-center gap-2 bg-white border border-primary-100 rounded-2xl p-1.5 px-4 shadow-sm animate-in fade-in slide-in-from-left-4 duration-500">
-              <input
-                type="date"
+              <CustomDateInput
                 value={customDates?.start || ''}
-                onChange={(e) => onCustomDateChange({ ...customDates, start: e.target.value })}
-                className="border-0 bg-transparent text-sm font-semibold focus:ring-0 text-gray-700 py-1 w-32 cursor-pointer"
+                max={customDates?.end || new Date().toISOString().split('T')[0]}
+                onChange={(val) => onCustomDateChange({ ...customDates, start: val })}
+                inputClassName="text-sm font-semibold text-gray-700 w-24 cursor-pointer"
               />
               <span className="text-gray-400 font-bold text-xs uppercase tracking-widest">to</span>
-              <input
-                type="date"
+              <CustomDateInput
                 value={customDates?.end || ''}
-                onChange={(e) => onCustomDateChange({ ...customDates, end: e.target.value })}
-                className="border-0 bg-transparent text-sm font-semibold focus:ring-0 text-gray-700 py-1 w-32 cursor-pointer"
+                min={customDates?.start}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={(val) => onCustomDateChange({ ...customDates, end: val })}
+                inputClassName="text-sm font-semibold text-gray-700 w-24 cursor-pointer"
               />
             </div>
           )}

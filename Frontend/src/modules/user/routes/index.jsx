@@ -82,6 +82,8 @@ const AddScrap = lazyLoad(() => import('../pages/Shop/AddScrap'));
 const Notifications = lazyLoad(() => import('../pages/Notifications'));
 const HelpSupport = lazyLoad(() => import('../pages/HelpSupport'));
 const CancellationPolicy = lazyLoad(() => import('../pages/CancellationPolicy'));
+const TermsConditions = lazyLoad(() => import('../pages/TermsConditions'));
+const PrivacyPolicy = lazyLoad(() => import('../pages/PrivacyPolicy'));
 
 const About = lazyLoad(() => import('../pages/About'));
 const Contact = lazyLoad(() => import('../pages/Contact'));
@@ -113,6 +115,10 @@ const UserRoutes = () => {
                               location.pathname.startsWith('/user/product/') || 
                               location.pathname.startsWith('/user/service/');
 
+  // Check if Footer is rendered on the current page
+  const footerPages = ['/user', '/user/', '/user/about', '/user/contact', '/user/services', '/user/products', '/user/service', '/user/product'];
+  const shouldShowFooter = footerPages.some(path => location.pathname.startsWith(path));
+
   // Check if we hide the live booking card (e.g. if we are on the specific booking details or track page)
   const isBookingDetailsPage = location.pathname.match(/^\/user\/booking\/[a-zA-Z0-9]+(\/track)?$/);
   const isBookingConfirmationPage = location.pathname.includes('/booking-confirmation');
@@ -127,8 +133,8 @@ const UserRoutes = () => {
   return (
     <ThemeManager theme="user">
       <ErrorBoundary>
-        {/* Main content area - leaves space for bottom nav when needed */}
-        <div className={shouldShowBottomNav && !['/user', '/user/'].includes(location.pathname) ? "pb-24" : ""}>
+        {/* Main content area - leaves space for bottom nav when needed (only when footer is not shown to avoid double padding) */}
+        <div className={(shouldShowBottomNav && !shouldShowFooter) ? "pb-24" : ""}>
           <Suspense fallback={<LoadingFallback />}>
             <PageTransition>
               <Routes>
@@ -146,6 +152,8 @@ const UserRoutes = () => {
                 <Route path="/service/:id" element={<ServiceDetails />} />
                 <Route path="/help-support" element={<HelpSupport />} />
                 <Route path="/cancellation-policy" element={<CancellationPolicy />} />
+                <Route path="/terms" element={<TermsConditions />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
 
                 {/* Protected routes (auth required) */}
                 <Route path="/native" element={<ProtectedRoute userType="user"><Native /></ProtectedRoute>} />
@@ -178,7 +186,7 @@ const UserRoutes = () => {
         {/* These components are OUTSIDE Suspense so they persist during page loads */}
         {!isBookingDetailsPage && !isBookingConfirmationPage && !isPublicPage && <LiveBookingCard hasBottomNav={shouldShowBottomNav} />}
         {shouldShowBottomNav && <BottomNav />}
-        {(['/user', '/user/', '/user/about', '/user/contact', '/user/services', '/user/products', '/user/service', '/user/product'].some(path => location.pathname.startsWith(path))) && <Footer />}
+        {(['/user', '/user/', '/user/about', '/user/contact', '/user/services', '/user/products', '/user/service', '/user/product'].some(path => location.pathname.startsWith(path))) && <Footer hasBottomNav={shouldShowBottomNav} />}
       </ErrorBoundary>
     </ThemeManager>
   );

@@ -7,8 +7,8 @@ import { vendorCatalogService, categoryService } from "../../../../../services/c
 import { z } from "zod";
 
 const schema = z.object({
-  name: z.string().min(2, "Name is required"),
-  basePrice: z.number().min(0, "Price must be non-negative"),
+  name: z.string().trim().min(2, "Service Name must be at least 2 characters").regex(/^[a-zA-Z\s]+$/, "Service Name must contain only letters and spaces"),
+  basePrice: z.number().gt(0, "Base Price must be greater than 0"),
   description: z.string().optional(),
   categoryId: z.string().min(1, "Category is required")
 });
@@ -22,6 +22,7 @@ const VendorServicesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", basePrice: "", description: "", categoryId: "" });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     loadServices();
@@ -64,9 +65,17 @@ const VendorServicesPage = () => {
 
     const result = schema.safeParse(data);
     if (!result.success) {
+      // Build per-field error map
+      const fieldErrors = {};
+      result.error.errors.forEach(err => {
+        const field = err.path[0];
+        fieldErrors[field] = err.message;
+      });
+      setErrors(fieldErrors);
       toast.error(result.error.errors[0].message);
       return;
     }
+    setErrors({});
 
     try {
       setLoading(true);
@@ -112,6 +121,7 @@ const VendorServicesPage = () => {
   const reset = () => {
     setEditingId(null);
     setForm({ name: "", basePrice: "", description: "", categoryId: "" });
+    setErrors({});
     setIsModalOpen(false);
   };
 
@@ -220,11 +230,11 @@ const VendorServicesPage = () => {
       <Modal isOpen={isModalOpen} onClose={reset} title={editingId ? "Edit Vendor Service" : "Add Vendor Service"}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold mb-1">Category</label>
+            <label className="block text-sm font-bold mb-1">Category <span className="text-red-500">*</span></label>
             <select
               value={form.categoryId}
-              onChange={(e) => setForm(p => ({ ...p, categoryId: e.target.value }))}
-              className="w-full px-4 py-2 border rounded-xl"
+              onChange={(e) => { setForm(p => ({ ...p, categoryId: e.target.value })); setErrors(p => ({ ...p, categoryId: '' })); }}
+              className={`w-full px-4 py-2 border rounded-xl ${errors.categoryId ? 'border-red-500 bg-red-50' : ''}`}
             >
               <option value="">Select Category</option>
               {categories.map(cat => (
@@ -233,25 +243,47 @@ const VendorServicesPage = () => {
                 </option>
               ))}
             </select>
+            {errors.categoryId && <p className="text-red-500 text-xs mt-1">{errors.categoryId}</p>}
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1">Service Name</label>
+            <label className="block text-sm font-bold mb-1">Service Name <span className="text-red-500">*</span></label>
             <input
               value={form.name}
-              onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-              className="w-full px-4 py-2 border rounded-xl"
+              onChange={(e) => {
+                // Only allow letters and spaces
+                const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                setForm(p => ({ ...p, name: val }));
+                setErrors(p => ({ ...p, name: '' }));
+              }}
+              className={`w-full px-4 py-2 border rounded-xl ${errors.name ? 'border-red-500 bg-red-50' : ''}`}
               placeholder="e.g. AC Service"
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1">Base Price (₹)</label>
+            <label className="block text-sm font-bold mb-1">Base Price (₹) <span className="text-red-500">*</span></label>
             <input
               type="number"
+              min="0.01"
+              step="any"
               value={form.basePrice}
-              onChange={(e) => setForm(p => ({ ...p, basePrice: e.target.value }))}
-              className="w-full px-4 py-2 border rounded-xl"
-              placeholder="0"
+              onChange={(e) => {
+                const val = e.target.value;
+                // Allow empty (to clear field) but not 0 or negative
+                if (val === '' || parseFloat(val) > 0) {
+                  setForm(p => ({ ...p, basePrice: val }));
+                  setErrors(p => ({ ...p, basePrice: '' }));
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                  e.preventDefault();
+                }
+              }}
+              className={`w-full px-4 py-2 border rounded-xl ${errors.basePrice ? 'border-red-500 bg-red-50' : ''}`}
+              placeholder="Enter price (e.g. 299)"
             />
+            {errors.basePrice && <p className="text-red-500 text-xs mt-1">{errors.basePrice}</p>}
           </div>
           <div>
             <label className="block text-sm font-bold mb-1">Description (Optional)</label>
@@ -260,6 +292,7 @@ const VendorServicesPage = () => {
               onChange={(e) => setForm(p => ({ ...p, description: e.target.value }))}
               className="w-full px-4 py-2 border rounded-xl"
               rows={3}
+              placeholder="Brief description of the service..."
             />
           </div>
           <button

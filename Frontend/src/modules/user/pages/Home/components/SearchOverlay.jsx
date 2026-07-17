@@ -192,7 +192,11 @@ const SearchOverlay = ({ isOpen, onClose, categories = [], onCategoryClick }) =>
                 ref={inputRef}
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val.startsWith(' ')) return;
+                  setQuery(val);
+                }}
                 placeholder="Search for services..."
                 className="w-full pl-10 pr-4 py-3 bg-gray-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all border-none outline-none text-base font-medium text-gray-900"
                 style={{ '--tw-ring-color': `${themeColors.primary}33` }}
@@ -210,7 +214,7 @@ const SearchOverlay = ({ isOpen, onClose, categories = [], onCategoryClick }) =>
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto bg-gray-50/50">
-            {query.length >= 2 ? (
+            {query.trim().length >= 2 ? (
               // Create Search Results List
               <div className="p-4 space-y-3">
                 {loading ? (

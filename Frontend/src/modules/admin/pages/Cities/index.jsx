@@ -39,6 +39,33 @@ const CityManagement = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!formData.name?.trim()) {
+      toast.error('City Name is required');
+      return;
+    }
+    if (!nameRegex.test(formData.name.trim())) {
+      toast.error('City Name should only contain letters and spaces');
+      return;
+    }
+    if (!formData.state?.trim()) {
+      toast.error('State is required');
+      return;
+    }
+    if (!nameRegex.test(formData.state.trim())) {
+      toast.error('State should only contain letters and spaces');
+      return;
+    }
+    if (!formData.country?.trim()) {
+      toast.error('Country/County is required');
+      return;
+    }
+    if (!nameRegex.test(formData.country.trim())) {
+      toast.error('Country/County should only contain letters and spaces');
+      return;
+    }
+
     try {
       if (editingCity) {
         await cityService.update(editingCity._id, formData);
@@ -208,7 +235,10 @@ const CityManagement = () => {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+                    setFormData({ ...formData, name: val });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="e.g. Mumbai"
                 />
@@ -219,7 +249,10 @@ const CityManagement = () => {
                 <input
                   type="text"
                   value={formData.state}
-                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+                    setFormData({ ...formData, state: val });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="e.g. Maharashtra"
                 />
@@ -230,7 +263,10 @@ const CityManagement = () => {
                 <input
                   type="text"
                   value={formData.country}
-                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+                    setFormData({ ...formData, country: val });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
               </div>

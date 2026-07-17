@@ -39,11 +39,11 @@ const VendorFullDashboard = ({ stats, recentJobs, vendorProfile, isOnline, handl
   ], [stats]);
 
   const vendorDashboardStats = useMemo(() => [
-    { label: 'Total Orders', value: stats?.totalBookings || 0, change: '+ 18.6%', isUp: true, icon: FiShoppingBag, color: 'text-purple-600', bg: 'bg-purple-100', sparkline: activeData.map(d => ({ v: d.orders })) },
-    { label: 'Total Earnings', value: `₹${Number(stats?.totalEarnings || 0).toLocaleString('en-IN')}`, change: '+ 22.5%', isUp: true, icon: FiDollarSign, color: 'text-green-600', bg: 'bg-green-100', sparkline: activeData.map(d => ({ v: d.earnings })) },
-    { label: 'Store Rating', value: Number(stats?.rating || 0) > 0 ? Number(stats.rating).toFixed(1) : '0.0', change: 'Live', isUp: true, icon: FiStar, color: 'text-yellow-600', bg: 'bg-yellow-100', sparkline: activeData.map(d => ({ v: d.orders * 0.5 })) },
-    { label: 'Online Status', value: isOnline ? 'Online' : 'Offline', change: 'Status', isUp: isOnline, icon: FiZap, color: isOnline ? 'text-emerald-600' : 'text-rose-600', bg: isOnline ? 'bg-emerald-100' : 'bg-rose-100', isToggle: true },
-  ], [stats, activeData, isOnline]);
+    { label: 'Total Orders', value: stats?.totalBookings || 0, change: '+ 18.6%', isUp: true, icon: FiShoppingBag, color: 'text-purple-600', bg: 'bg-purple-100', sparkline: activeData.map(d => ({ v: d.orders })), onClick: () => navigate('/vendor/jobs') },
+    { label: 'Total Earnings', value: `₹${Number(stats?.totalEarnings || 0).toLocaleString('en-IN')}`, change: '+ 22.5%', isUp: true, icon: FiDollarSign, color: 'text-green-600', bg: 'bg-green-100', sparkline: activeData.map(d => ({ v: d.earnings })), onClick: () => navigate('/vendor/earnings') },
+    { label: 'Store Rating', value: Number(stats?.rating || 0) > 0 ? Number(stats.rating).toFixed(1) : '0.0', change: 'Live', isUp: true, icon: FiStar, color: 'text-yellow-600', bg: 'bg-yellow-100', sparkline: activeData.map(d => ({ v: d.orders * 0.5 })), onClick: () => navigate('/vendor/my-ratings') },
+    { label: 'Online Status', value: isOnline ? 'Online' : 'Offline', change: 'Status', isUp: isOnline, icon: FiZap, color: isOnline ? 'text-emerald-600' : 'text-rose-600', bg: isOnline ? 'bg-emerald-100' : 'bg-rose-100', isToggle: true, onClick: handleToggleOnline },
+  ], [stats, activeData, isOnline, navigate, handleToggleOnline]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -99,7 +99,8 @@ const VendorFullDashboard = ({ stats, recentJobs, vendorProfile, isOnline, handl
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+            onClick={stat.onClick}
+            className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
           >
             <div className="flex items-start justify-between mb-3">
               <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center ${stat.color} group-hover:scale-110 transition-transform`}>

@@ -194,9 +194,27 @@ const WorkerLogin = () => {
               </button>
             </div>
           </form>
+
+          <p className="mt-8 text-center text-sm text-gray-500 animate-fade-in animate-stagger-5">
+            Want to join the fleet?{' '}
+            <Link to="/worker/signup" className="font-semibold text-[#347989] hover:text-[#D68F35] transition-colors duration-300">
+              Register as Xpert
+            </Link>
+          </p>
+
+          <div className="mt-4 text-center text-xs text-gray-400 animate-fade-in">
+            By signing in, you agree to our{' '}
+            <Link to="/worker/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+              Terms &amp; Conditions
+            </Link>{' '}
+            and{' '}
+            <Link to="/worker/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+              Privacy Policy
+            </Link>
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

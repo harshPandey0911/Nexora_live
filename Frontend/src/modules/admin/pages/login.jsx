@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { adminAuthService } from '../../../services/authService';
+import Logo from '../../../components/common/Logo';
 
 const themeColors = {
   button: '#1e3a8a'
@@ -64,17 +65,9 @@ const AdminLogin = () => {
       <div className="w-full max-w-md">
         {/* White Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
-                boxShadow: `0 4px 12px rgba(30, 58, 138, 0.3)`
-              }}
-            >
-              <FiLock className="w-8 h-8 text-white" />
-            </div>
+            <Logo className="h-20 w-20 object-cover rounded-2xl shadow-lg" />
           </div>
 
           {/* Title */}

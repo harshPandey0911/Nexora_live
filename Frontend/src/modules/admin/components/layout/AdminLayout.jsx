@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { toast } from 'react-hot-toast';
 import { FiAlertTriangle, FiVolumeX, FiUserCheck, FiX } from 'react-icons/fi';
@@ -36,7 +36,17 @@ const playBuzzerSound = () => {
 
 const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
   const headerHeight = useAdminHeaderHeight();
+
+  // Scroll main container to top on page transition
+  useEffect(() => {
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+    }
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Bottom nav height is 64px (h-16)
   const bottomNavHeight = 64;

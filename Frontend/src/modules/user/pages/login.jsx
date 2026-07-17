@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiPhone, FiLock, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
+import { FiPhone, FiLock, FiArrowRight, FiCheckCircle, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
 import { userAuthService } from '../../../services/authService';
@@ -18,10 +18,12 @@ const loginSchema = z.object({
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    phone: '9876543210',
-    password: 'password123'
+    phone: '',
+    password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Refs for focus management
   const phoneInputRef = useRef(null);
@@ -45,6 +47,9 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: null }));
+    }
   };
 
   const handleLoginSubmit = async (e) => {
@@ -53,9 +58,15 @@ const Login = () => {
     // Zod Validation
     const validationResult = loginSchema.safeParse(formData);
     if (!validationResult.success) {
-      toast.error(validationResult.error.errors[0].message);
+      const errMsgs = {};
+      validationResult.error.errors.forEach(err => {
+        errMsgs[err.path[0]] = err.message;
+        toast.error(err.message);
+      });
+      setErrors(errMsgs);
       return;
     }
+    setErrors({});
 
     setIsLoading(true);
     try {
@@ -103,7 +114,7 @@ const Login = () => {
         <div className="bg-white py-8 px-4 shadow-2xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden animate-slide-in-bottom">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[var(--brand-teal)] via-[var(--brand-yellow)] to-[var(--brand-orange)]" />
 
-          <form className="space-y-6" onSubmit={handleLoginSubmit}>
+          <form className="space-y-6" onSubmit={handleLoginSubmit} autoComplete="off">
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                 Mobile Number
@@ -119,7 +130,7 @@ const Login = () => {
                   ref={phoneInputRef}
                   type="tel"
                   inputMode="numeric"
-                  autoComplete="tel"
+                  autoComplete="off"
                   id="phone"
                   name="phone"
                   className="block w-full pl-24 pr-4 py-3.5 border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
@@ -127,11 +138,19 @@ const Login = () => {
                   value={formData.phone}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '');
-                    if (val.length <= 10) setFormData(prev => ({ ...prev, phone: val }));
+                    if (val.length <= 10) {
+                      setFormData(prev => ({ ...prev, phone: val }));
+                    }
+                    if (errors.phone) {
+                      setErrors(prev => ({ ...prev, phone: null }));
+                    }
                   }}
                   style={{ '--tw-ring-color': brandColor }}
                 />
               </div>
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1 ml-1">{errors.phone}</p>
+              )}
             </div>
 
             <div>
@@ -153,21 +172,33 @@ const Login = () => {
                 <input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
+                  className="block w-full pl-10 pr-10 py-3.5 border border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
                   placeholder="••••••••"
                   style={{ '--tw-ring-color': brandColor }}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <FiEyeOff className="h-5 w-5" />
+                  ) : (
+                    <FiEye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </div>
 
             <div>
               <button
                 type="submit"
-                disabled={isLoading || formData.phone.length < 10 || formData.password.length < 6}
+                disabled={isLoading}
                 className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-bold text-white transition-all duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-teal)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 transform shadow-lg shadow-[var(--brand-teal)]/30 hover:shadow-[var(--brand-teal)]/40 overflow-hidden"
                 style={{ backgroundColor: brandColor }}
               >
@@ -180,6 +211,17 @@ const Login = () => {
                   </span>
                 )}
               </button>
+            </div>
+
+            <div className="text-center text-xs text-gray-500 mt-4 select-none">
+              By signing in, you agree to our{' '}
+              <Link to="/user/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                Terms & Conditions
+              </Link>{' '}
+              and{' '}
+              <Link to="/user/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                Privacy Policy
+              </Link>
             </div>
 
             <div className="mt-6">

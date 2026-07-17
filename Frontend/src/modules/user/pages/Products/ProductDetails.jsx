@@ -80,6 +80,7 @@ const ProductDetailsPage = () => {
         serviceCount: quantity,
         vendorId: product.vendorId,
         vendorName: product.vendorName,
+        gstPercentage: product.gstPercentage
       };
 
       const res = await addToCart(cartItemData);

@@ -128,16 +128,16 @@ export const exportToCSV = (data, filename, columns) => {
           // Apply type-based formatting
           switch (col.type) {
             case 'date':
-              value = formatDateIndian(value);
+              value = value ? '\t' + formatDateIndian(value) : '';
               break;
             case 'datetime':
-              value = formatDateTimeIndian(value);
+              value = value ? '\t' + formatDateTimeIndian(value) : '';
               break;
             case 'currency':
               value = formatCurrencyIndian(value);
               break;
             case 'phone':
-              value = formatPhoneIndian(value);
+              value = value ? '\t' + formatPhoneIndian(value) : '';
               break;
             case 'number':
               value = value !== null && value !== undefined ? Number(value) : '';

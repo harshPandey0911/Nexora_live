@@ -300,7 +300,11 @@ const BillingPage = () => {
   const updateCustomItem = (index, field, value) => {
     setCustomItems(prev => {
       const newItems = [...prev];
-      const newItem = { ...newItems[index], [field]: value };
+      let finalVal = value;
+      if (field === 'price' || field === 'quantity') {
+        finalVal = Math.max(0, Number(value) || 0);
+      }
+      const newItem = { ...newItems[index], [field]: finalVal };
       const baseTotal = newItem.price * newItem.quantity;
       newItem.gstAmount = newItem.gstApplicable ? baseTotal * (newItem.gstPercentage / 100) : 0;
       newItem.total = baseTotal + newItem.gstAmount;
@@ -803,12 +807,14 @@ const BillingPage = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Price (₹)</label>
-                        <input type="number" placeholder="0" value={item.price || ''} onChange={e => updateCustomItem(idx, 'price', Number(e.target.value))}
+                        <input type="number" min="0" placeholder="0" value={item.price || ''} onChange={e => updateCustomItem(idx, 'price', e.target.value)}
+                          onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                           className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500 text-gray-800" />
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Quantity</label>
-                        <input type="number" value={item.quantity} onChange={e => updateCustomItem(idx, 'quantity', Number(e.target.value))}
+                        <input type="number" min="1" value={item.quantity} onChange={e => updateCustomItem(idx, 'quantity', e.target.value)}
+                          onKeyDown={(e) => ['e', 'E', '+', '-'].includes(e.key) && e.preventDefault()}
                           className="w-full bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:ring-1 focus:ring-blue-500 text-gray-800" />
                       </div>
                     </div>

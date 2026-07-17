@@ -2,6 +2,31 @@ import React from "react";
 import { FiX } from "react-icons/fi";
 
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
+  React.useEffect(() => {
+    if (isOpen) {
+      const originalBodyOverflow = window.getComputedStyle(document.body).overflow;
+      const originalHtmlOverflow = window.getComputedStyle(document.documentElement).overflow;
+      
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+
+      const mainEl = document.querySelector("main");
+      let originalMainOverflow = "";
+      if (mainEl) {
+        originalMainOverflow = window.getComputedStyle(mainEl).overflow;
+        mainEl.style.overflow = "hidden";
+      }
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        if (mainEl) {
+          mainEl.style.overflow = originalMainOverflow;
+        }
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const sizeClasses = {
@@ -12,7 +37,7 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden flex flex-col`}>
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-white">
           <h2 className="text-2xl font-bold text-gray-900">{title}</h2>

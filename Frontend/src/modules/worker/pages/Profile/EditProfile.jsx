@@ -144,14 +144,20 @@ const EditProfile = () => {
   };
 
   const handleInputChange = (field, value) => {
+    let filteredValue = value;
+    if (field === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (field === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setFormData(prev => ({
         ...prev,
-        [parent]: { ...prev[parent], [child]: value }
+        [parent]: { ...prev[parent], [child]: filteredValue }
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData(prev => ({ ...prev, [field]: filteredValue }));
     }
   };
 

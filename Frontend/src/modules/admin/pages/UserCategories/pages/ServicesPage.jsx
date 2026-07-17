@@ -10,7 +10,7 @@ import { z } from "zod";
 // Schema for Service Entity (Child of Brand)
 const serviceSchema = z.object({
   title: z.string().min(2, "Title is required"),
-  basePrice: z.number().min(0, "Price must be non-negative"),
+  basePrice: z.number().gt(0, "Price must be greater than 0"),
   gstPercentage: z.number().min(0).max(100).default(18),
   discountPrice: z.number().optional(),
   categoryId: z.string().min(1, "Category is required"),
@@ -645,12 +645,23 @@ const ServicesPage = () => {
               <label className="block text-sm font-bold text-gray-700 mb-1">{priceLabel} (₹)</label>
               <input
                 type="number"
+                min="0.01"
+                step="any"
                 value={form.basePrice}
-                onChange={e => setForm({ ...form, basePrice: e.target.value })}
-                placeholder="0"
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || parseFloat(val) > 0) {
+                    setForm({ ...form, basePrice: val });
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="e.g. 100"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 required
-                min="0"
               />
             </div>
             <div>

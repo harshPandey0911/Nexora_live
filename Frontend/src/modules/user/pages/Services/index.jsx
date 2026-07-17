@@ -122,8 +122,9 @@ const ServicesPage = () => {
   ];
 
   const filteredItems = services.filter(svc => {
-    const matchesSearch = svc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          svc.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const trimmedQuery = searchQuery.trim().toLowerCase();
+    const matchesSearch = svc.title.toLowerCase().includes(trimmedQuery) ||
+                          svc.description?.toLowerCase().includes(trimmedQuery);
     
     if (activeTab === 'All') return matchesSearch;
 
@@ -151,10 +152,12 @@ const ServicesPage = () => {
         title: service.title,
         description: service.description || '',
         icon: toAssetUrl(service.iconUrl || service.icon || ''),
+        category: service.categoryTitle || 'General',
         price: service.basePrice,
         unitPrice: service.basePrice,
         serviceCount: 1,
         vendorId: service.vendorId,
+        gstPercentage: service.gstPercentage,
         card: {
           title: service.title,
           subtitle: service.description || '',
@@ -208,7 +211,11 @@ const ServicesPage = () => {
                     type="text" 
                     placeholder="Search services..." 
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.startsWith(' ')) return;
+                      setSearchQuery(val);
+                    }}
                     className="w-full pl-12 pr-4 py-4 bg-white border-none rounded-2xl text-sm font-bold shadow-xl shadow-blue-900/5 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   />
                 </div>
@@ -284,10 +291,12 @@ const ServicesPage = () => {
                           e.target.src = 'https://ui-avatars.com/api/?name=' + svc.title + '&background=f0f9ff&color=2563eb&bold=true';
                         }}
                       />
-                      <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
-                        <FiStar className="fill-current w-2 h-2 text-orange-400" />
-                        <span className="text-[9px] font-bold text-gray-900">4.8</span>
-                      </div>
+                      {svc.rating && (
+                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-md px-1.5 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                          <FiStar className="fill-current w-2 h-2 text-orange-400" />
+                          <span className="text-[9px] font-bold text-gray-900">{svc.rating}</span>
+                        </div>
+                      )}
                     </div>
                     
                     {/* Right/Bottom: Content */}

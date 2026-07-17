@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import { CustomDateInput } from '../../../../components/common';
 import {
   FiFileText,
   FiDownload,
@@ -128,6 +130,14 @@ const StatsCard = ({ title, value, subtitle, icon: Icon, color, trend }) => {
 
 // Data Table Component
 const DataTable = ({ data, columns, loading }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  // Reset page when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -145,33 +155,98 @@ const DataTable = ({ data, columns, loading }) => {
     );
   }
 
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const paginatedData = data.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            {columns.map((col, idx) => (
-              <th key={idx} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {data.slice(0, 20).map((row, idx) => (
-            <tr key={idx} className="hover:bg-gray-50 transition-colors">
-              {columns.map((col, cidx) => (
-                <td key={cidx} className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                  {col.render ? col.render(row[col.key], row) : row[col.key]}
-                </td>
+    <div className="space-y-4">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {columns.map((col, idx) => (
+                <th key={idx} className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  {col.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {data.length > 20 && (
-        <div className="text-center py-3 text-sm text-gray-500 bg-gray-50 border-t">
-          Showing 20 of {data.length} records. Download CSV for full data.
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {paginatedData.map((row, idx) => (
+              <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                {columns.map((col, cidx) => (
+                  <td key={cidx} className="px-4 py-3 text-gray-700 whitespace-nowrap">
+                    {col.render ? col.render(row[col.key], row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      {data.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex-wrap gap-2 rounded-b-xl">
+          <p className="text-xs text-gray-500 font-medium">
+            Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, data.length)} of {data.length} entries
+          </p>
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
+                title="First page"
+              >
+                «
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
+              >
+                Prev
+              </button>
+              
+              {(() => {
+                const pages = [];
+                const maxVisible = 5;
+                const start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                const end = Math.min(totalPages, start + maxVisible - 1);
+                
+                for (let i = start; i <= end; i++) {
+                  pages.push(
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all ${currentPage === i ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
+                    >
+                      {i}
+                    </button>
+                  );
+                }
+                return pages;
+              })()}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
+                title="Last page"
+              >
+                »
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -492,21 +567,23 @@ const PaymentReports = () => {
           {/* Date Range Filter */}
           <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-2">
             <div className="flex items-center gap-2">
-              <FiCalendar className="text-gray-400" />
-              <input
-                type="date"
+              <CustomDateInput
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border-0 bg-transparent text-sm focus:ring-0 text-gray-700"
+                max={endDate || new Date().toISOString().split('T')[0]}
+                onChange={(val) => setStartDate(val)}
+                inputClassName="text-sm font-semibold text-gray-700 w-[78px]"
               />
             </div>
             <span className="text-gray-400">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="border-0 bg-transparent text-sm focus:ring-0 text-gray-700"
-            />
+            <div className="flex items-center gap-2">
+              <CustomDateInput
+                value={endDate}
+                min={startDate}
+                max={new Date().toISOString().split('T')[0]}
+                onChange={(val) => setEndDate(val)}
+                inputClassName="text-sm font-semibold text-gray-700 w-[78px]"
+              />
+            </div>
             <button
               onClick={() => { fetchOverview(); fetchReportData(); }}
               className="p-2 bg-white rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"

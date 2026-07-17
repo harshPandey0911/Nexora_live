@@ -273,9 +273,15 @@ const EditProfile = () => {
   };
 
   const handleInputChange = (field, value) => {
+    let filteredValue = value;
+    if (field === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (field === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     setFormData(prev => ({
       ...prev,
-      [field]: value,
+      [field]: filteredValue,
     }));
     // Clear error for this field
     if (errors[field]) {
@@ -473,23 +479,19 @@ const EditProfile = () => {
             {/* Name Input */}
             <div className="group">
               <label className="block text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-2 px-1">
-                Full Name <span className="text-rose-500">*</span>
+                Full Name <span className="text-rose-500">*</span> (Identity Details cannot be edited)
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-black/[0.02] group-focus-within:bg-teal-50 group-focus-within:text-teal-600 transition-colors">
-                  <FiUser className="w-5 h-5" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-black/[0.02]">
+                  <FiUser className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter legal name"
-                  className={`w-full pl-16 pr-4 py-4 bg-white/70 backdrop-blur-md rounded-3xl border transition-all focus:outline-none focus:ring-4 focus:ring-teal-500/5 ${
-                    errors.name ? 'border-rose-200 text-rose-900' : 'border-white/60 focus:border-teal-500/30'
-                  } font-[1000] text-gray-900 text-sm tracking-tight`}
+                  disabled
+                  className="w-full pl-16 pr-4 py-4 bg-gray-100 rounded-3xl border border-gray-200 outline-none font-[1000] text-gray-400 text-sm tracking-tight cursor-not-allowed"
                 />
               </div>
-              {errors.name && <p className="text-rose-500 text-[9px] font-medium capitalize tracking-widest mt-2 px-1">{errors.name}</p>}
             </div>
 
             {/* Business Name Input */}
@@ -514,40 +516,35 @@ const EditProfile = () => {
             {/* Phone Input */}
             <div className="group">
               <label className="block text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-2 px-1">
-                Encryption Link (Mobile) <span className="text-rose-500">*</span>
+                Encryption Link (Mobile) <span className="text-rose-500">*</span> (Identity Details cannot be edited)
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100/50 text-teal-600">
-                  <FiPhone className="w-4 h-4" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-black/[0.02]">
+                  <FiPhone className="w-4 h-4 text-gray-400" />
                 </div>
                 <input
                   type="tel"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="Enter contact number"
-                  className={`w-full pl-16 pr-4 py-4 bg-white/70 backdrop-blur-md rounded-3xl border transition-all focus:outline-none focus:ring-4 focus:ring-teal-500/5 ${
-                    errors.phone ? 'border-rose-200 text-rose-900' : 'border-white/60 focus:border-teal-500/30'
-                  } font-[1000] text-gray-900 text-sm tracking-tight`}
+                  disabled
+                  className="w-full pl-16 pr-4 py-4 bg-gray-100 rounded-3xl border border-gray-200 outline-none font-[1000] text-gray-400 text-sm tracking-tight cursor-not-allowed"
                 />
               </div>
-              {errors.phone && <p className="text-rose-500 text-[9px] font-medium capitalize tracking-widest mt-2 px-1">{errors.phone}</p>}
             </div>
 
             {/* Email Input */}
             <div className="group">
               <label className="block text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-2 px-1">
-                Network Access (Email)
+                Network Access (Email) <span className="text-rose-500">*</span> (Identity Details cannot be edited)
               </label>
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center border border-teal-100/50 text-teal-600">
-                  <FiMail className="w-4 h-4" />
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center border border-black/[0.02]">
+                  <FiMail className="w-4 h-4 text-gray-400" />
                 </div>
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="Enter email address"
-                  className={`w-full pl-16 pr-4 py-4 bg-white/70 backdrop-blur-md rounded-3xl border border-white/60 focus:border-teal-500/30 transition-all focus:outline-none focus:ring-4 focus:ring-teal-500/5 font-[1000] text-gray-900 text-sm tracking-tight`}
+                  disabled
+                  className="w-full pl-16 pr-4 py-4 bg-gray-100 rounded-3xl border border-gray-200 outline-none font-[1000] text-gray-400 text-sm tracking-tight cursor-not-allowed"
                 />
               </div>
             </div>
@@ -674,18 +671,8 @@ const EditProfile = () => {
               </label>
 
               <div
-                className={`relative rounded-[36px] p-8 text-center transition-all border-2 border-dashed bg-white/40 backdrop-blur-md cursor-pointer group ${
-                  aadharFile || formData.aadharDocument ? 'border-teal-500/30 bg-teal-50/10' : 'border-gray-200 hover:border-teal-500/30'
-                }`}
-                onClick={() => handleImageClick('aadhar')}
+                className={`relative rounded-[36px] p-8 text-center border bg-gray-50/50 cursor-not-allowed border-gray-200`}
               >
-                <input
-                  id="aadhar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAadharChange}
-                />
                 <div className="flex flex-col items-center">
                   {aadharFile || formData.aadharDocument ? (
                     <div className="w-full">
@@ -695,9 +682,6 @@ const EditProfile = () => {
                           alt="Aadhar Preview"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-teal-900/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <FiUpload className="w-8 h-8 text-white" />
-                        </div>
                       </div>
                       <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-xl text-[10px] font-[1000] capitalize tracking-widest shadow-lg shadow-teal-900/10">
                         <FiCheck className="w-4 h-4" />
@@ -709,13 +693,11 @@ const EditProfile = () => {
                       <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4 border border-black/[0.02]">
                         <FiUpload className="w-6 h-6 text-gray-400" />
                       </div>
-                      <span className="text-[11px] font-[1000] text-gray-900 capitalize tracking-widest block mb-1">Upload Identity Proof</span>
-                      <span className="text-[9px] font-medium text-gray-400 capitalize tracking-widest opacity-60">Aadhar Front View (Max 5MB)</span>
+                      <span className="text-[11px] font-[1000] text-gray-900 capitalize tracking-widest block mb-1">No Identity Proof Uploaded</span>
                     </>
                   )}
                 </div>
               </div>
-              {errors.aadharDocument && <p className="text-rose-500 text-[9px] font-medium capitalize tracking-widest px-1">{errors.aadharDocument}</p>}
             </div>
 
           </div>

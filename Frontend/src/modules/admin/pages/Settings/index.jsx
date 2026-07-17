@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSettings, FiGrid, FiDollarSign, FiSave, FiUser, FiMail, FiTrash2, FiPlus, FiUsers, FiShield, FiFileText, FiMapPin, FiPhone, FiHeadphones, FiMessageCircle, FiEdit, FiLock, FiUnlock, FiX } from 'react-icons/fi';
+import { FiSettings, FiGrid, FiDollarSign, FiSave, FiUser, FiMail, FiTrash2, FiPlus, FiUsers, FiShield, FiFileText, FiMapPin, FiPhone, FiHeadphones, FiMessageCircle, FiEdit, FiLock, FiUnlock, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import { getSettings, updateSettings, updateAdminProfile, getAdminProfile, getAllAdmins, createAdmin, deleteAdmin, updateAdminDetails, toggleAdminStatus } from '../../services/settingsService';
 import { cityService } from '../../services/cityService';
 import CityManagement from '../Cities';
@@ -57,6 +57,29 @@ const AdminSettings = () => {
   });
   const [supportLoading, setSupportLoading] = useState(false);
 
+  // Policies Config State
+  const [policySettings, setPolicySettings] = useState({
+    termsAndConditions: {
+      title: 'Nexora Go Terms of Service',
+      lastUpdated: 'July 15, 2026',
+      introduction: 'Please read these Terms & Conditions carefully before using our website or mobile application. By accessing or using Nexora Go (Homestr), you agree to be bound by these terms.',
+      sections: []
+    },
+    privacyPolicy: {
+      title: 'Nexora Go Privacy Policy',
+      lastUpdated: 'July 15, 2026',
+      introduction: 'Your privacy is highly important to us. This Privacy Policy details the types of personal information we collect, how we use it, and the safeguards in place to protect your data.',
+      sections: []
+    },
+    workerTermsAndConditions: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    workerPrivacyPolicy: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    vendorTermsAndConditions: { title: '', lastUpdated: '', introduction: '', sections: [] },
+    vendorPrivacyPolicy: { title: '', lastUpdated: '', introduction: '', sections: [] }
+  });
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyActiveTab, setPolicyActiveTab] = useState('terms'); // 'terms', 'privacy'
+  const [policyTarget, setPolicyTarget] = useState('user'); // 'user', 'worker', 'vendor'
+
   const [profile, setProfile] = useState({
     name: '',
     email: '',
@@ -66,6 +89,10 @@ const AdminSettings = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Admin Management State
   const [admins, setAdmins] = useState([]);
@@ -152,6 +179,30 @@ const AdminSettings = () => {
             supportPhone: res.settings.supportPhone || '',
             supportWhatsapp: res.settings.supportWhatsapp || ''
           });
+          if (res.settings.termsAndConditions) {
+            setPolicySettings(prev => ({
+              ...prev,
+              termsAndConditions: res.settings.termsAndConditions
+            }));
+          }
+          if (res.settings.privacyPolicy) {
+            setPolicySettings(prev => ({
+              ...prev,
+              privacyPolicy: res.settings.privacyPolicy
+            }));
+          }
+          if (res.settings.workerTermsAndConditions) {
+            setPolicySettings(prev => ({ ...prev, workerTermsAndConditions: res.settings.workerTermsAndConditions }));
+          }
+          if (res.settings.workerPrivacyPolicy) {
+            setPolicySettings(prev => ({ ...prev, workerPrivacyPolicy: res.settings.workerPrivacyPolicy }));
+          }
+          if (res.settings.vendorTermsAndConditions) {
+            setPolicySettings(prev => ({ ...prev, vendorTermsAndConditions: res.settings.vendorTermsAndConditions }));
+          }
+          if (res.settings.vendorPrivacyPolicy) {
+            setPolicySettings(prev => ({ ...prev, vendorPrivacyPolicy: res.settings.vendorPrivacyPolicy }));
+          }
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -205,15 +256,20 @@ const AdminSettings = () => {
 
   const handleFinancialChange = (e) => {
     const { name, value } = e.target;
+    const numValue = Number(value);
     setFinancialSettings(prev => ({
       ...prev,
-      [name]: Number(value)
+      [name]: numValue < 0 ? 0 : numValue
     }));
   };
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
-    setProfile(prev => ({ ...prev, [name]: value }));
+    let newValue = value;
+    if (name === 'email') {
+      newValue = value.toLowerCase();
+    }
+    setProfile(prev => ({ ...prev, [name]: newValue }));
   };
 
   const handleFinancialSave = async (e) => {
@@ -236,9 +292,33 @@ const AdminSettings = () => {
   // Handle billing settings change
   const handleBillingChange = (e) => {
     const { name, value } = e.target;
-    // Auto-uppercase for specific fields
-    const upperFields = ['companyGSTIN', 'companyPAN', 'invoicePrefix'];
-    const newValue = upperFields.includes(name) ? value.toUpperCase() : value;
+    let newValue = value;
+
+    // Auto-uppercase for GSTIN, PAN, invoicePrefix
+    if (['companyGSTIN', 'companyPAN', 'invoicePrefix'].includes(name)) {
+      newValue = value.toUpperCase();
+    }
+
+    // Company Email — auto-lowercase
+    if (name === 'companyEmail') {
+      newValue = value.toLowerCase();
+    }
+
+    // Company Phone — digits only, max 10
+    if (name === 'companyPhone') {
+      newValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
+    // City & State — letters and spaces only, title case format
+    if (name === 'companyCity' || name === 'companyState') {
+      newValue = value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Pincode — digits only, max 6
+    if (name === 'companyPincode') {
+      newValue = value.replace(/\D/g, '').slice(0, 6);
+    }
+
     setBillingSettings(prev => ({ ...prev, [name]: newValue }));
   };
 
@@ -265,8 +345,12 @@ const AdminSettings = () => {
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!companyPhone || !phoneRegex.test(companyPhone)) return "Invalid Phone Number (must be 10 digits)";
 
+    const nameRegex = /^[a-zA-Z\s]+$/;
     if (!companyCity?.trim()) return "City is required";
+    if (!nameRegex.test(companyCity.trim())) return "City should only contain letters and spaces";
+    
     if (!companyState?.trim()) return "State is required";
+    if (!nameRegex.test(companyState.trim())) return "State should only contain letters and spaces";
 
     const pincodeRegex = /^[1-9][0-9]{5}$/;
     if (!companyPincode || !pincodeRegex.test(companyPincode)) return "Invalid Pincode (must be 6 digits)";
@@ -284,7 +368,10 @@ const AdminSettings = () => {
     e.preventDefault();
 
     const error = validateBilling();
-    if (error) return toast.error(error);
+    if (error) {
+      toast.dismiss();
+      return toast.error(error);
+    }
 
     setBillingLoading(true);
     try {
@@ -300,12 +387,43 @@ const AdminSettings = () => {
   // Handle support settings change
   const handleSupportChange = (e) => {
     const { name, value } = e.target;
-    setSupportSettings(prev => ({ ...prev, [name]: value }));
+    let newValue = value;
+
+    // Support Email — auto-lowercase
+    if (name === 'supportEmail') {
+      newValue = value.toLowerCase();
+    }
+
+    // Support Phone & WhatsApp — digits only, max 10
+    if (name === 'supportPhone' || name === 'supportWhatsapp') {
+      newValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
+    setSupportSettings(prev => ({ ...prev, [name]: newValue }));
   };
 
   // Save support settings
   const handleSupportSave = async (e) => {
     e.preventDefault();
+
+    if (supportSettings.supportEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(supportSettings.supportEmail)) {
+        toast.error('Please enter a valid support email address');
+        return;
+      }
+    }
+
+    if (supportSettings.supportPhone && supportSettings.supportPhone.length !== 10) {
+      toast.error('Support Phone must be exactly 10 digits');
+      return;
+    }
+
+    if (supportSettings.supportWhatsapp && supportSettings.supportWhatsapp.length !== 10) {
+      toast.error('Support WhatsApp must be exactly 10 digits');
+      return;
+    }
+
     setSupportLoading(true);
     try {
       await updateSettings(supportSettings);
@@ -426,6 +544,77 @@ const AdminSettings = () => {
     }
   };
 
+  const handlePolicyBaseChange = (policyType, field, value) => {
+    setPolicySettings(prev => ({
+      ...prev,
+      [policyType]: {
+        ...prev[policyType],
+        [field]: value
+      }
+    }));
+  };
+
+  const handlePolicySectionChange = (policyType, index, field, value) => {
+    setPolicySettings(prev => {
+      const sections = [...prev[policyType].sections];
+      sections[index] = { ...sections[index], [field]: value };
+      return {
+        ...prev,
+        [policyType]: {
+          ...prev[policyType],
+          sections
+        }
+      };
+    });
+  };
+
+  const addPolicySection = (policyType) => {
+    setPolicySettings(prev => {
+      const sections = [...prev[policyType].sections];
+      sections.push({ title: '', content: '', iconType: policyType === 'termsAndConditions' ? 'file' : 'bell' });
+      return {
+        ...prev,
+        [policyType]: {
+          ...prev[policyType],
+          sections
+        }
+      };
+    });
+    toast.success('New section added');
+  };
+
+  const removePolicySection = (policyType, index) => {
+    setPolicySettings(prev => {
+      const sections = prev[policyType].sections.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        [policyType]: {
+          ...prev[policyType],
+          sections
+        }
+      };
+    });
+    toast.success('Section removed');
+  };
+
+  const handlePolicySave = async (e) => {
+    e.preventDefault();
+    setPolicyLoading(true);
+    try {
+      const res = await updateSettings(policySettings);
+      if (res.success) {
+        toast.success('Policies updated successfully');
+      } else {
+        toast.error(res.message || 'Failed to update policies');
+      }
+    } catch (error) {
+      console.error('Error updating policies:', error);
+      toast.error('Failed to save policies');
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
   const [serviceMode, setServiceMode] = useState('multi');
   useEffect(() => {
     const config = JSON.parse(localStorage.getItem('adminServiceConfig') || '{}');
@@ -492,8 +681,26 @@ const AdminSettings = () => {
           <p className="text-sm text-gray-500">Add, remove, and view all system administrators</p>
         </div>
       )}
+
+      {/* Terms & Privacy Policies Settings Card - Super Admin Only */}
+      {isSuperAdmin && (
+        <div onClick={() => setActiveView('policies')}
+          className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer group">
+          <div className="w-12 h-12 bg-rose-50 rounded-lg flex items-center justify-center mb-4 group-hover:bg-rose-100 transition-colors">
+            <FiFileText className="w-6 h-6 text-rose-600" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-800 mb-2">Terms & Privacy</h3>
+          <p className="text-sm text-gray-500">Configure Terms & Conditions and Privacy Policy texts</p>
+        </div>
+      )}
     </div>
   );
+  const activePolicyKey = policyTarget === 'user'
+    ? (policyActiveTab === 'terms' ? 'termsAndConditions' : 'privacyPolicy')
+    : policyTarget === 'worker'
+    ? (policyActiveTab === 'terms' ? 'workerTermsAndConditions' : 'workerPrivacyPolicy')
+    : (policyActiveTab === 'terms' ? 'vendorTermsAndConditions' : 'vendorPrivacyPolicy');
+  const activePolicy = policySettings[activePolicyKey] || { title: '', lastUpdated: '', introduction: '', sections: [] };
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -549,16 +756,43 @@ const AdminSettings = () => {
                 <div className="pt-6 border-t border-gray-100 space-y-4">
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Change Password</h3>
                   <div className="space-y-4">
-                    <input type="password" name="currentPassword" value={profile.currentPassword} onChange={handleProfileChange}
-                      placeholder="Current Password"
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                    <div className="relative">
+                      <input type={showCurrentPassword ? "text" : "password"} name="currentPassword" value={profile.currentPassword} onChange={handleProfileChange}
+                        placeholder="Current Password"
+                        className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showCurrentPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                      </button>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input type="password" name="newPassword" value={profile.newPassword} onChange={handleProfileChange}
-                        placeholder="New Password"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
-                      <input type="password" name="confirmPassword" value={profile.confirmPassword} onChange={handleProfileChange}
-                        placeholder="Confirm New Password"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                      <div className="relative">
+                        <input type={showNewPassword ? "text" : "password"} name="newPassword" value={profile.newPassword} onChange={handleProfileChange}
+                          placeholder="New Password"
+                          className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showNewPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <input type={showConfirmPassword ? "text" : "password"} name="confirmPassword" value={profile.confirmPassword} onChange={handleProfileChange}
+                          placeholder="Confirm New Password"
+                          className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showConfirmPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -595,11 +829,13 @@ const AdminSettings = () => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Visit Charges (₹)</label>
                       <input type="number" name="visitedCharges" value={financialSettings.visitedCharges} onChange={handleFinancialChange}
+                        min="0"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Vendor Cash Limit (₹)</label>
                       <input type="number" name="vendorCashLimit" value={financialSettings.vendorCashLimit} onChange={handleFinancialChange}
+                        min="0"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                     </div>
                     <div>
@@ -633,17 +869,20 @@ const AdminSettings = () => {
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">TDS Percentage (%)</label>
                       <input type="number" name="tdsPercentage" value={financialSettings.tdsPercentage} onChange={handleFinancialChange}
+                        min="0" max="100"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Platform Fee (%)</label>
                       <input type="number" name="platformFeePercentage" value={financialSettings.platformFeePercentage} onChange={handleFinancialChange}
+                        min="0" max="100"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                       <p className="text-[10px] text-gray-400 mt-1">Fee charged on vendor withdrawals</p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Cancellation Penalty (₹)</label>
                       <input type="number" name="cancellationPenalty" value={financialSettings.cancellationPenalty} onChange={handleFinancialChange}
+                        min="0"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                     </div>
                     <div className="pt-4 border-t border-gray-100 md:col-span-2">
@@ -652,18 +891,21 @@ const AdminSettings = () => {
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Max Global Search Time (Mins)</label>
                           <input type="number" name="maxSearchTime" value={financialSettings.maxSearchTime} onChange={handleFinancialChange}
+                            min="0"
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Total time to find a vendor before search is auto-cancelled</p>
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Wave Alert Threshold (Secs)</label>
                           <input type="number" name="waveDuration" value={financialSettings.waveDuration} onChange={handleFinancialChange}
+                            min="0"
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Time waited before alerting the next batch of vendors</p>
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Global Search Radius (Km)</label>
                           <input type="number" name="searchRadius" value={financialSettings.searchRadius} onChange={handleFinancialChange}
+                            min="0"
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Default distance to hunt for vendors around booking location</p>
                         </div>
@@ -727,11 +969,13 @@ const AdminSettings = () => {
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">GSTIN</label>
                         <input type="text" name="companyGSTIN" value={billingSettings.companyGSTIN} onChange={handleBillingChange}
+                          maxLength={15} placeholder="e.g. 27ABCDE1234F1Z5"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500 uppercase" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">PAN</label>
                         <input type="text" name="companyPAN" value={billingSettings.companyPAN} onChange={handleBillingChange}
+                          maxLength={10} placeholder="e.g. ABCDE1234F"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500 uppercase" />
                       </div>
                     </div>
@@ -745,12 +989,14 @@ const AdminSettings = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Company Email</label>
-                        <input type="email" name="companyEmail" value={billingSettings.companyEmail} onChange={handleBillingChange}
+                        <input type="text" name="companyEmail" value={billingSettings.companyEmail} onChange={handleBillingChange}
+                          placeholder="company@example.com"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Company Phone</label>
                         <input type="text" name="companyPhone" value={billingSettings.companyPhone} onChange={handleBillingChange}
+                          maxLength={10} placeholder="10-digit mobile number"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
                       </div>
                     </div>
@@ -759,16 +1005,19 @@ const AdminSettings = () => {
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">City</label>
                         <input type="text" name="companyCity" value={billingSettings.companyCity} onChange={handleBillingChange}
+                          placeholder="e.g. Mumbai"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">State</label>
                         <input type="text" name="companyState" value={billingSettings.companyState} onChange={handleBillingChange}
+                          placeholder="e.g. Maharashtra"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Pincode</label>
                         <input type="text" name="companyPincode" value={billingSettings.companyPincode} onChange={handleBillingChange}
+                          maxLength={6} placeholder="6-digit pincode"
                           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
                       </div>
                     </div>
@@ -862,7 +1111,8 @@ const AdminSettings = () => {
                     <label className="block text-xs font-medium text-gray-500 mb-1">Support Email</label>
                     <div className="relative">
                       <FiMail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="email" name="supportEmail" value={supportSettings.supportEmail} onChange={handleSupportChange}
+                      <input type="text" name="supportEmail" value={supportSettings.supportEmail} onChange={handleSupportChange}
+                        placeholder="support@example.com"
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
                     </div>
                   </div>
@@ -870,7 +1120,8 @@ const AdminSettings = () => {
                     <label className="block text-xs font-medium text-gray-500 mb-1">Support Phone</label>
                     <div className="relative">
                       <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="tel" name="supportPhone" value={supportSettings.supportPhone} onChange={handleSupportChange}
+                      <input type="text" name="supportPhone" value={supportSettings.supportPhone} onChange={handleSupportChange}
+                        maxLength={10} placeholder="10-digit number"
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
                     </div>
                   </div>
@@ -878,7 +1129,8 @@ const AdminSettings = () => {
                     <label className="block text-xs font-medium text-gray-500 mb-1">WhatsApp Support</label>
                     <div className="relative">
                       <FiMessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <input type="tel" name="supportWhatsapp" value={supportSettings.supportWhatsapp} onChange={handleSupportChange}
+                      <input type="text" name="supportWhatsapp" value={supportSettings.supportWhatsapp} onChange={handleSupportChange}
+                        maxLength={10} placeholder="10-digit number"
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all" />
                     </div>
                   </div>
@@ -1057,6 +1309,199 @@ const AdminSettings = () => {
                   </table>
                 </div>
               </div>
+            </motion.div>
+          )
+        }
+
+        {/* Policies Editor View - Super Admin Only */}
+        {
+          activeView === 'policies' && isSuperAdmin && (
+            <motion.div key="policies" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }}
+              className="space-y-6">
+              
+              {/* Tab Navigation */}
+              <div className="flex items-center gap-2 p-1 bg-gray-100/50 rounded-xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setPolicyActiveTab('terms')}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${policyActiveTab === 'terms' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  Terms & Conditions
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPolicyActiveTab('privacy')}
+                  className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${policyActiveTab === 'privacy' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+                >
+                  Privacy Policy
+                </button>
+              </div>
+
+              {/* Editor Card */}
+              <form onSubmit={handlePolicySave} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-rose-50 rounded-lg">
+                      <FiFileText className="w-5 h-5 text-rose-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-800">
+                        {policyActiveTab === 'terms' ? 'Terms & Conditions Configuration' : 'Privacy Policy Configuration'}
+                      </h2>
+                      <p className="text-sm text-gray-500">Configure content seen by the users</p>
+                    </div>
+                  </div>
+                  <button type="submit" disabled={policyLoading}
+                    className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-lg shadow-rose-200 transition-all disabled:opacity-60">
+                    {policyLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <FiSave className="w-4 h-4" />}
+                    Save Changes
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Target Audience Selector */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Target Audience</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setPolicyTarget('user')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'user' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Customer App
+                      </button>
+                      <button type="button" onClick={() => setPolicyTarget('worker')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'worker' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Xpert App
+                      </button>
+                      <button type="button" onClick={() => setPolicyTarget('vendor')} className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${policyTarget === 'vendor' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        Vendor App
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Basic page config */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Page Title</label>
+                      <input
+                        type="text"
+                        value={activePolicy.title || ''}
+                        onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'title', e.target.value)}
+                        placeholder="Enter page title"
+                        required
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Last Updated Date</label>
+                      <input
+                        type="text"
+                        value={activePolicy.lastUpdated || ''}
+                        onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'lastUpdated', e.target.value)}
+                        placeholder="e.g. July 15, 2026"
+                        required
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Page Introduction Text</label>
+                    <textarea
+                      rows={3}
+                      value={activePolicy.introduction || ''}
+                      onChange={(e) => handlePolicyBaseChange(activePolicyKey, 'introduction', e.target.value)}
+                      placeholder="Enter policy introduction text"
+                      required
+                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm resize-none"
+                    />
+                  </div>
+
+                  <div className="border-t border-gray-100 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-gray-800">Policy Sections</h3>
+                      <button
+                        type="button"
+                        onClick={() => addPolicySection(activePolicyKey)}
+                        className="px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-600 flex items-center gap-1.5 transition-all font-medium"
+                      >
+                        <FiPlus className="w-4 h-4" /> Add Section
+                      </button>
+                    </div>
+
+                    {/* Sections list */}
+                    <div className="space-y-4">
+                      {(activePolicy.sections || []).map((section, idx) => (
+                        <div key={idx} className="bg-gray-50 rounded-xl p-5 border border-gray-100 relative">
+                          <div className="flex justify-between items-center pb-3 border-b border-gray-200/50 mb-4">
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Section #{idx + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => removePolicySection(activePolicyKey, idx)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete Section"
+                            >
+                              <FiTrash2 className="w-4.5 h-4.5" />
+                            </button>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="md:col-span-2">
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Section Title</label>
+                              <input
+                                type="text"
+                                value={section.title || ''}
+                                onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'title', e.target.value)}
+                                placeholder="e.g. 1. Account Creation"
+                                required
+                                className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 mb-1">Section Icon</label>
+                              <select
+                                value={section.iconType || ''}
+                                onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'iconType', e.target.value)}
+                                className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm"
+                              >
+                                {policyActiveTab === 'terms' ? (
+                                  <>
+                                    <option value="user">User Check Icon</option>
+                                    <option value="shield">Shield Icon</option>
+                                    <option value="payment">Credit Card Icon</option>
+                                    <option value="alert">Alert Icon</option>
+                                    <option value="file">File/Document Icon</option>
+                                  </>
+                                ) : (
+                                  <>
+                                    <option value="lock">Lock Icon</option>
+                                    <option value="map">Map Pin Icon</option>
+                                    <option value="eye">Eye Icon</option>
+                                    <option value="share">Share Icon</option>
+                                    <option value="bell">Notification Bell Icon</option>
+                                  </>
+                                )}
+                              </select>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 mb-1">Section Content</label>
+                            <textarea
+                              rows={3}
+                              value={section.content || ''}
+                              onChange={(e) => handlePolicySectionChange(activePolicyKey, idx, 'content', e.target.value)}
+                              placeholder="Enter section description content details..."
+                              required
+                              className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:border-rose-500 transition-all text-sm resize-none"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {(activePolicy.sections || []).length === 0 && (
+                        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-gray-400">
+                          No sections defined. Click "Add Section" to create one.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </form>
             </motion.div>
           )
         }

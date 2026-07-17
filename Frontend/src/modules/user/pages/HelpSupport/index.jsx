@@ -15,8 +15,8 @@ const HelpSupport = () => {
   const [showContactForm, setShowContactForm] = useState(false);
   const [supportInfo, setSupportInfo] = useState({
     email: 'support@homestr.com',
-    phone: '',
-    whatsapp: ''
+    phone: '+919999999999',
+    whatsapp: '+919999999999'
   });
 
   useEffect(() => {
@@ -27,8 +27,8 @@ const HelpSupport = () => {
           const { supportEmail, supportPhone, supportWhatsapp } = response.data.settings;
           setSupportInfo({
             email: supportEmail || 'support@homestr.com',
-            phone: supportPhone || '',
-            whatsapp: supportWhatsapp || ''
+            phone: supportPhone || '+919999999999',
+            whatsapp: supportWhatsapp || '+919999999999'
           });
         }
       } catch (error) {
@@ -119,7 +119,7 @@ const HelpSupport = () => {
       action: () => {
         if (supportInfo.whatsapp) {
           const cleanNumber = supportInfo.whatsapp.replace(/\D/g, '');
-          window.location.href = `whatsapp://send?phone=${cleanNumber}`;
+          window.location.href = `https://wa.me/${cleanNumber}`;
         } else {
           toast('WhatsApp support is currently unavailable');
         }
@@ -159,6 +159,25 @@ const HelpSupport = () => {
       return;
     }
 
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error('Please enter your name');
+      return;
+    }
+
+    const nameRegex = /^[a-zA-Z\s]+$/;
+    if (!nameRegex.test(trimmedName)) {
+      toast.error('Name should only contain letters and spaces');
+      return;
+    }
+
+    const trimmedEmail = formData.email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
     // TODO: Send to backend
     toast.success('Your message has been sent! We\'ll get back to you soon.');
     setShowContactForm(false);
@@ -167,9 +186,9 @@ const HelpSupport = () => {
 
   const filteredQuestions = categories.flatMap(cat =>
     cat.questions.filter(q =>
-      searchQuery === '' ||
-      q.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      q.a.toLowerCase().includes(searchQuery.toLowerCase())
+      searchQuery.trim() === '' ||
+      q.q.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
+      q.a.toLowerCase().includes(searchQuery.trim().toLowerCase())
     ).map(q => ({ ...q, category: cat.title, color: cat.color }))
   );
 
@@ -197,7 +216,11 @@ const HelpSupport = () => {
               type="text"
               placeholder="Search for help..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val.startsWith(' ')) return;
+                setSearchQuery(val);
+              }}
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
             />
           </div>
@@ -212,11 +235,11 @@ const HelpSupport = () => {
             {quickActions.map(action => {
               let href = null;
               if (action.id === 'chat' && supportInfo.whatsapp) {
-                href = `whatsapp://send?phone=${supportInfo.whatsapp.replace(/\D/g, '')}`;
+                href = `https://wa.me/${supportInfo.whatsapp.replace(/\D/g, '')}`;
               } else if (action.id === 'email' && supportInfo.email) {
                 href = `mailto:${supportInfo.email}`;
               } else if (action.id === 'call' && supportInfo.phone) {
-                href = `tel:${supportInfo.phone.replace(/\D/g, '')}`;
+                href = `tel:${supportInfo.phone.replace(/[^\d+]/g, '')}`;
               }
 
               const Component = href ? 'a' : 'button';
@@ -226,7 +249,7 @@ const HelpSupport = () => {
                   key={action.id}
                   href={href}
                   onClick={!href ? action.action : undefined}
-                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all active:scale-98 border border-gray-100 flex items-center gap-4 w-full"
+                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-all active:scale-98 border border-gray-100 flex items-center gap-4 w-full cursor-pointer"
                 >
                   <div
                     className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
@@ -255,7 +278,7 @@ const HelpSupport = () => {
         </button>
 
         {/* FAQ Categories */}
-        {searchQuery === '' && (
+        {searchQuery.trim() === '' && (
           <div className="mb-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3">Browse by Category</h2>
             <div className="space-y-3">
@@ -301,7 +324,7 @@ const HelpSupport = () => {
         )}
 
         {/* Search Results */}
-        {searchQuery !== '' && (
+        {searchQuery.trim() !== '' && (
           <div>
             <h2 className="text-lg font-bold text-gray-900 mb-3">
               Search Results ({filteredQuestions.length})
@@ -342,7 +365,7 @@ const HelpSupport = () => {
 
       {/* Contact Form Modal */}
       {showContactForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 rounded-t-3xl">
               <div className="flex items-center justify-between">
@@ -362,7 +385,10 @@ const HelpSupport = () => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+                    setFormData({ ...formData, name: val });
+                  }}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
                   placeholder="Your name"
                 />

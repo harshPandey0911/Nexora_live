@@ -54,7 +54,11 @@ exports.updateSettings = async (req, res, next) => {
       // Commission & Platform Fees
       commissionRates, platformFeeRates,
       // Slots Config
-      slotConfig
+      slotConfig,
+      // Configurable Policies
+      termsAndConditions, privacyPolicy,
+      workerTermsAndConditions, workerPrivacyPolicy,
+      vendorTermsAndConditions, vendorPrivacyPolicy
     } = req.body;
 
     let settings = await Settings.findOne({ type: 'global' });
@@ -111,6 +115,14 @@ exports.updateSettings = async (req, res, next) => {
     // Slots Config update
     if (slotConfig !== undefined) settings.slotConfig = slotConfig;
 
+    // Policy updates
+    if (termsAndConditions !== undefined) settings.termsAndConditions = termsAndConditions;
+    if (privacyPolicy !== undefined) settings.privacyPolicy = privacyPolicy;
+    if (workerTermsAndConditions !== undefined) settings.workerTermsAndConditions = workerTermsAndConditions;
+    if (workerPrivacyPolicy !== undefined) settings.workerPrivacyPolicy = workerPrivacyPolicy;
+    if (vendorTermsAndConditions !== undefined) settings.vendorTermsAndConditions = vendorTermsAndConditions;
+    if (vendorPrivacyPolicy !== undefined) settings.vendorPrivacyPolicy = vendorPrivacyPolicy;
+
     await settings.save();
 
     // Propagate vendorCashLimit to all existing vendors if it was changed
@@ -147,7 +159,7 @@ exports.updateSettings = async (req, res, next) => {
 // Get Public Settings (Visited Charges, GST)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig');
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig termsAndConditions privacyPolicy workerTermsAndConditions workerPrivacyPolicy vendorTermsAndConditions vendorPrivacyPolicy');
 
     // Default if not found (fallback values)
     if (!settings) {

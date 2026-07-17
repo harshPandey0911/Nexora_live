@@ -103,12 +103,17 @@ const MobileDashboard = memo(({
 
           <div className="grid grid-cols-2 gap-4">
             {[
-              { label: 'Total Orders', value: stats?.totalBookings || 0, icon: FiShoppingBag, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', change: '+ 18.6%', isUp: true },
-              { label: 'Total Earnings', value: `₹${Number(stats?.totalEarnings || 0).toLocaleString('en-IN')}`, icon: FiDollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', change: '+ 22.5%', isUp: true },
-              { label: 'Store Rating', value: Number(stats?.rating || 0) > 0 ? Number(stats.rating).toFixed(1) : '0.0', icon: FiStar, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-100', change: 'LIVE', isUp: true },
-              { label: 'Online Status', value: isOnline ? 'Online' : 'Offline', icon: FiZap, color: isOnline ? 'text-emerald-600' : 'text-rose-600', bg: isOnline ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100', change: 'STATUS', isUp: isOnline }
+              { label: 'Total Orders', value: stats?.totalBookings || 0, icon: FiShoppingBag, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-100', change: '+ 18.6%', isUp: true, onClick: () => navigate('/vendor/jobs') },
+              { label: 'Total Earnings', value: `₹${Number(stats?.totalEarnings || 0).toLocaleString('en-IN')}`, icon: FiDollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', change: '+ 22.5%', isUp: true, onClick: () => navigate('/vendor/earnings') },
+              { label: 'Store Rating', value: Number(stats?.rating || 0) > 0 ? Number(stats.rating).toFixed(1) : '0.0', icon: FiStar, color: 'text-yellow-600', bg: 'bg-yellow-50 border-yellow-100', change: 'LIVE', isUp: true, onClick: () => navigate('/vendor/my-ratings') },
+              { label: 'Online Status', value: isOnline ? 'Online' : 'Offline', icon: FiZap, color: isOnline ? 'text-emerald-600' : 'text-rose-600', bg: isOnline ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100', change: 'STATUS', isUp: isOnline, onClick: handleToggleOnline }
             ].map((stat, idx) => (
-              <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col justify-between hover:shadow-md transition-all duration-350 shadow-sm">
+              <motion.div
+                key={idx}
+                whileTap={{ scale: 0.98 }}
+                onClick={stat.onClick}
+                className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col justify-between hover:shadow-md transition-all duration-350 shadow-sm cursor-pointer"
+              >
                 <div className="flex items-center justify-between mb-3 w-full">
                   <div className={`w-8 h-8 rounded-xl ${stat.bg} flex items-center justify-center ${stat.color} border`}>
                     <stat.icon className="w-4 h-4" />
@@ -124,7 +129,7 @@ const MobileDashboard = memo(({
                     {stat.value}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 

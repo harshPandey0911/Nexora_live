@@ -226,8 +226,12 @@ const FooterLinks = () => {
                   <label className="block text-sm font-bold text-gray-700 mb-1">Order</label>
                   <input
                     type="number"
+                    min="0"
                     value={formData.order}
-                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setFormData({ ...formData, order: isNaN(val) || val < 0 ? 0 : val });
+                    }}
                     className="w-full px-4 py-2 rounded-lg border border-gray-200 outline-none"
                   />
                 </div>

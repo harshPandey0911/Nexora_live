@@ -37,6 +37,7 @@ const VendorSignup = () => {
   const [documentPreview, setDocumentPreview] = useState({});
   const [uploadingDocs, setUploadingDocs] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   // Refs for auto-focus
   const nameInputRef = useRef(null);
@@ -64,9 +65,15 @@ const VendorSignup = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let filteredValue = value;
+    if (name === 'name') {
+      filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+    } else if (name === 'email') {
+      filteredValue = value.toLowerCase();
+    }
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: filteredValue
     }));
   };
 
@@ -153,6 +160,11 @@ const VendorSignup = () => {
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
 
+    if (!agreeToTerms) {
+      toast.error('You must agree to the Terms & Conditions and Privacy Policy');
+      return;
+    }
+
     // Zod Validation
     const validationResult = vendorSignupSchema.safeParse({
       name: formData.name,
@@ -229,17 +241,9 @@ const VendorSignup = () => {
       <div className="w-full max-w-4xl">
         {/* White Card */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
-          {/* Icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors.button} 0%, #008a8a 100%)`,
-                boxShadow: `0 4px 12px rgba(0, 166, 166, 0.3)`
-              }}
-            >
-              <FiUser className="w-8 h-8 text-white" />
-            </div>
+            <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
           </div>
 
           {/* Title */}
@@ -494,6 +498,33 @@ const VendorSignup = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Terms and conditions */}
+            <div className="flex items-start mb-6">
+              <div className="flex items-center h-5">
+                <input
+                  id="agreeToTerms"
+                  name="agreeToTerms"
+                  type="checkbox"
+                  checked={agreeToTerms}
+                  onChange={(e) => setAgreeToTerms(e.target.checked)}
+                  className="h-4 w-4 rounded cursor-pointer"
+                  style={{ accentColor: themeColors.button }}
+                />
+              </div>
+              <div className="ml-3 text-xs">
+                <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
+                  I agree to the{' '}
+                  <Link to="/vendor/terms" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
+                    Terms & Conditions
+                  </Link>{' '}
+                  and{' '}
+                  <Link to="/vendor/privacy" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
+                    Privacy Policy
+                  </Link>
+                </label>
               </div>
             </div>
 

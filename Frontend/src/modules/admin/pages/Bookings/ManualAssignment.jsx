@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiClock, FiUser, FiMapPin, FiCheckCircle, FiXCircle, FiUserCheck,
-  FiRefreshCw, FiAlertCircle, FiTool, FiNavigation, FiPackage, FiChevronRight
+  FiRefreshCw, FiAlertCircle, FiTool, FiNavigation, FiPackage, FiChevronRight, FiSearch
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { adminBookingService } from '../../../../services/adminBookingService';
@@ -132,6 +132,9 @@ const ManualAssignment = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 9;
 
   // Modal states
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -210,16 +213,32 @@ const ManualAssignment = () => {
     }
   };
 
-  // Group bookings by status priority for section headers
-  const urgentBookings = bookings.filter(b => getStatusConfig(b).priority === 'urgent');
-  const waitingBookings = bookings.filter(b => getStatusConfig(b).priority === 'waiting');
-  const activeBookings = bookings.filter(b => getStatusConfig(b).priority === 'active');
-  const completedBookings = bookings.filter(b => ['ok', 'done'].includes(getStatusConfig(b).priority));
+  // Filter by search query
+  const filteredBookings = bookings.filter(b => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      b.bookingNumber?.toLowerCase().includes(q) ||
+      b.userId?.name?.toLowerCase().includes(q) ||
+      b.userId?.phone?.includes(q) ||
+      b.serviceId?.title?.toLowerCase().includes(q)
+    );
+  });
+
+  // Group filtered bookings by status priority for section headers
+  const urgentBookings = filteredBookings.filter(b => getStatusConfig(b).priority === 'urgent');
+  const waitingBookings = filteredBookings.filter(b => getStatusConfig(b).priority === 'waiting');
+  const activeBookings = filteredBookings.filter(b => getStatusConfig(b).priority === 'active');
+  const completedBookings = filteredBookings.filter(b => ['ok', 'done'].includes(getStatusConfig(b).priority));
+
+  // Paginate all filtered bookings
+  const totalPages = Math.ceil(filteredBookings.length / PAGE_SIZE);
+  const paginatedBookings = filteredBookings.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Manual Booking Assignment</h2>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -227,6 +246,17 @@ const ManualAssignment = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Search Field */}
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search by customer, ID or service..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-60"
+            />
+          </div>
           {lastRefreshed && (
             <span className="text-[10px] text-gray-400">
               Updated {lastRefreshed.toLocaleTimeString()}
@@ -279,7 +309,7 @@ const ManualAssignment = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence>
-            {bookings.map((booking) => {
+            {paginatedBookings.map((booking) => {
               const config = getStatusConfig(booking);
               const Icon = config.icon;
               const canAssign = ['urgent'].includes(config.priority);
@@ -423,6 +453,35 @@ const ManualAssignment = () => {
               );
             })}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && filteredBookings.length > 0 && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-all"
+          >
+            Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pg => (
+            <button
+              key={pg}
+              onClick={() => setCurrentPage(pg)}
+              className={`w-8 h-8 rounded-lg text-xs font-bold border transition-all ${currentPage === pg ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              {pg}
+            </button>
+          ))}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-all"
+          >
+            Next
+          </button>
         </div>
       )}
 

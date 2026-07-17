@@ -107,15 +107,19 @@ const ProductOrders = memo(() => {
           ))}
         </div>
 
-        <div className="relative group flex-1 max-w-md">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
-          <input 
-            type="text"
-            placeholder="Search order ID or customer..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white border border-gray-200 rounded-2xl py-2 pl-10 pr-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-          />
+        <div className="flex-1 max-w-md flex flex-col gap-1">
+          <label htmlFor="vendor-product-orders-search" className="text-xs font-bold text-gray-700 ml-1">Search Orders</label>
+          <div className="relative group">
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-blue-500 transition-colors" />
+            <input 
+              id="vendor-product-orders-search"
+              type="text"
+              placeholder="Search order ID or customer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-gray-200 rounded-2xl py-2 pl-10 pr-4 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+            />
+          </div>
         </div>
       </div>
 

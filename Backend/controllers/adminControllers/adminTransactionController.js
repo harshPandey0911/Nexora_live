@@ -26,8 +26,8 @@ const getAllTransactions = async (req, res) => {
       if (search) {
         const searchRegex = new RegExp(search, 'i');
         const [users, vendors] = await Promise.all([
-          User.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-          Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
+          User.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+          Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
         ]);
 
         bookingQuery.$or = [
@@ -131,30 +131,32 @@ const getAllTransactions = async (req, res) => {
 
     // --- STANDARD LOGIC FOR OTHERS (User, Vendor, Worker, All) ---
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    let query = {};
+    const conditions = [];
 
     // Apply status filter
     if (status && status !== 'all') {
-      query.status = status;
+      conditions.push({ status });
     }
 
     // Apply type filter
     if (type && type !== 'all') {
-      query.type = type;
+      conditions.push({ type });
     }
 
     // Apply entity filter
     if (entity) {
       if (entity === 'user') {
-        query.$or = [
-          { userId: { $ne: null } },
-          { type: 'cash_collected' },
-          { type: 'payment' }
-        ];
+        conditions.push({
+          $or: [
+            { userId: { $ne: null } },
+            { type: 'cash_collected' },
+            { type: 'payment' }
+          ]
+        });
       } else if (entity === 'vendor') {
-        query.vendorId = { $ne: null };
+        conditions.push({ vendorId: { $ne: null } });
       } else if (entity === 'worker') {
-        query.workerId = { $ne: null };
+        conditions.push({ workerId: { $ne: null } });
       }
     }
 
@@ -164,9 +166,9 @@ const getAllTransactions = async (req, res) => {
 
       // We need to find matching users, vendors, workers and bookings first
       const [users, vendors, workers, bookings] = await Promise.all([
-        User.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-        Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
-        Worker.find({ $or: [{ name: searchRegex }, { email: searchRegex }] }).select('_id'),
+        User.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+        Vendor.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
+        Worker.find({ $or: [{ name: searchRegex }, { email: searchRegex }, { phone: searchRegex }] }).select('_id'),
         Booking.find({ bookingNumber: searchRegex }).select('_id')
       ]);
 
@@ -179,7 +181,7 @@ const getAllTransactions = async (req, res) => {
       const userBookingIds = await Booking.find({ userId: { $in: userIds } }).select('_id');
       const allBookingIds = [...bookingIds, ...userBookingIds.map(b => b._id)];
 
-      query.$or = [
+      const searchOr = [
         { referenceId: searchRegex },
         { userId: { $in: userIds } },
         { vendorId: { $in: vendorIds } },
@@ -189,9 +191,13 @@ const getAllTransactions = async (req, res) => {
 
       // If it looks like an ObjectId, search by ID too
       if (search.match(/^[0-9a-fA-F]{24}$/)) {
-        query.$or.push({ _id: search });
+        searchOr.push({ _id: search });
       }
+
+      conditions.push({ $or: searchOr });
     }
+
+    const query = conditions.length > 0 ? { $and: conditions } : {};
 
     const transactions = await Transaction.find(query)
       .populate('userId', 'name email phone')

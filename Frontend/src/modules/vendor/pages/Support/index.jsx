@@ -33,6 +33,14 @@ const SupportList = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!formData.subject.trim()) {
+      toast.error('Please enter a subject for your ticket');
+      return;
+    }
+    if (!formData.message.trim()) {
+      toast.error('Please describe your issue in the message field');
+      return;
+    }
     try {
       const res = await supportService.createTicket(formData);
       if (res.success) {

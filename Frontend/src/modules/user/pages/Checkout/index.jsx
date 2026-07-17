@@ -34,6 +34,8 @@ const Checkout = () => {
 
   const [cartItems, setCartItems] = useState([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [showSavedAddressesModal, setShowSavedAddressesModal] = useState(false);
   const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
   const [address, setAddress] = useState('');
   const [houseNumber, setHouseNumber] = useState('');
@@ -131,6 +133,7 @@ const Checkout = () => {
             }
 
             if (response.user?.addresses?.length > 0) {
+              setSavedAddresses(response.user.addresses);
               const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
               setAddress(defaultAddr.addressLine1);
               setHouseNumber(defaultAddr.addressLine2 || '');
@@ -156,7 +159,8 @@ const Checkout = () => {
             }
 
             // Set Addresses
-            if (response.user?.addresses?.length > 0) {
+             if (response.user?.addresses?.length > 0) {
+              setSavedAddresses(response.user.addresses);
               const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
               setAddress(defaultAddr.addressLine1);
               setHouseNumber(defaultAddr.addressLine2 || '');
@@ -880,9 +884,24 @@ const Checkout = () => {
 
         const response = await userAuthService.getProfile();
         if (response.success && response.user) {
-          const updatedAddresses = [newAddress]; // Always replace with single address
+          const existingAddresses = response.user.addresses || [];
+          const cleanedExisting = existingAddresses.map(addr => ({ ...addr, isDefault: false }));
+          const addressExists = existingAddresses.some(addr => 
+            addr.lat === newAddress.lat && addr.lng === newAddress.lng && addr.addressLine2 === newAddress.addressLine2
+          );
+          
+          let updatedAddresses;
+          if (addressExists) {
+            updatedAddresses = existingAddresses.map(addr => 
+              (addr.lat === newAddress.lat && addr.lng === newAddress.lng && addr.addressLine2 === newAddress.addressLine2)
+                ? { ...addr, isDefault: true }
+                : { ...addr, isDefault: false }
+            );
+          } else {
+            updatedAddresses = [...cleanedExisting, newAddress];
+          }
           await userAuthService.updateProfile({ addresses: updatedAddresses });
-          toast.success('Address updated in profile!');
+          toast.success('Address saved to profile!');
         }
       } catch (e) {
         console.error('Failed to save address to profile', e);
@@ -1055,7 +1074,13 @@ const Checkout = () => {
   }, 0);
 
   const savings = totalOriginalPrice - itemTotal;
-  const taxesAndFee = Math.round((itemTotal * gstPercentage) / 100);
+  const taxesAndFee = Math.round(
+    cartItems.reduce((sum, item) => {
+      const price = calculateItemPrice(item);
+      const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
+      return sum + (price * (itemGst / 100));
+    }, 0)
+  );
   // Visited fee logic: if Total is 0 (All free), user might still pay visited fee?
   // User says "no payemtn". So maybe visited fee also waived? Or user pays visited fee?
   // "ask direct servicebooking" -> implies fully free.
@@ -1069,7 +1094,15 @@ const Checkout = () => {
 
   // Helper for Free Plan Full Breakdown Display
   // If the booking is free, we still want to show what the Tax/Fee WOULD have been
-  const displayTax = totalAmount === 0 ? Math.round((totalOriginalPrice * gstPercentage) / 100) : taxesAndFee;
+  const displayTax = totalAmount === 0 
+    ? Math.round(
+        cartItems.reduce((sum, item) => {
+          const original = (item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1);
+          const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
+          return sum + (original * (itemGst / 100));
+        }, 0)
+      )
+    : taxesAndFee;
   const displayFee = totalAmount === 0 ? visitedFee : finalVisitedFee;
   const displaySavings = totalAmount === 0 ? (totalOriginalPrice + displayTax + displayFee) : savings;
 
@@ -1223,7 +1256,7 @@ const Checkout = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowAddressModal(true)}
+                  onClick={() => setShowSavedAddressesModal(true)}
                   className="p-1.5 hover:bg-gray-100 rounded-full transition-colors shrink-0 mt-0.5"
                 >
                   <FiEdit2 className="w-4 h-4 text-gray-600" />
@@ -1261,7 +1294,7 @@ const Checkout = () => {
             </div>
           ) : (
             <div
-              onClick={() => setShowAddressModal(true)}
+              onClick={() => setShowSavedAddressesModal(true)}
               className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-xl cursor-pointer active:scale-[0.98] transition-all"
             >
               <div className="flex items-center gap-3">
@@ -1572,7 +1605,12 @@ const Checkout = () => {
                 {/* Taxes */}
                 {displayTax > 0 && (
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-500">GST ({gstPercentage}%)</span>
+                    <span className="text-sm text-slate-500">
+                      {(() => {
+                        const uniqueGsts = [...new Set(cartItems.map(item => item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage))];
+                        return uniqueGsts.length === 1 ? `GST (${uniqueGsts[0]}%)` : 'GST';
+                      })()}
+                    </span>
                     <span className="text-sm font-medium text-slate-700">₹{displayTax.toLocaleString('en-IN')}</span>
                   </div>
                 )}
@@ -1665,7 +1703,7 @@ const Checkout = () => {
                 <input
                   type="text"
                   value={contactDetails.name}
-                  onChange={(e) => setContactDetails(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) => setContactDetails(prev => ({ ...prev, name: e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase()) }))}
                   className="w-full mt-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
                   placeholder="Enter name"
                 />
@@ -1680,7 +1718,10 @@ const Checkout = () => {
                     value={contactDetails.phone?.replace('+91', '')?.replace(/^\+91/, '') || ''}
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, '');
-                      setContactDetails(prev => ({ ...prev, phone: val }));
+                      if (val.length > 0 && !['6', '7', '8', '9'].includes(val[0])) {
+                        return;
+                      }
+                      setContactDetails(prev => ({ ...prev, phone: val.slice(0, 10) }));
                     }}
                     className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
                     placeholder="9999999999"
@@ -1771,6 +1812,94 @@ const Checkout = () => {
                 className="w-full py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-50 active:scale-95 transition-all"
               >
                 Okay, got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Addresses List Modal */}
+      {showSavedAddressesModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[1000] flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom duration-200">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Select Delivery Address</h2>
+              <button
+                onClick={() => setShowSavedAddressesModal(false)}
+                className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <FiX className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-3 flex-1">
+              {savedAddresses.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  <FiMapPin className="w-10 h-10 mx-auto mb-2 opacity-30 text-teal-600" />
+                  <p className="text-sm font-medium">No saved addresses found</p>
+                </div>
+              ) : (
+                savedAddresses.map((addr) => {
+                  const isSelected = addressDetails?.lat === addr.lat && addressDetails?.lng === addr.lng && houseNumber === addr.addressLine2;
+                  return (
+                    <div
+                      key={addr._id || addr.id}
+                      onClick={async () => {
+                        setAddress(addr.addressLine1);
+                        setHouseNumber(addr.addressLine2 || '');
+                        setAddressDetails({
+                          address: addr.addressLine1,
+                          lat: addr.lat,
+                          lng: addr.lng,
+                          type: addr.type,
+                          city: addr.city,
+                          state: addr.state,
+                          pincode: addr.pincode
+                        });
+                        setShowSavedAddressesModal(false);
+                        
+                        try {
+                          const updated = savedAddresses.map(a => ({
+                            ...a,
+                            isDefault: (a._id || a.id) === (addr._id || addr.id)
+                          }));
+                          setSavedAddresses(updated);
+                          await userAuthService.updateProfile({ addresses: updated });
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }}
+                      className={`p-4 rounded-2xl border-2 text-left cursor-pointer transition-all flex items-start gap-3 hover:border-teal-500 ${
+                        isSelected ? 'border-teal-500 bg-teal-50/30' : 'border-gray-100 bg-gray-50/50'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
+                        isSelected ? 'bg-teal-500 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        <FiHome className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-gray-900 capitalize mb-0.5">
+                          {addr.type || 'Address'}
+                        </p>
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          {addr.addressLine2 ? `${addr.addressLine2}, ` : ''}{addr.addressLine1}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+
+              <button
+                onClick={() => {
+                  setShowSavedAddressesModal(false);
+                  setShowAddressModal(true);
+                }}
+                className="w-full py-4 border-2 border-dashed border-teal-300 hover:border-teal-500 hover:bg-teal-50/30 text-teal-600 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+              >
+                <FiPlus className="w-5 h-5" />
+                <span>Add New Address</span>
               </button>
             </div>
           </div>

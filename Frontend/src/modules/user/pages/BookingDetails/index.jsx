@@ -611,7 +611,7 @@ const BookingDetails = () => {
         <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/40 border-b border-black/[0.03] px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/user/my-bookings')}
               className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.02]"
             >
               <FiArrowLeft className="w-5 h-5 text-gray-800" />
@@ -786,14 +786,18 @@ const BookingDetails = () => {
                 </div>
 
                 {/* Quick Call Action */}
-                {(booking.workerId?.phone || booking.assignedTo?.phone || booking.vendorId?.phone) && (
-                  <a
-                    href={`tel:${booking.workerId?.phone || booking.assignedTo?.phone || booking.vendorId?.phone}`}
-                    className="w-10 h-10 bg-green-50 text-green-600 rounded-full flex items-center justify-center hover:bg-green-100 transition-colors active:scale-95 border border-green-100"
-                  >
-                    <FiPhone className="w-5 h-5" />
-                  </a>
-                )}
+                {(() => {
+                  const rawPhone = booking.workerId?.phone || booking.assignedTo?.phone || booking.vendorId?.phone;
+                  return rawPhone ? (
+                    <a
+                      href={`tel:${rawPhone.replace(/[^\d+]/g, '')}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-10 h-10 bg-green-50 text-green-600 rounded-full flex items-center justify-center hover:bg-green-100 transition-colors active:scale-95 border border-green-100 cursor-pointer"
+                    >
+                      <FiPhone className="w-5 h-5" />
+                    </a>
+                  ) : null;
+                })()}
               </div>
             </div>
           )}
@@ -1381,39 +1385,20 @@ const BookingDetails = () => {
           <div className="grid grid-cols-2 gap-4">
             {/* Support */}
             {/* Support */}
-            <button
-              onClick={() => {
-                const phone = supportInfo.phone || '+919999999999';
-                if (phone) {
-                  // Use native anchor click for better WebView compatibility
-                  const link = document.createElement('a');
-                  link.href = `tel:${phone.replace(/[^\d+]/g, '')}`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                } else {
-                  toast.error('Support phone number not available');
-                }
-              }}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95"
+            <a
+              href={`tel:${(supportInfo.phone || '+919999999999').replace(/[^\d+]/g, '')}`}
+              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
               <FiPhone className="w-6 h-6 text-gray-700" />
               <span className="text-sm font-bold text-gray-700">Call Support</span>
-            </button>
-            <button
-              onClick={() => {
-                const email = supportInfo.email || 'help@homestr.in';
-                const link = document.createElement('a');
-                link.href = `mailto:${email}`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95"
+            </a>
+            <a
+              href={`mailto:${supportInfo.email || 'help@homestr.in'}`}
+              className="col-span-1 flex flex-col items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
               <FiMail className="w-6 h-6 text-gray-700" />
               <span className="text-sm font-bold text-gray-700">Email Help</span>
-            </button>
+            </a>
 
             {/* Cancel */}
             {!['cancelled', 'completed', 'work_done'].includes(booking.status?.toLowerCase()) && (

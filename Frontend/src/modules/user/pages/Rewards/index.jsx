@@ -174,19 +174,6 @@ const Rewards = () => {
           <p className="text-xs text-gray-500 mb-3">
             Start referring to get surprises
           </p>
-
-          {/* Dotted Line Separator */}
-          <div className="border-t border-dotted border-gray-300 my-3"></div>
-
-          {/* Referral Offer */}
-          <div className="flex items-center gap-2.5 mt-4">
-            <div className="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">🎁</span>
-            </div>
-            <p className="text-sm text-gray-800 font-medium">
-              Earn ₹100 on every successful referral
-            </p>
-          </div>
         </div>
       </main>
 

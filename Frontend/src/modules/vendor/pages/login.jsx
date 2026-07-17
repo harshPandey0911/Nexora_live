@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiPhone, FiArrowRight, FiCheckCircle, FiLock } from 'react-icons/fi';
+import { FiPhone, FiArrowRight, FiCheckCircle, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../theme';
 import { login } from '../services/authService';
@@ -19,6 +19,7 @@ const VendorLogin = () => {
   const [phoneNumber, setPhoneNumber] = useState('8765432109');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Refs for auto-focus
   const phoneInputRef = useRef(null);
@@ -98,17 +99,9 @@ const VendorLogin = () => {
       <div className="w-full max-w-md">
         {/* White Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          {/* Icon */}
+          {/* Logo */}
           <div className="flex justify-center mb-6">
-            <div
-              className="w-16 h-16 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
-                boxShadow: `0 4px 12px rgba(30, 58, 138, 0.3)`
-              }}
-            >
-              <FiLock className="w-8 h-8 text-white" />
-            </div>
+            <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
           </div>
 
           {/* Title */}
@@ -161,11 +154,11 @@ const VendorLogin = () => {
                   <FiLock className="w-5 h-5 text-gray-400" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
+                  className="w-full pl-12 pr-12 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
                   onFocus={(e) => {
                     e.target.style.borderColor = themeColors.button;
                     e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
@@ -176,6 +169,13 @@ const VendorLogin = () => {
                   }}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none z-10"
+                >
+                  {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                </button>
               </div>
             </div>
 
@@ -225,6 +225,17 @@ const VendorLogin = () => {
             Apply Now
           </Link>
         </p>
+
+        <div className="mt-4 text-center text-xs text-gray-500">
+          By signing in, you agree to our{' '}
+          <Link to="/vendor/terms" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
+            Terms &amp; Conditions
+          </Link>{' '}
+          and{' '}
+          <Link to="/vendor/privacy" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );
