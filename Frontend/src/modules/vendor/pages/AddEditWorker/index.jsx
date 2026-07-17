@@ -235,7 +235,7 @@ const AddEditWorker = () => {
     let pincode = '';
     let addressLine2 = '';
 
-    if (location.components) {
+    if (location && location.components) {
       location.components.forEach(comp => {
         if (comp.types.includes('locality')) city = comp.long_name;
         if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
@@ -250,10 +250,10 @@ const AddEditWorker = () => {
         ...prev.address,
         addressLine1: houseNumber,
         addressLine2: addressLine2,
-        city: city,
-        state: state,
-        pincode: pincode,
-        fullAddress: location.address
+        city: city || prev.address.city,
+        state: state || prev.address.state,
+        pincode: pincode || prev.address.pincode,
+        fullAddress: location?.address || prev.address.fullAddress
       }
     }));
     setIsAddressModalOpen(false);
@@ -709,6 +709,9 @@ const AddEditWorker = () => {
         onClose={() => setIsAddressModalOpen(false)}
         address={formData.address?.fullAddress || ''}
         houseNumber={formData.address?.addressLine1 || ''}
+        city={formData.address?.city || ''}
+        state={formData.address?.state || ''}
+        pincode={formData.address?.pincode || ''}
         onHouseNumberChange={(val) => handleInputChange('address.addressLine1', val)}
         onSave={handleAddressSave}
       />

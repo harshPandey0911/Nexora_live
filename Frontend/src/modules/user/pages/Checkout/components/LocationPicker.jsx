@@ -22,12 +22,22 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
   const [autocomplete, setAutocomplete] = useState(null);
   const [loading, setLoading] = useState(false);
   const loadingRef = React.useRef(false);
+  const [mapError, setMapError] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
     libraries
   });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isLoaded) {
+        setMapError(true);
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
 
   // Update marker when initialPosition changes (from external selection)
   useEffect(() => {
@@ -195,16 +205,24 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
     }
   };
 
-  if (loadError) {
-    return <div className="h-64 bg-gray-200 flex items-center justify-center">
-      <p className="text-red-600">Error loading Google Maps</p>
-    </div>;
+  if (loadError || mapError) {
+    return (
+      <div className="h-[190px] bg-gray-50 flex flex-col items-center justify-center p-4 border border-dashed border-gray-200 text-center">
+        <FiMapPin className="w-8 h-8 text-gray-300 mb-2" />
+        <p className="text-xs font-semibold text-gray-500">Interactive Map Unavailable</p>
+        <p className="text-[10px] text-gray-400 mt-1 leading-normal">
+          Please enter your location details manually in the fields below.
+        </p>
+      </div>
+    );
   }
 
   if (!isLoaded) {
-    return <div className="h-64 bg-gray-200 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
-    </div>;
+    return (
+      <div className="h-[190px] bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
+      </div>
+    );
   }
 
   return (
