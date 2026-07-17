@@ -7,9 +7,11 @@ import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { vendorAuthService } from '../../../../services/authService';
 import LogoLoader from '../../../../components/common/LogoLoader';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Helper function to convert hex to rgba
   const hexToRgba = (hex, alpha) => {
@@ -287,16 +289,7 @@ const Profile = () => {
       <div className="pt-8">
         <motion.button
           whileTap={{ scale: 0.95 }}
-          onClick={async () => {
-            try {
-              await vendorAuthService.logout();
-              toast.success('Logged out');
-              navigate('/vendor/login');
-            } catch (e) {
-              localStorage.clear();
-              navigate('/vendor/login');
-            }
-          }}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full py-6 rounded-[32px] bg-rose-50 border border-rose-100 text-rose-600 text-xs font-medium capitalize tracking-widest flex items-center justify-center gap-4 active:scale-95 transition-all hover:bg-rose-600 hover:text-white group shadow-sm"
         >
           <FiLogOut className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
@@ -308,6 +301,26 @@ const Profile = () => {
           <p className="text-[7px] font-normal text-gray-400 capitalize tracking-widest text-center">Build v2.4.0-Premium</p>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={async () => {
+          try {
+            await vendorAuthService.logout();
+            toast.success('Logged out');
+            navigate('/vendor/login');
+          } catch (e) {
+            localStorage.clear();
+            navigate('/vendor/login');
+          }
+        }}
+        title="Terminate Session?"
+        message="Are you sure you want to logout from your vendor account?"
+        confirmLabel="Logout"
+        cancelLabel="Stay"
+        type="danger"
+      />
     </div>
   );
 };

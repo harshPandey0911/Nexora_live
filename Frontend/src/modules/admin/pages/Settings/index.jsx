@@ -6,6 +6,8 @@ import { cityService } from '../../services/cityService';
 import CityManagement from '../Cities';
 import { toast } from 'react-hot-toast';
 
+import { useCityStateAutocomplete } from '../../../../hooks/useCityStateAutocomplete';
+
 const AdminSettings = () => {
   const [settings, setSettings] = useState({
     workerAutoAssignment: true,
@@ -79,6 +81,25 @@ const AdminSettings = () => {
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policyActiveTab, setPolicyActiveTab] = useState('terms'); // 'terms', 'privacy'
   const [policyTarget, setPolicyTarget] = useState('user'); // 'user', 'worker', 'vendor'
+
+  const {
+    showCitySuggestions: showBillingCitySuggestions,
+    setShowCitySuggestions: setShowBillingCitySuggestions,
+    showStateSuggestions: showBillingStateSuggestions,
+    setShowStateSuggestions: setShowBillingStateSuggestions,
+    filteredCities: filteredBillingCities,
+    filteredStates: filteredBillingStates,
+    handleCityChange: handleBillingCityChange,
+    handleStateChange: handleBillingStateChange,
+    handleSelectCity: handleSelectBillingCity,
+    handleSelectState: handleSelectBillingState,
+    handleCityBlur: handleBillingCityBlur,
+    validateCity: validateBillingCity
+  } = useCityStateAutocomplete(
+    billingSettings.companyCity,
+    billingSettings.companyState,
+    (city, state) => setBillingSettings(prev => ({ ...prev, companyCity: city, companyState: state }))
+  );
 
   const [profile, setProfile] = useState({
     name: '',
@@ -165,8 +186,8 @@ const AdminSettings = () => {
             companyGSTIN: res.settings.companyGSTIN || '',
             companyPAN: res.settings.companyPAN || '',
             companyAddress: res.settings.companyAddress || '',
-            companyCity: res.settings.companyCity || '',
-            companyState: res.settings.companyState || '',
+            companyCity: (res.settings.companyCity || '').replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase()),
+            companyState: (res.settings.companyState || '').replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase()),
             companyPincode: res.settings.companyPincode || '',
             companyPhone: res.settings.companyPhone || '',
             companyEmail: res.settings.companyEmail || '',
@@ -309,9 +330,17 @@ const AdminSettings = () => {
       newValue = value.replace(/\D/g, '').slice(0, 10);
     }
 
-    // City & State — letters and spaces only, title case format
-    if (name === 'companyCity' || name === 'companyState') {
+    // City & State — letters and spaces only, title case format, dynamic reset & suggestions
+    if (name === 'companyCity') {
       newValue = value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+      handleBillingCityChange(newValue);
+      return;
+    }
+
+    if (name === 'companyState') {
+      newValue = value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
+      handleBillingStateChange(newValue);
+      return;
     }
 
     // Pincode — digits only, max 6
@@ -349,8 +378,17 @@ const AdminSettings = () => {
     if (!companyCity?.trim()) return "City is required";
     if (!nameRegex.test(companyCity.trim())) return "City should only contain letters and spaces";
     
+    // Database validation check
+    const { isValidCity, resolvedState } = validateBillingCity(companyCity);
+    if (!isValidCity) return `"${companyCity}" is not a recognized Indian city. Please select a valid city from the suggestions.`;
+
     if (!companyState?.trim()) return "State is required";
     if (!nameRegex.test(companyState.trim())) return "State should only contain letters and spaces";
+
+    // Auto-align State
+    if (resolvedState && resolvedState.toLowerCase() !== companyState.trim().toLowerCase()) {
+      billingSettings.companyState = resolvedState;
+    }
 
     const pincodeRegex = /^[1-9][0-9]{5}$/;
     if (!companyPincode || !pincodeRegex.test(companyPincode)) return "Invalid Pincode (must be 6 digits)";
@@ -1002,17 +1040,59 @@ const AdminSettings = () => {
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-medium text-gray-500 mb-1">City</label>
-                        <input type="text" name="companyCity" value={billingSettings.companyCity} onChange={handleBillingChange}
+                        <input
+                          type="text"
+                          name="companyCity"
+                          value={billingSettings.companyCity}
+                          onChange={handleBillingChange}
+                          onFocus={() => setShowBillingCitySuggestions(true)}
+                          onBlur={handleBillingCityBlur}
                           placeholder="e.g. Mumbai"
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
+                          autoComplete="off"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+                        />
+                        {showBillingCitySuggestions && filteredBillingCities.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 divide-y divide-gray-50">
+                            {filteredBillingCities.map((city, idx) => (
+                              <li
+                                key={idx}
+                                onMouseDown={() => handleSelectBillingCity(city)}
+                                className="px-3.5 py-2 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer text-xs text-gray-700 transition-colors"
+                              >
+                                {city}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-medium text-gray-500 mb-1">State</label>
-                        <input type="text" name="companyState" value={billingSettings.companyState} onChange={handleBillingChange}
+                        <input
+                          type="text"
+                          name="companyState"
+                          value={billingSettings.companyState}
+                          onChange={handleBillingChange}
+                          onFocus={() => setShowBillingStateSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowBillingStateSuggestions(false), 200)}
                           placeholder="e.g. Maharashtra"
-                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500" />
+                          autoComplete="off"
+                          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-500"
+                        />
+                        {showBillingStateSuggestions && filteredBillingStates.length > 0 && (
+                          <ul className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 divide-y divide-gray-50">
+                            {filteredBillingStates.map((stateName, idx) => (
+                              <li
+                                key={idx}
+                                onMouseDown={() => handleSelectBillingState(stateName)}
+                                className="px-3.5 py-2 hover:bg-indigo-50 hover:text-indigo-700 cursor-pointer text-xs text-gray-700 transition-colors"
+                              >
+                                {stateName}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Pincode</label>

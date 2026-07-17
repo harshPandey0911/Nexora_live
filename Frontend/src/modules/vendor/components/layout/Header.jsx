@@ -138,10 +138,10 @@ const Header = memo(({
             </button>
           )}
           <div>
-            <h1 className="text-xl lg:text-2xl font-normal text-gray-800 leading-tight">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight tracking-tight">
               {title || 'Vendor Hub'}
             </h1>
-            <p className="text-[10px] sm:text-xs text-gray-500 font-medium hidden sm:block">
+            <p className="text-[10px] sm:text-xs text-gray-500 font-semibold hidden sm:block">
               Manage your business operations and performance
             </p>
           </div>

@@ -89,8 +89,12 @@ exports.updateSettings = async (req, res, next) => {
     if (companyGSTIN !== undefined) settings.companyGSTIN = companyGSTIN;
     if (companyPAN !== undefined) settings.companyPAN = companyPAN;
     if (companyAddress !== undefined) settings.companyAddress = companyAddress;
-    if (companyCity !== undefined) settings.companyCity = companyCity;
-    if (companyState !== undefined) settings.companyState = companyState;
+    if (companyCity !== undefined) {
+      settings.companyCity = companyCity.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase()).trim();
+    }
+    if (companyState !== undefined) {
+      settings.companyState = companyState.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase()).trim();
+    }
     if (companyPincode !== undefined) settings.companyPincode = companyPincode;
     if (companyPhone !== undefined) settings.companyPhone = companyPhone;
     if (companyEmail !== undefined) settings.companyEmail = companyEmail;

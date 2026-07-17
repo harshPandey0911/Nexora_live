@@ -3,6 +3,8 @@ import { toast } from 'react-hot-toast';
 import { cityService } from '../../services/cityService';
 import { HiPlus, HiPencil, HiTrash, HiCheck, HiX } from 'react-icons/hi';
 
+import { useCityStateAutocomplete } from '../../../../hooks/useCityStateAutocomplete';
+
 
 const CityManagement = () => {
   const [cities, setCities] = useState([]);
@@ -18,6 +20,25 @@ const CityManagement = () => {
     isActive: true,
     isDefault: false
   });
+
+  const {
+    showCitySuggestions,
+    setShowCitySuggestions,
+    showStateSuggestions,
+    setShowStateSuggestions,
+    filteredCities,
+    filteredStates,
+    handleCityChange,
+    handleStateChange,
+    handleSelectCity,
+    handleSelectState,
+    handleCityBlur,
+    validateCity
+  } = useCityStateAutocomplete(
+    formData.name,
+    formData.state,
+    (city, state) => setFormData(prev => ({ ...prev, name: city, state }))
+  );
 
   const fetchCities = async () => {
     try {
@@ -41,37 +62,55 @@ const CityManagement = () => {
     e.preventDefault();
 
     const nameRegex = /^[a-zA-Z\s]+$/;
-    if (!formData.name?.trim()) {
+    const cityName = (formData.name || '').trim();
+
+    if (!cityName) {
       toast.error('City Name is required');
       return;
     }
-    if (!nameRegex.test(formData.name.trim())) {
+    if (!nameRegex.test(cityName)) {
       toast.error('City Name should only contain letters and spaces');
       return;
     }
-    if (!formData.state?.trim()) {
+
+    // Validate that the city exists in our database and get its correct state
+    const { isValidCity, resolvedState } = validateCity(cityName);
+
+    if (!isValidCity) {
+      toast.error(`"${cityName}" is not a recognized Indian city. Please select a valid city from the suggestions.`);
+      return;
+    }
+
+    // Force set the correct state and formatting
+    const updatedFormData = {
+      ...formData,
+      name: cityName,
+      state: resolvedState || formData.state
+    };
+
+    if (!updatedFormData.state?.trim()) {
       toast.error('State is required');
       return;
     }
-    if (!nameRegex.test(formData.state.trim())) {
+    if (!nameRegex.test(updatedFormData.state.trim())) {
       toast.error('State should only contain letters and spaces');
       return;
     }
-    if (!formData.country?.trim()) {
+    if (!updatedFormData.country?.trim()) {
       toast.error('Country/County is required');
       return;
     }
-    if (!nameRegex.test(formData.country.trim())) {
+    if (!nameRegex.test(updatedFormData.country.trim())) {
       toast.error('Country/County should only contain letters and spaces');
       return;
     }
 
     try {
       if (editingCity) {
-        await cityService.update(editingCity._id, formData);
+        await cityService.update(editingCity._id, updatedFormData);
         toast.success('City updated successfully');
       } else {
-        await cityService.create(formData);
+        await cityService.create(updatedFormData);
         toast.success('City created successfully');
       }
       setIsModalOpen(false);
@@ -131,6 +170,7 @@ const CityManagement = () => {
       isDefault: false
     });
   };
+  // Helper handlers are now managed globally by the useCityStateAutocomplete hook
 
   return (
     <div className="p-6">
@@ -229,7 +269,7 @@ const CityManagement = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">City Name</label>
                 <input
                   type="text"
@@ -237,26 +277,59 @@ const CityManagement = () => {
                   value={formData.name}
                   onChange={(e) => {
                     const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
-                    setFormData({ ...formData, name: val });
+                    handleCityChange(val);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  onFocus={() => setShowCitySuggestions(true)}
+                  onBlur={handleCityBlur}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                   placeholder="e.g. Mumbai"
+                  autoComplete="off"
                 />
+                {showCitySuggestions && filteredCities.length > 0 && (
+                  <ul className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 divide-y divide-gray-50">
+                    {filteredCities.map((city, idx) => (
+                      <li
+                        key={idx}
+                        onMouseDown={() => handleSelectCity(city)}
+                        className="px-3.5 py-2 hover:bg-teal-50 hover:text-teal-700 cursor-pointer text-xs text-gray-700 transition-colors"
+                      >
+                        {city}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
                 <input
                   type="text"
                   value={formData.state}
                   onChange={(e) => {
                     const val = e.target.value.replace(/[^a-zA-Z\s]/g, '').replace(/\b\w/g, c => c.toUpperCase());
-                    setFormData({ ...formData, state: val });
+                    handleStateChange(val);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  onFocus={() => setShowStateSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowStateSuggestions(false), 200)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
                   placeholder="e.g. Maharashtra"
+                  autoComplete="off"
                 />
+                {showStateSuggestions && filteredStates.length > 0 && (
+                  <ul className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg z-50 divide-y divide-gray-50">
+                    {filteredStates.map((stateName, idx) => (
+                      <li
+                        key={idx}
+                        onMouseDown={() => handleSelectState(stateName)}
+                        className="px-3.5 py-2 hover:bg-teal-50 hover:text-teal-700 cursor-pointer text-xs text-gray-700 transition-colors"
+                      >
+                        {stateName}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>

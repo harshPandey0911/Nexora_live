@@ -8,6 +8,7 @@ import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
 import workerService from '../../../../services/workerService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Settings = () => {
   });
 
   const [loading, setLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useLayoutEffect(() => {
     const html = document.documentElement;
@@ -113,20 +115,21 @@ const Settings = () => {
     await updateDBSettings(updated);
   };
 
-  const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      try {
-        await workerAuthService.logout();
-        toast.success('Logged out successfully');
-        navigate('/worker/login');
-      } catch (error) {
-        // Even if API call fails, clear local storage
-        localStorage.removeItem('workerAccessToken');
-        localStorage.removeItem('workerRefreshToken');
-        localStorage.removeItem('workerData');
-        toast.success('Logged out successfully');
-        navigate('/worker/login');
-      }
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await workerAuthService.logout();
+      toast.success('Logged out successfully');
+      navigate('/worker/login');
+    } catch (error) {
+      localStorage.removeItem('workerAccessToken');
+      localStorage.removeItem('workerRefreshToken');
+      localStorage.removeItem('workerData');
+      toast.success('Logged out successfully');
+      navigate('/worker/login');
     }
   };
 
@@ -254,6 +257,17 @@ const Settings = () => {
       </main>
 
       <BottomNav />
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Logout?"
+        message="Are you sure you want to logout from your worker account?"
+        confirmLabel="Logout"
+        cancelLabel="Stay"
+        type="danger"
+      />
     </div>
   );
 };

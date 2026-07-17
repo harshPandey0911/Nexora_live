@@ -224,7 +224,7 @@ export default function BookingDetails() {
   const handleCancelJob = () => {
     setConfirmDialog({
       isOpen: true,
-      title: 'Cancel Payment',
+      title: 'Cancel Booking',
       message: 'Are you sure you want to cancel this booking? This action cannot be undone and may affect your rating.',
       type: 'warning',
       onConfirm: async () => {
@@ -1173,7 +1173,7 @@ export default function BookingDetails() {
                 className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl font-medium text-[9px] md:text-[10px] capitalize tracking-widest text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-3 md:gap-4 mt-2"
               >
                 <FiXCircle className="w-4 h-4 md:w-5 md:h-5" />
-                Cancel Payment
+                Cancel Booking
               </motion.button>
             </div>
           )}

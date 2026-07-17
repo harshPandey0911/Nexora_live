@@ -4,8 +4,8 @@ import mobileImage from '../../../../../assets/mobile.png';
 const AppDownloadBanner = ({ appData, inline = false }) => {
   const title = appData?.title || 'Download the Nexora GO App';
   const subtitle = appData?.subtitle || 'Better experience, exclusive offers & faster everything.';
-  const playStoreUrl = appData?.playStoreUrl || '#';
-  const appStoreUrl = appData?.appStoreUrl || '#';
+  const playStoreUrl = appData?.playStoreUrl && appData.playStoreUrl !== '#' ? appData.playStoreUrl : 'https://play.google.com/store';
+  const appStoreUrl = appData?.appStoreUrl && appData.appStoreUrl !== '#' ? appData.appStoreUrl : 'https://apps.apple.com/';
   const qrCodeUrl = appData?.qrCodeUrl || '/qr-code.png';
   const imageUrl = appData?.imageUrl || mobileImage;
 
@@ -24,10 +24,9 @@ const AppDownloadBanner = ({ appData, inline = false }) => {
           
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
             <a 
-              href={playStoreUrl !== '#' ? playStoreUrl : undefined} 
-              target={playStoreUrl !== '#' ? '_blank' : undefined}
+              href={playStoreUrl} 
+              target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => { if (playStoreUrl === '#') e.preventDefault(); }}
               className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:scale-105 transition-transform cursor-pointer"
             >
               <div className="text-left">
@@ -36,10 +35,9 @@ const AppDownloadBanner = ({ appData, inline = false }) => {
               </div>
             </a>
             <a 
-              href={appStoreUrl !== '#' ? appStoreUrl : undefined} 
-              target={appStoreUrl !== '#' ? '_blank' : undefined}
+              href={appStoreUrl} 
+              target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => { if (appStoreUrl === '#') e.preventDefault(); }}
               className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:scale-105 transition-transform cursor-pointer"
             >
               <div className="text-left">
@@ -81,10 +79,9 @@ const AppDownloadBanner = ({ appData, inline = false }) => {
           
           <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-3 lg:gap-4">
             <a 
-              href={playStoreUrl !== '#' ? playStoreUrl : undefined}
-              target={playStoreUrl !== '#' ? '_blank' : undefined}
+              href={playStoreUrl}
+              target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => { if (playStoreUrl === '#') e.preventDefault(); }}
               className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center cursor-pointer"
             >
               <div className="text-left">
@@ -93,10 +90,9 @@ const AppDownloadBanner = ({ appData, inline = false }) => {
               </div>
             </a>
             <a 
-              href={appStoreUrl !== '#' ? appStoreUrl : undefined}
-              target={appStoreUrl !== '#' ? '_blank' : undefined}
+              href={appStoreUrl}
+              target="_blank"
               rel="noopener noreferrer"
-              onClick={(e) => { if (appStoreUrl === '#') e.preventDefault(); }}
               className="flex items-center gap-2 lg:gap-3 bg-black text-white px-6 py-3 lg:px-7 lg:py-3.5 rounded-xl lg:rounded-2xl hover:scale-105 transition-transform w-full sm:w-auto justify-center cursor-pointer"
             >
               <div className="text-left">

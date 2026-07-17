@@ -4,11 +4,13 @@ import { toast } from 'react-hot-toast';
 import api from '../../../../services/api';
 import LogoLoader from '../../../../components/common/LogoLoader';
 import { FiCheck, FiArrowRight, FiLock, FiAlertCircle } from 'react-icons/fi';
+import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
 const Subscribe = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [payingPlanId, setPayingPlanId] = useState(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -140,6 +142,10 @@ const Subscribe = () => {
   };
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
     localStorage.removeItem('vendorAccessToken');
     localStorage.removeItem('vendorRefreshToken');
     localStorage.removeItem('vendorData');
@@ -151,6 +157,7 @@ const Subscribe = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-slate-900 text-white flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="max-w-5xl w-full mx-auto flex-grow flex flex-col justify-center">
         
@@ -247,6 +254,18 @@ const Subscribe = () => {
         Secure transactions powered by Razorpay. Nexora Go &copy; {new Date().getFullYear()}
       </div>
     </div>
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={confirmLogout}
+        title="Logout?"
+        message="Are you sure you want to logout from your vendor account?"
+        confirmLabel="Logout"
+        cancelLabel="Stay"
+        type="danger"
+      />
+    </>
   );
 };
 

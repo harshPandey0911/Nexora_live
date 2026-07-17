@@ -1,4 +1,5 @@
 const cloudinary = require('../config/cloudinary');
+const Settings = require('../models/Settings');
 
 /**
  * Cloudinary Controller
@@ -14,6 +15,20 @@ exports.getSignature = async (req, res) => {
     const { folder = 'appzeto' } = req.query;
     const timestamp = Math.round(new Date().getTime() / 1000);
 
+    // Fetch dynamic settings from database if available
+    const settings = await Settings.findOne({ type: 'global' }).lean();
+    
+    const cloudName = settings?.cloudinaryCloudName || process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = settings?.cloudinaryApiKey || process.env.CLOUDINARY_API_KEY;
+    const apiSecret = settings?.cloudinaryApiSecret || process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cloudinary credentials are not configured.'
+      });
+    }
+
     // Params to be signed
     const paramsToSign = {
       timestamp,
@@ -23,15 +38,15 @@ exports.getSignature = async (req, res) => {
     // Generate signature using API Secret
     const signature = cloudinary.utils.api_sign_request(
       paramsToSign,
-      process.env.CLOUDINARY_API_SECRET
+      apiSecret
     );
 
     res.status(200).json({
       success: true,
       signature,
       timestamp,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
+      cloudName,
+      apiKey,
       folder
     });
   } catch (error) {

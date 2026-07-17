@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FiPhone, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
@@ -15,6 +15,7 @@ const forgotSchema = z.object({
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobile, setMobile] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -27,6 +28,11 @@ const ForgotPassword = () => {
       navigate('/user', { replace: true });
       return;
     }
+    // Pre-fill mobile if arriving from login page
+    const prefilledPhone = location.state?.phone;
+    if (prefilledPhone) {
+      setMobile(prefilledPhone);
+    }
     if (phoneInputRef.current) {
       setTimeout(() => phoneInputRef.current.focus(), 100);
     }
@@ -38,7 +44,7 @@ const ForgotPassword = () => {
     // Zod validation
     const validationResult = forgotSchema.safeParse({ mobile });
     if (!validationResult.success) {
-      toast.error(validationResult.error.errors[0].message);
+      toast.error(validationResult.error.issues[0].message);
       return;
     }
 
@@ -94,6 +100,7 @@ const ForgotPassword = () => {
               <div className="pt-4">
                 <Link
                   to="/user/login"
+                  state={{ phone: mobile }}
                   className="inline-flex justify-center items-center px-6 py-3 border border-transparent text-sm font-bold rounded-xl text-white shadow-md hover:shadow-lg transition-all duration-300"
                   style={{ backgroundColor: brandColor }}
                 >
@@ -153,6 +160,7 @@ const ForgotPassword = () => {
               <div className="text-center pt-2">
                 <Link
                   to="/user/login"
+                  state={{ phone: mobile }}
                   className="text-sm font-medium text-gray-500 hover:text-[var(--brand-teal)] transition-colors"
                 >
                   Back to Login

@@ -67,12 +67,12 @@ const VendorServicesPage = () => {
     if (!result.success) {
       // Build per-field error map
       const fieldErrors = {};
-      result.error.errors.forEach(err => {
+      result.error.issues.forEach(err => {
         const field = err.path[0];
         fieldErrors[field] = err.message;
       });
       setErrors(fieldErrors);
-      toast.error(result.error.errors[0].message);
+      toast.error(result.error.issues[0].message);
       return;
     }
     setErrors({});

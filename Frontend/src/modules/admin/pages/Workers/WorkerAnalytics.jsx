@@ -116,7 +116,13 @@ const WorkerAnalytics = () => {
                   outerRadius={75}
                   paddingAngle={5}
                   dataKey="count"
-                  nameKey={(entry) => entry._id ? 'Available' : 'Unavailable'}
+                  nameKey={(entry) => {
+                    if (!entry._id) return 'Unavailable';
+                    const idLower = String(entry._id).toLowerCase();
+                    if (idLower === 'online' || idLower === 'active') return 'Available';
+                    if (idLower === 'offline' || idLower === 'inactive') return 'Unavailable';
+                    return idLower.charAt(0).toUpperCase() + idLower.slice(1);
+                  }}
                 >
                   {data?.availabilityDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

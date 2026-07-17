@@ -29,6 +29,8 @@ const Wallet = () => {
     return cached ? JSON.parse(cached) : [];
   });
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
 
   useEffect(() => {
@@ -65,6 +67,17 @@ const Wallet = () => {
     if (filter === 'all') return true;
     return txn.type === filter;
   });
+
+  const totalPages = Math.ceil(filteredTransactions.length / PAGE_SIZE);
+  const paginatedTransactions = filteredTransactions.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  const handleFilterChange = (f) => {
+    setFilter(f);
+    setCurrentPage(1);
+  };
 
   const getTransactionIcon = (type) => {
     switch (type) {
@@ -269,7 +282,7 @@ const Wallet = () => {
             {['all', 'cash_collected', 'settlement'].map((f) => (
               <button
                 key={f}
-                onClick={() => setFilter(f)}
+                onClick={() => handleFilterChange(f)}
                 className={`text-[9px] font-normal capitalize tracking-widest px-5 py-2.5 rounded-xl transition-all border ${filter === f 
                   ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-200' 
                   : 'bg-white text-gray-500 border-gray-100 hover:bg-gray-50 shadow-sm'
@@ -290,7 +303,7 @@ const Wallet = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {filteredTransactions.map((txn) => {
+            {paginatedTransactions.map((txn) => {
               const isNegative = ['cash_collected', 'tds_deduction', 'withdrawal', 'platform_fee'].includes(txn.type);
 
               return (
@@ -326,6 +339,31 @@ const Wallet = () => {
                 </div>
               );
             })}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <p className="text-[9px] font-medium text-gray-400 capitalize tracking-widest">
+                  Page {currentPage} of {totalPages} &bull; {filteredTransactions.length} entries
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 rounded-xl text-[9px] font-medium capitalize tracking-widest border border-gray-100 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 rounded-xl text-[9px] font-medium capitalize tracking-widest border border-blue-100 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

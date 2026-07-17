@@ -92,7 +92,7 @@ const ManageAddresses = () => {
 
       const validationResult = addressSchema.safeParse(addressData);
       if (!validationResult.success) {
-        toast.error(validationResult.error.errors[0].message);
+        toast.error(validationResult.error.issues[0].message);
         return;
       }
 
@@ -174,9 +174,9 @@ const ManageAddresses = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white pb-4">
+    <div className="min-h-screen bg-white pb-4 pt-16">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-30">
+      <header className="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center gap-3">
             <button
