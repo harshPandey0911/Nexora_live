@@ -6,12 +6,25 @@ import LocationPicker from './LocationPicker';
 
 const libraries = ['places', 'geometry'];
 
-const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = '', onHouseNumberChange, onSave }) => {
+const AddressSelectionModal = ({ 
+  isOpen, 
+  onClose, 
+  address = '', 
+  houseNumber = '', 
+  city: initialCity = '',
+  state: initialState = '',
+  pincode: initialPincode = '',
+  onHouseNumberChange, 
+  onSave 
+}) => {
   const [isClosing, setIsClosing] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [mapAddress, setMapAddress] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [mapAddress, setMapAddress] = useState(address || '');
+  const [searchQuery, setSearchQuery] = useState(address || '');
   const [autocomplete, setAutocomplete] = useState(null);
+  const [city, setCity] = useState(initialCity || '');
+  const [stateName, setStateName] = useState(initialState || '');
+  const [pincode, setPincode] = useState(initialPincode || '');
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -24,6 +37,11 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
       document.body.style.width = '100%';
+      setMapAddress(address || '');
+      setSearchQuery(address || '');
+      setCity(initialCity || '');
+      setStateName(initialState || '');
+      setPincode(initialPincode || '');
     } else {
       document.body.style.overflow = '';
       document.body.style.position = '';
@@ -35,7 +53,7 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
       document.body.style.position = '';
       document.body.style.width = '';
     };
-  }, [isOpen]);
+  }, [isOpen, address, initialCity, initialState, initialPincode]);
 
   const handleClose = () => {
     setIsClosing(true);
@@ -49,6 +67,13 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
     setSelectedLocation(location);
     setMapAddress(location.address);
     setSearchQuery(location.address);
+    if (location.components) {
+      location.components.forEach(comp => {
+        if (comp.types.includes('locality')) setCity(comp.long_name);
+        if (comp.types.includes('administrative_area_level_1')) setStateName(comp.long_name);
+        if (comp.types.includes('postal_code')) setPincode(comp.long_name);
+      });
+    }
   };
 
   const onPlaceChanged = () => {
@@ -64,8 +89,29 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
         setSelectedLocation(location);
         setMapAddress(place.formatted_address);
         setSearchQuery(place.formatted_address);
+        if (place.address_components) {
+          place.address_components.forEach(comp => {
+            if (comp.types.includes('locality')) setCity(comp.long_name);
+            if (comp.types.includes('administrative_area_level_1')) setStateName(comp.long_name);
+            if (comp.types.includes('postal_code')) setPincode(comp.long_name);
+          });
+        }
       }
     }
+  };
+
+  const handleSave = () => {
+    const components = [
+      { long_name: city, types: ['locality'] },
+      { long_name: stateName, types: ['administrative_area_level_1'] },
+      { long_name: pincode, types: ['postal_code'] }
+    ];
+    const locationToSave = {
+      ...(selectedLocation || {}),
+      address: mapAddress,
+      components: components
+    };
+    onSave(houseNumber, locationToSave);
   };
 
   const onAutocompleteLoad = (autocompleteInstance) => {
@@ -128,8 +174,8 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
           </div>
         </div>
 
-        {/* Address Details - Non-Scrollable */}
-        <div className="px-4 py-2 pb-2 overflow-hidden flex-1">
+        {/* Address Details - Scrollable Container */}
+        <div className="px-4 py-2 pb-2 overflow-y-auto flex-1 scrollbar-hide">
           {/* Address Search */}
           <div className="mb-2.5">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
@@ -150,13 +196,20 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
                     type="text"
                     placeholder="Search for area, street name..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchQuery(val);
+                      setMapAddress(val);
+                    }}
                     className="w-full pl-9 pr-10 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
                   />
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-all"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setMapAddress('');
+                      }}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-all z-20"
                     >
                       <FiX className="w-4 h-4" />
                     </button>
@@ -165,18 +218,35 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
               </Autocomplete>
             ) : (
               <div className="relative">
+                <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
                 <input
                   type="text"
-                  placeholder="Loading Maps..."
-                  disabled
-                  className="w-full pl-4 py-3 bg-gray-100 rounded-xl text-sm"
+                  placeholder="Enter location / address manually..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    setMapAddress(val);
+                  }}
+                  className="w-full pl-9 pr-10 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setMapAddress('');
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200 transition-all z-20"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )}
           </div>
 
-          {/* House/Flat Number - NEW */}
-          <div className="mb-3">
+          {/* House/Flat Number */}
+          <div className="mb-2.5">
             <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
               House / Flat / Office No. (Optional)
             </label>
@@ -192,9 +262,49 @@ const AddressSelectionModal = ({ isOpen, onClose, address = '', houseNumber = ''
             </div>
           </div>
 
+          {/* City, State, Pincode fields */}
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                City
+              </label>
+              <input
+                type="text"
+                placeholder="City"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                State
+              </label>
+              <input
+                type="text"
+                placeholder="State"
+                value={stateName}
+                onChange={(e) => setStateName(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+                Pincode
+              </label>
+              <input
+                type="text"
+                placeholder="Pincode"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+              />
+            </div>
+          </div>
+
           {/* Save Button */}
           <button
-            onClick={() => onSave(houseNumber, selectedLocation)}
+            onClick={handleSave}
             disabled={!mapAddress}
             className="w-full py-4 rounded-xl font-black text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl mb-1 uppercase tracking-wider text-xs"
             style={{
