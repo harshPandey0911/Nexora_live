@@ -75,7 +75,7 @@ const ProductDetailsPage = () => {
         description: product.description || '',
         icon: toAssetUrl(product.iconUrl || product.icon || ''),
         category: product.categoryTitle || 'General',
-        price: product.basePrice,
+        price: product.basePrice * quantity,
         unitPrice: product.basePrice,
         serviceCount: quantity,
         vendorId: product.vendorId,

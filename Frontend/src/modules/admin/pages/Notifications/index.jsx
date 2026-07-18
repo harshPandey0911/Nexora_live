@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiBell, FiRefreshCw, FiCheck, FiCheckCircle, FiTrash2, FiFilter, FiUser, FiDollarSign, FiUserCheck } from 'react-icons/fi';
+import { FiBell, FiRefreshCw, FiCheck, FiCheckCircle, FiTrash2, FiFilter, FiUser, FiDollarSign, FiUserCheck, FiBriefcase, FiActivity } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 import api from '../../../../services/api';
 
 const Notifications = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, unread, read
@@ -14,7 +16,7 @@ const Notifications = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get('/notifications', {
+      const res = await api.get('/notifications/admin', {
         params: { limit: 50 }
       });
       if (res.data.success) {
@@ -72,22 +74,66 @@ const Notifications = () => {
     }
   };
 
-  const getIcon = (type) => {
-    switch (type) {
-      case 'vendor_withdrawal_request':
-        return <FiDollarSign className="text-green-500" />;
-      case 'vendor_approval_request':
-        return <FiUserCheck className="text-blue-500" />;
-      case 'vendor_cash_limit_exceeded':
-        return <FiDollarSign className="text-red-500" />;
-      default:
-        return <FiBell className="text-gray-500" />;
+  const handleNotificationClick = async (notification) => {
+    // Mark as read if unread
+    if (!notification.isRead) {
+      await markAsRead(notification._id);
     }
+
+    const type = (notification.type || '').toLowerCase();
+    const relatedType = (notification.relatedType || '').toLowerCase();
+
+    // Smart routing based on type
+    if (type.includes('withdrawal') || type.includes('payout_requested')) {
+      navigate('/admin/settlements/withdrawals');
+    } else if (type.includes('cash_limit') || type.includes('payout_processed') || type.includes('wallet')) {
+      navigate('/admin/settlements/vendors');
+    } else if (type.includes('vendor') || type.includes('registration')) {
+      navigate('/admin/vendors/all');
+    } else if (type.includes('booking') || type.includes('job') || type.includes('worker') || type.includes('visit') || type.includes('work') || type.includes('journey')) {
+      navigate('/admin/bookings/all');
+    } else if (relatedType === 'booking') {
+      navigate('/admin/bookings/all');
+    } else if (relatedType === 'vendor') {
+      navigate('/admin/vendors/all');
+    } else if (relatedType === 'withdrawal') {
+      navigate('/admin/settlements/withdrawals');
+    }
+  };
+
+  const getIcon = (typeStr) => {
+    const type = (typeStr || '').toLowerCase();
+    
+    if (['payment', 'payout', 'wallet', 'refund', 'withdrawal', 'cash_limit'].some(k => type.includes(k))) {
+      return <FiDollarSign className="text-emerald-500" />;
+    }
+    if (['booking', 'job', 'worker', 'visit', 'work', 'reached', 'journey', 'scrap'].some(k => type.includes(k))) {
+      return <FiBriefcase className="text-blue-500" />;
+    }
+    if (['approved', 'rejected', 'registration', 'review', 'general'].some(k => type.includes(k))) {
+      return <FiActivity className="text-indigo-500" />;
+    }
+    return <FiBell className="text-gray-500" />;
   };
 
   const filteredNotifications = notifications.filter(n => {
     if (filter === 'unread') return !n.isRead;
     if (filter === 'read') return n.isRead;
+    
+    const type = (n.type || '').toLowerCase();
+    
+    if (filter === 'financial') {
+      return ['payment', 'payout', 'wallet', 'refund', 'withdrawal', 'cash_limit'].some(keyword => type.includes(keyword));
+    }
+    
+    if (filter === 'deployments') {
+      return ['booking', 'job', 'worker', 'visit', 'work', 'reached', 'journey', 'scrap'].some(keyword => type.includes(keyword));
+    }
+    
+    if (filter === 'operational') {
+      return ['approved', 'rejected', 'registration', 'review', 'general'].some(keyword => type.includes(keyword));
+    }
+    
     return true;
   });
 
@@ -155,17 +201,24 @@ const Notifications = () => {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
-          {['all', 'unread', 'read'].map(f => (
+        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'unread', label: 'Unread' },
+            { id: 'read', label: 'Read' },
+            { id: 'deployments', label: 'Deployments' },
+            { id: 'financial', label: 'Financials' },
+            { id: 'operational', label: 'Operational' }
+          ].map(f => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${filter === f
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-500 hover:bg-gray-100'
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${filter === f.id
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'
                 }`}
             >
-              {f}
+              {f.label}
             </button>
           ))}
         </div>
@@ -192,7 +245,8 @@ const Notifications = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className={`p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 ${!notification.isRead ? 'bg-blue-50/30' : ''
+                  onClick={() => handleNotificationClick(notification)}
+                  className={`p-4 hover:bg-gray-50 transition-colors flex items-start gap-3 cursor-pointer ${!notification.isRead ? 'bg-blue-50/30' : ''
                     }`}
                 >
                   {/* Icon */}
@@ -220,16 +274,22 @@ const Notifications = () => {
                     <div className="flex items-center gap-2 mt-2">
                       {!notification.isRead && (
                         <button
-                          onClick={() => markAsRead(notification._id)}
-                          className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            markAsRead(notification._id);
+                          }}
+                          className="text-[10px] font-semibold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <FiCheck className="text-xs" />
                           Mark as read
                         </button>
                       )}
                       <button
-                        onClick={() => deleteNotification(notification._id)}
-                        className="text-[10px] font-semibold text-red-500 hover:underline flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification._id);
+                        }}
+                        className="text-[10px] font-semibold text-red-500 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <FiTrash2 className="text-xs" />
                         Delete

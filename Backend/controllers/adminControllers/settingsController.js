@@ -48,7 +48,7 @@ exports.updateSettings = async (req, res, next) => {
       // Support Settings
       supportEmail, supportPhone, supportWhatsapp,
       // Booking Timing
-      maxSearchTime, waveDuration, searchRadius,
+      maxSearchTime, waveDuration, searchRadius, maxCartItemQuantity,
       // Payment Control
       isOnlinePaymentEnabled,
       // Commission & Platform Fees
@@ -110,6 +110,7 @@ exports.updateSettings = async (req, res, next) => {
     if (maxSearchTime !== undefined) settings.maxSearchTime = maxSearchTime;
     if (waveDuration !== undefined) settings.waveDuration = waveDuration;
     if (searchRadius !== undefined) settings.searchRadius = searchRadius;
+    if (maxCartItemQuantity !== undefined) settings.maxCartItemQuantity = maxCartItemQuantity;
     if (isOnlinePaymentEnabled !== undefined) settings.isOnlinePaymentEnabled = isOnlinePaymentEnabled;
 
     // Commission & Platform Fees update
@@ -163,11 +164,11 @@ exports.updateSettings = async (req, res, next) => {
 // Get Public Settings (Visited Charges, GST)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig termsAndConditions privacyPolicy workerTermsAndConditions workerPrivacyPolicy vendorTermsAndConditions vendorPrivacyPolicy');
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig termsAndConditions privacyPolicy workerTermsAndConditions workerPrivacyPolicy vendorTermsAndConditions vendorPrivacyPolicy maxCartItemQuantity');
 
     // Default if not found (fallback values)
     if (!settings) {
-      settings = { visitedCharges: 29, serviceGstPercentage: 18, partsGstPercentage: 18 };
+      settings = { visitedCharges: 29, serviceGstPercentage: 18, partsGstPercentage: 18, maxCartItemQuantity: 100 };
     }
 
     res.status(200).json({

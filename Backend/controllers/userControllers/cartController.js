@@ -50,15 +50,30 @@ const addToCart = async (req, res) => {
     }
 
     // Check if item already exists
-    const existingItemIndex = cart.items.findIndex(
-      item => item.serviceId?.toString() === serviceId || item.title === title
-    );
+    const existingItemIndex = cart.items.findIndex(item => {
+      const sId1 = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : null;
+      const sId2 = serviceId ? serviceId.toString() : null;
+      if (sId1 && sId2) {
+        return sId1 === sId2;
+      }
+      return item.title && title && item.title.trim().toLowerCase() === title.trim().toLowerCase();
+    });
 
     if (existingItemIndex > -1) {
       // Update quantity
-      cart.items[existingItemIndex].serviceCount += serviceCount;
+      const existingItem = cart.items[existingItemIndex];
+      const addedCount = serviceCount || 1;
+      const newCount = (existingItem.serviceCount || 1) + addedCount;
+      const unit = existingItem.unitPrice || (existingItem.serviceCount ? existingItem.price / existingItem.serviceCount : existingItem.price) || (unitPrice || price || 0);
+      
+      cart.items[existingItemIndex].serviceCount = newCount;
+      cart.items[existingItemIndex].unitPrice = unit;
+      cart.items[existingItemIndex].price = unit * newCount;
     } else {
       // Add new item
+      const count = serviceCount || 1;
+      const unit = unitPrice || (price && count ? price / count : price) || 0;
+
       cart.items.push({
         serviceId: serviceId || null,
         categoryId: categoryId || null,
@@ -68,9 +83,9 @@ const addToCart = async (req, res) => {
         description: description || '',
         icon: icon || '',
         category,
-        price,
-        unitPrice: unitPrice || price,
-        serviceCount,
+        price: unit * count,
+        unitPrice: unit,
+        serviceCount: count,
         vendorId: vendorId || null
       });
     }

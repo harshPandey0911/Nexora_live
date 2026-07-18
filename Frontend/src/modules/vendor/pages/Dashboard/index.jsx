@@ -104,7 +104,11 @@ const Dashboard = memo(() => {
         vendorEarnings: b.vendorEarnings,
         timeSlot: {
           date: new Date(b.scheduledDate).toLocaleDateString(),
-          time: b.scheduledTime || 'Time not set'
+          time: b.scheduledTime 
+            ? b.scheduledTime 
+            : (b.timeSlot?.start 
+                ? `${b.timeSlot.start} - ${b.timeSlot.end}` 
+                : 'Time not set')
         },
         status: b.status,
         expiresAt: b.expiresAt || (b.createdAt && config ? new Date(new Date(b.createdAt).getTime() + (config.maxSearchTime || 5) * 60000).toISOString() : null)
@@ -146,11 +150,25 @@ const Dashboard = memo(() => {
     setPendingBookings(mergedPending);
     localStorage.setItem('vendorPendingJobs', JSON.stringify(mergedPending));
 
+    // Deduplicate by string ID to guarantee no duplicate requests are displayed
+    const seenIds = new Set();
+    const finalPending = [];
+    mergedPending.forEach(job => {
+      const idStr = String(job._id || job.id || '');
+      if (idStr && !seenIds.has(idStr)) {
+        seenIds.add(idStr);
+        finalPending.push(job);
+      }
+    });
+
+    setPendingBookings(finalPending);
+    localStorage.setItem('vendorPendingJobs', JSON.stringify(finalPending));
+
     setStats({
       totalBookings: apiStats.totalBookings || 0,
       todayEarnings: apiStats.vendorEarnings || 0,
       inProgressBookings: apiStats.inProgressBookings || 0,
-      pendingAlerts: mergedPending.length,
+      pendingAlerts: finalPending.length,
       workersOnline: apiStats.workersOnline || 0,
       totalEarnings: apiStats.vendorEarnings || 0,
       completedJobs: apiStats.completedBookings || 0,

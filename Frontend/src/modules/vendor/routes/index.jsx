@@ -14,6 +14,24 @@ const lazyLoad = (importFunc) => {
   return lazy(() => {
     return Promise.resolve(importFunc()).catch((error) => {
       console.error('Failed to load vendor page:', error);
+
+      // Check if it's a chunk loading/dynamic import error (e.g. from redeployment)
+      const isChunkError = 
+        error.message?.includes('Failed to fetch dynamically imported module') ||
+        error.message?.includes('Importing a module script failed') ||
+        error.message?.includes('error loading dynamically imported module');
+        
+      if (isChunkError) {
+        // Prevent infinite reload loops by checking if reload happened in the last 15 seconds
+        const lastReload = sessionStorage.getItem('last_chunk_reload');
+        const now = Date.now();
+        if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+          sessionStorage.setItem('last_chunk_reload', String(now));
+          window.location.reload();
+          return new Promise(() => {}); // Return a pending promise to prevent rendering anything before reload
+        }
+      }
+
       return Promise.resolve({
         default: () => (
           <div className="flex items-center justify-center min-h-screen bg-white">

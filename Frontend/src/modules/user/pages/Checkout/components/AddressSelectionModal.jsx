@@ -47,11 +47,23 @@ const AddressSelectionModal = ({
       document.body.style.position = '';
       document.body.style.width = '';
       setIsClosing(false);
+
+      // Clean up google autocomplete container when closing
+      const pacContainers = document.querySelectorAll('.pac-container');
+      pacContainers.forEach(container => {
+        container.remove();
+      });
     }
     return () => {
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.width = '';
+
+      // Clean up google autocomplete container when unmounting
+      const pacContainers = document.querySelectorAll('.pac-container');
+      pacContainers.forEach(container => {
+        container.remove();
+      });
     };
   }, [isOpen, address, initialCity, initialState, initialPincode]);
 
@@ -108,10 +120,11 @@ const AddressSelectionModal = ({
     ];
     const locationToSave = {
       ...(selectedLocation || {}),
-      address: mapAddress,
+      address: mapAddress || searchQuery,
       components: components
     };
-    onSave(houseNumber, locationToSave);
+    const addressToPass = (houseNumber && houseNumber.length > 5) ? houseNumber : (mapAddress || searchQuery || houseNumber);
+    onSave(addressToPass, locationToSave);
   };
 
   const onAutocompleteLoad = (autocompleteInstance) => {
@@ -127,7 +140,7 @@ const AddressSelectionModal = ({
         onClick={handleClose}
       />
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-full sm:max-w-md h-[80vh] sm:h-auto sm:max-h-[82vh] relative z-10 ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+        className={`bg-white rounded-2xl shadow-2xl w-full sm:max-w-md h-auto max-h-[95vh] relative z-10 ${isClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -137,35 +150,23 @@ const AddressSelectionModal = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10 shrink-0 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 py-2.5 z-10 shrink-0 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
               <FiArrowLeft className="w-5 h-5 text-black" />
             </button>
-            <h1 className="text-xl font-bold text-black">Confirm Location</h1>
+            <div>
+              <h1 className="text-base font-bold text-black leading-tight">Confirm Location</h1>
+              <p className="text-[10px] text-gray-500 font-medium">Pinpoint coordinates accurately on the map</p>
+            </div>
           </div>
           <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <FiX className="w-5 h-5 text-black" />
           </button>
         </div>
 
-        {/* Info Card - Styled with Brand Colors */}
-        <div className="px-4 pt-4 shrink-0">
-          <div className="rounded-xl p-3 mb-2 border" style={{ backgroundColor: `${themeColors.brand.teal}0D`, borderColor: `${themeColors.brand.teal}1A` }}>
-            <div className="flex items-start gap-3">
-              <FiMapPin className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: themeColors.button }} />
-              <div>
-                <h3 className="font-semibold mb-1 text-sm" style={{ color: themeColors.button }}>Set Delivery Location</h3>
-                <p className="text-xs" style={{ color: `${themeColors.brand.teal}CC` }}>
-                  Place the pin accurately on the map to help the professional find you easily.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Map Section */}
-        <div className="px-4 pb-2 shrink-0">
+        <div className="px-4 pt-3 pb-2 shrink-0">
           <div className="rounded-xl overflow-hidden shadow-sm border border-gray-100">
             <LocationPicker
               onLocationSelect={handleLocationSelect}
@@ -174,11 +175,11 @@ const AddressSelectionModal = ({
           </div>
         </div>
 
-        {/* Address Details - Scrollable Container */}
-        <div className="px-4 py-2 pb-2 overflow-y-auto flex-1 scrollbar-hide">
+        {/* Address Details - Form Fields */}
+        <div className="px-4 py-2 overflow-y-auto flex-1 scrollbar-hide">
           {/* Address Search */}
-          <div className="mb-2.5">
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+          <div className="mb-2">
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">
               Pinpoint your Address
             </label>
             {isLoaded ? (
@@ -201,7 +202,7 @@ const AddressSelectionModal = ({
                       setSearchQuery(val);
                       setMapAddress(val);
                     }}
-                    className="w-full pl-9 pr-10 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                    className="w-full pl-9 pr-10 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
                   />
                   {searchQuery && (
                     <button
@@ -228,7 +229,7 @@ const AddressSelectionModal = ({
                     setSearchQuery(val);
                     setMapAddress(val);
                   }}
-                  className="w-full pl-9 pr-10 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                  className="w-full pl-9 pr-10 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
                 />
                 {searchQuery && (
                   <button
@@ -246,8 +247,8 @@ const AddressSelectionModal = ({
           </div>
 
           {/* House/Flat Number */}
-          <div className="mb-2.5">
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+          <div className="mb-2">
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">
               House / Flat / Office No. (Optional)
             </label>
             <div className="relative">
@@ -257,15 +258,15 @@ const AddressSelectionModal = ({
                 placeholder="e.g. Flat 101, Appzeto Tower"
                 value={houseNumber}
                 onChange={(e) => onHouseNumberChange(e.target.value)}
-                className="w-full pl-9 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-1 focus:ring-primary-500 transition-all font-medium"
               />
             </div>
           </div>
 
           {/* City, State, Pincode fields */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="grid grid-cols-3 gap-2 mb-2">
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">
                 City
               </label>
               <input
@@ -273,11 +274,11 @@ const AddressSelectionModal = ({
                 placeholder="City"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                className="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">
                 State
               </label>
               <input
@@ -285,11 +286,11 @@ const AddressSelectionModal = ({
                 placeholder="State"
                 value={stateName}
                 onChange={(e) => setStateName(e.target.value)}
-                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                className="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5 ml-1">
+              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">
                 Pincode
               </label>
               <input
@@ -297,16 +298,18 @@ const AddressSelectionModal = ({
                 placeholder="Pincode"
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value)}
-                className="w-full px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
+                className="w-full px-3 py-2 bg-gray-50 border-none rounded-xl text-xs focus:ring-1 focus:ring-primary-500 transition-all font-medium"
               />
             </div>
           </div>
+        </div>
 
-          {/* Save Button */}
+        {/* Fixed Footer with Save Button */}
+        <div className="px-4 pb-4 pt-2 shrink-0 bg-white border-t border-gray-100">
           <button
             onClick={handleSave}
             disabled={!mapAddress}
-            className="w-full py-4 rounded-xl font-black text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl mb-1 uppercase tracking-wider text-xs"
+            className="w-full py-3 rounded-xl font-black text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl uppercase tracking-wider text-xs"
             style={{
               backgroundColor: themeColors.button,
               boxShadow: `0 8px 16px ${themeColors.button}30`

@@ -119,21 +119,29 @@ const addWorker = async (req, res) => {
       });
     }
 
+    // Build location object if coordinates are present in address
+    const workerLocation = (address && address.lat !== undefined && address.lng !== undefined) ? {
+      lat: Number(address.lat),
+      lng: Number(address.lng),
+      updatedAt: new Date()
+    } : undefined;
+
     // Create worker
     worker = await Worker.create({
       name,
-      email: email || undefined, // Handle empty string as undefined for sparse index
+      email: (email && email.trim()) ? email.trim().toLowerCase() : undefined, // Handle empty string as undefined for sparse index
       phone,
       password,
       profilePhoto: profilePhoto || null,
       aadhar: {
-        number: aadhar.number,
-        document: aadharUrl
+        number: aadhar?.number || '',
+        document: aadharUrl || null
       },
       vendorId,
       serviceCategories: serviceCategories || [],
       address: address || {},
-      approvalStatus: 'pending',
+      location: workerLocation,
+      approvalStatus: 'approved',
       status: WORKER_STATUS.OFFLINE
     });
 
@@ -166,12 +174,19 @@ const linkWorker = async (req, res) => {
       });
     }
 
-    const worker = await Worker.findOne({ phone });
+    let worker = await Worker.findOne({ phone });
 
     if (!worker) {
       return res.status(404).json({
         success: false,
-        message: 'Worker not found with this phone number'
+        message: 'No worker found with this phone number'
+      });
+    }
+
+    if (worker.vendorId && worker.vendorId.toString() === vendorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Worker is already linked to your account'
       });
     }
 
@@ -182,9 +197,9 @@ const linkWorker = async (req, res) => {
       });
     }
 
-    // Link worker
     worker.vendorId = vendorId;
     worker.status = WORKER_STATUS.ACTIVE;
+    worker.approvalStatus = 'approved';
     await worker.save();
 
     res.status(200).json({
@@ -234,7 +249,17 @@ const updateWorker = async (req, res) => {
     if (updateData.name) worker.name = updateData.name;
     if (updateData.email !== undefined) worker.email = updateData.email || undefined;
     if (updateData.serviceCategories) worker.serviceCategories = updateData.serviceCategories;
-    if (updateData.address) worker.address = { ...worker.address, ...updateData.address };
+    if (worker.approvalStatus === 'pending') worker.approvalStatus = 'approved';
+    if (updateData.address) {
+      worker.address = { ...worker.address, ...updateData.address };
+      if (updateData.address.lat !== undefined && updateData.address.lng !== undefined) {
+        worker.location = {
+          lat: Number(updateData.address.lat),
+          lng: Number(updateData.address.lng),
+          updatedAt: new Date()
+        };
+      }
+    }
     if (updateData.status) worker.status = updateData.status;
 
     // Update Aadhar if provided

@@ -49,10 +49,16 @@ const VendorLayout = ({ children }) => {
 
   const currentTitle = getPageInfo(location.pathname);
 
-  // Check if current page is a detail page (they often have their own local headers)
+  // Check if current page is a detail/sub page (they have their own dedicated headers)
   const isDetailPage = location.pathname.includes('/vendor/booking/') || 
-                       location.pathname.includes('/vendor/profile/edit') ||
-                       location.pathname.includes('/vendor/support/ticket/');
+                       location.pathname.includes('/vendor/profile') ||
+                       location.pathname.includes('/vendor/address-management') ||
+                       location.pathname.includes('/vendor/support/ticket/') ||
+                       location.pathname.includes('/vendor/wallet/') ||
+                       location.pathname.includes('/vendor/billing') ||
+                       location.pathname.includes('/vendor/withdrawal') ||
+                       location.pathname.includes('/vendor/privacy-policy') ||
+                       location.pathname.includes('/vendor/terms-conditions');
 
   // Permission Check
   const checkPermission = () => {

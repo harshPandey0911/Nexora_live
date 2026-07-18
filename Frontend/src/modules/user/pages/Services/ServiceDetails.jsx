@@ -78,7 +78,7 @@ const ServiceDetailsPage = () => {
         description: service.description || '',
         icon: toAssetUrl(service.iconUrl || service.icon || ''),
         category: service.categoryTitle || 'General',
-        price: service.basePrice,
+        price: service.basePrice * quantity,
         unitPrice: service.basePrice,
         serviceCount: quantity,
         vendorId: service.vendorId,

@@ -42,13 +42,25 @@ const NotificationWindow = ({
     if (!notification.isRead && onMarkAsRead) {
       onMarkAsRead(notification._id);
     }
-    if (notification.relatedId && notification.relatedType === 'booking') {
-      // Navigate to booking details if possible, or just bookings list
-      // For now, if we have bookingId in data, use it.
-      const bookingId = notification.relatedId || notification.bookingId;
-      if (bookingId) {
-        navigate(`/admin/bookings`);
-      }
+
+    const type = (notification.type || '').toLowerCase();
+    const relatedType = (notification.relatedType || '').toLowerCase();
+
+    // Smart routing based on type
+    if (type.includes('withdrawal') || type.includes('payout_requested')) {
+      navigate('/admin/settlements/withdrawals');
+    } else if (type.includes('cash_limit') || type.includes('payout_processed') || type.includes('wallet')) {
+      navigate('/admin/settlements/vendors');
+    } else if (type.includes('vendor') || type.includes('registration')) {
+      navigate('/admin/vendors/all');
+    } else if (type.includes('booking') || type.includes('job') || type.includes('worker') || type.includes('visit') || type.includes('work') || type.includes('journey')) {
+      navigate('/admin/bookings/all');
+    } else if (relatedType === 'booking') {
+      navigate('/admin/bookings/all');
+    } else if (relatedType === 'vendor') {
+      navigate('/admin/vendors/all');
+    } else if (relatedType === 'withdrawal') {
+      navigate('/admin/settlements/withdrawals');
     }
 
     onClose();
@@ -117,7 +129,7 @@ const NotificationWindow = ({
                 </div>
               ) : (
                 <div className="p-2">
-                  {notifications.map((n) => (
+                  {notifications.slice(0, 4).map((n) => (
                     <div
                       key={n._id}
                       className={`p-3 rounded-xl border mb-2 cursor-pointer transition-colors ${n.isRead ? 'bg-white border-gray-200' : 'bg-primary-50 border-primary-300'
@@ -163,6 +175,18 @@ const NotificationWindow = ({
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-3 text-center z-10 flex-shrink-0">
+              <button
+                onClick={() => {
+                  navigate('/admin/notifications');
+                  onClose();
+                }}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center justify-center gap-1 mx-auto cursor-pointer"
+              >
+                View All Notifications <FiChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </motion.div>
         </>

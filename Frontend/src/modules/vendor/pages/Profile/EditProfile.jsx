@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSave, FiUser, FiBriefcase, FiPhone, FiMail, FiMapPin, FiChevronDown, FiCamera, FiUpload, FiEdit2 } from 'react-icons/fi';
+import { FiSave, FiUser, FiBriefcase, FiPhone, FiMail, FiMapPin, FiChevronDown, FiCamera, FiUpload, FiEdit2, FiArrowLeft, FiActivity, FiCheck } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import BottomNav from '../../components/layout/BottomNav';
@@ -422,7 +422,7 @@ const EditProfile = () => {
             onClick={() => navigate(-1)}
             className="w-10 h-10 rounded-xl bg-white shadow-sm border border-black/[0.02] flex items-center justify-center"
           >
-            <FiUser className="w-5 h-5 text-gray-900 rotate-180" />
+            <FiArrowLeft className="w-5 h-5 text-gray-900" />
           </motion.button>
           <h1 className="text-xl font-[1000] text-gray-900 tracking-tight">Modify Identity</h1>
         </div>

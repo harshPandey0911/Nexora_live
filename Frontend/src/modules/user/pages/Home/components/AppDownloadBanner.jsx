@@ -4,8 +4,19 @@ import mobileImage from '../../../../../assets/mobile.png';
 const AppDownloadBanner = ({ appData, inline = false }) => {
   const title = appData?.title || 'Download the Nexora GO App';
   const subtitle = appData?.subtitle || 'Better experience, exclusive offers & faster everything.';
-  const playStoreUrl = appData?.playStoreUrl && appData.playStoreUrl !== '#' ? appData.playStoreUrl : 'https://play.google.com/store';
-  const appStoreUrl = appData?.appStoreUrl && appData.appStoreUrl !== '#' ? appData.appStoreUrl : 'https://apps.apple.com/';
+
+  const sanitizeUrl = (url, fallback) => {
+    if (!url || url === '#') return fallback;
+    const trimmed = url.trim();
+    if (!trimmed) return fallback;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
+
+  const playStoreUrl = sanitizeUrl(appData?.playStoreUrl, 'https://play.google.com/store');
+  const appStoreUrl = sanitizeUrl(appData?.appStoreUrl, 'https://apps.apple.com/');
   const qrCodeUrl = appData?.qrCodeUrl || '/qr-code.png';
   const imageUrl = appData?.imageUrl || mobileImage;
 

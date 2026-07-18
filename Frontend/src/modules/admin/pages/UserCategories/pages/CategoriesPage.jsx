@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { FiGrid, FiPlus, FiEdit2, FiTrash2, FiSave, FiChevronUp, FiChevronDown, FiMove, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import CardShell from "../components/CardShell";
@@ -23,6 +23,7 @@ const categorySchema = z.object({
 import { useOutletContext } from "react-router-dom";
 
 const CategoriesPage = () => {
+  const reorderContainerRef = useRef(null);
   const { catalog, setCatalog } = useOutletContext();
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -370,6 +371,21 @@ const CategoriesPage = () => {
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+
+    const container = reorderContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mouseY = e.clientY;
+    const threshold = 60; // px threshold from top/bottom boundary
+
+    if (mouseY - rect.top < threshold) {
+      const intensity = Math.max(1, (threshold - (mouseY - rect.top)) / 5);
+      container.scrollTop -= intensity * 8;
+    } else if (rect.bottom - mouseY < threshold) {
+      const intensity = Math.max(1, (threshold - (rect.bottom - mouseY)) / 5);
+      container.scrollTop += intensity * 8;
+    }
   };
 
   const handleDrop = (e, dropIndex) => {
@@ -385,15 +401,21 @@ const CategoriesPage = () => {
     const [draggedCategory] = newCategories.splice(draggedIndex, 1);
     newCategories.splice(dropIndex, 0, draggedCategory);
 
+    const updatedCategories = newCategories.map((cat, index) => ({
+      ...cat,
+      homeOrder: index,
+      order: index
+    }));
+
     // Update orders for all categories
-    const bulkUpdates = newCategories.map((cat, index) =>
-      categoryService.updateOrder(cat.id, index)
+    const bulkUpdates = updatedCategories.map((cat, index) =>
+      categoryService.updateOrder(cat.id || cat._id, index)
     );
 
     Promise.all(bulkUpdates)
       .then(() => {
-        setCatalog(prev => ({ ...prev, categories: newCategories }));
-        saveCatalog({ ...catalog, categories: newCategories });
+        setCatalog(prev => ({ ...prev, categories: updatedCategories }));
+        saveCatalog({ ...catalog, categories: updatedCategories });
         toast.success("Categories reordered successfully");
       })
       .catch((error) => {
@@ -736,7 +758,7 @@ const CategoriesPage = () => {
             Drag and drop categories to reorder them. The new order will be saved automatically.
           </p>
 
-          <div className="max-h-96 overflow-y-auto space-y-2">
+          <div ref={reorderContainerRef} className="max-h-96 overflow-y-auto space-y-2">
             {categories.map((category, index) => (
               <div
                 key={category.id}

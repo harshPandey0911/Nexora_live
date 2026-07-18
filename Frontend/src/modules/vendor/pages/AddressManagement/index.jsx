@@ -74,6 +74,16 @@ const AddressManagement = () => {
     loadAddress();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      // Clean up google autocomplete container when page unmounts
+      const pacContainers = document.querySelectorAll('.pac-container');
+      pacContainers.forEach(container => {
+        container.remove();
+      });
+    };
+  }, []);
+
   const handleLocationSelect = (location) => {
     setSelectedLocation(location);
     // setAddress(location.address); 
@@ -146,6 +156,20 @@ const AddressManagement = () => {
       });
 
       if (response.success) {
+        // Update localStorage vendorData
+        const vendorDataRaw = localStorage.getItem('vendorData');
+        if (vendorDataRaw) {
+          const vendor = JSON.parse(vendorDataRaw);
+          const updatedVendor = { ...vendor, address: addrData };
+          const finalVendor = response.vendor ? { ...vendor, ...response.vendor } : updatedVendor;
+          localStorage.setItem('vendorData', JSON.stringify(finalVendor));
+        } else if (response.vendor) {
+          localStorage.setItem('vendorData', JSON.stringify(response.vendor));
+        }
+
+        // Dispatch event to notify other components
+        window.dispatchEvent(new Event('vendorDataUpdated'));
+
         toast.success('Address saved successfully!');
         setTimeout(() => {
           //   navigate('/vendor/profile'); // Stay here or go back settings? User preference.
@@ -169,18 +193,21 @@ const AddressManagement = () => {
         <div className="absolute inset-0 bg-gray-50" />
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-10 py-6 flex items-center justify-between relative z-10">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/90 border-b border-gray-100 px-6 lg:px-10 py-4 lg:py-5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate('/vendor/settings')}
-            className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 transition-all"
+            onClick={() => navigate('/vendor/profile')}
+            className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all active:scale-95"
           >
             <FiArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-medium text-gray-900 tracking-tight">Deployment Base</h1>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Deployment Base</h1>
+            <p className="text-xs text-gray-400 font-medium hidden sm:block">Manage your operational address & coordinates</p>
+          </div>
         </div>
-        <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center shadow-inner">
-          <FiMapPin className="w-6 h-6 text-blue-500" />
+        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+          <FiMapPin className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
         </div>
       </header>
 

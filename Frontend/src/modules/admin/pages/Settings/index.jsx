@@ -26,6 +26,7 @@ const AdminSettings = () => {
     maxSearchTime: 5,
     waveDuration: 60,
     searchRadius: 10,
+    maxCartItemQuantity: 100,
     isOnlinePaymentEnabled: true
   });
 
@@ -175,6 +176,7 @@ const AdminSettings = () => {
             vendorCashLimit: res.settings.vendorCashLimit || 10000,
             cancellationPenalty: res.settings.cancellationPenalty !== undefined ? res.settings.cancellationPenalty : 49,
             searchRadius: res.settings.searchRadius || 10,
+            maxCartItemQuantity: res.settings.maxCartItemQuantity || 100,
             isOnlinePaymentEnabled: res.settings.isOnlinePaymentEnabled !== undefined ? res.settings.isOnlinePaymentEnabled : true
           });
           if (res.settings.slotConfig) {
@@ -277,10 +279,16 @@ const AdminSettings = () => {
 
   const handleFinancialChange = (e) => {
     const { name, value } = e.target;
-    const numValue = Number(value);
+    // Strip leading zeros if followed by another digit (e.g. '04' -> '4')
+    const cleanValue = value.replace(/^0+(?=\d)/, '');
+    
+    // Ensure we don't allow negative values
+    const numValue = Number(cleanValue);
+    const finalValue = numValue < 0 ? '0' : cleanValue;
+
     setFinancialSettings(prev => ({
       ...prev,
-      [name]: numValue < 0 ? 0 : numValue
+      [name]: finalValue
     }));
   };
 
@@ -946,6 +954,13 @@ const AdminSettings = () => {
                             min="0"
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Default distance to hunt for vendors around booking location</p>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Max Cart Item Quantity</label>
+                          <input type="number" name="maxCartItemQuantity" value={financialSettings.maxCartItemQuantity} onChange={handleFinancialChange}
+                            min="1"
+                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                          <p className="text-[10px] text-gray-400 mt-1">Maximum quantity a user can add for a single item in the cart</p>
                         </div>
                       </div>
                     </div>

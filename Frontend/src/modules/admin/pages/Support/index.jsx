@@ -132,7 +132,9 @@ const AdminSupport = () => {
                     </div>
                     <h3 className="font-bold text-gray-800 text-sm mb-1 truncate">{ticket.subject}</h3>
                     <p className="text-xs text-gray-500 mb-2 truncate">From: {ticket.creator?.name || 'Unknown'} ({ticket.creatorRole})</p>
-                    <p className="text-[10px] text-gray-400">{new Date(ticket.updatedAt).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-gray-400">
+                      🗓 {new Date(ticket.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(ticket.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -158,6 +160,9 @@ const AdminSupport = () => {
                   </div>
                   <p className="text-xs text-gray-500">
                     <span className="font-semibold uppercase text-blue-600">{selectedTicket.creatorRole}</span>: {selectedTicket.creator?.name || 'Unknown'} | {selectedTicket.creator?.phone}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    Raised on: {new Date(selectedTicket.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} at {new Date(selectedTicket.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

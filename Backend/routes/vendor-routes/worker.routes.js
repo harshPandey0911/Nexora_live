@@ -19,20 +19,21 @@ const addWorkerValidation = [
   body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email is required'),
   body('phone').trim().notEmpty().isLength({ min: 10, max: 10 }).withMessage('Phone number must be 10 digits'),
   body('password').trim().notEmpty().withMessage('Password is required').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('aadhar.number').trim().notEmpty().isLength({ min: 12, max: 12 }).withMessage('Aadhar number must be 12 digits'),
-  body('aadhar.document').trim().notEmpty().withMessage('Aadhar document is required'),
+  body('aadhar.number').optional({ checkFalsy: true }).trim(),
+  body('aadhar.document').optional({ checkFalsy: true }),
   body('serviceCategory').optional().trim(),
   body('serviceCategories').optional().isArray().withMessage('Service Categories must be an array'),
   body('skills').optional().isArray().withMessage('Skills must be an array')
 ];
 
 const updateWorkerValidation = [
-  body('name').optional().trim().notEmpty(),
-  body('email').optional().isEmail(),
-  body('serviceCategory').optional().trim(),
+  body('name').optional({ checkFalsy: true }).trim().notEmpty(),
+  body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email address is required'),
+  body('phone').optional({ checkFalsy: true }).trim(),
+  body('serviceCategory').optional({ checkFalsy: true }).trim(),
   body('serviceCategories').optional().isArray(),
   body('skills').optional().isArray(),
-  body('status').optional().isIn(['active', 'inactive', 'suspended'])
+  body('status').optional({ checkFalsy: true }).isIn(['active', 'inactive', 'suspended', 'ONLINE', 'OFFLINE', 'online', 'offline'])
 ];
 
 // Routes

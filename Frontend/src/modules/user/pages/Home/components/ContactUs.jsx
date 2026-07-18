@@ -30,8 +30,23 @@ const ContactUs = ({ data }) => {
     setForm({ name: '', email: '', message: '' });
   };
 
-  if (!data) return null;
-  const { title, subtitle, email, phone, address, workingHours } = data;
+  const defaultData = {
+    title: 'Contact Us',
+    subtitle: "Have questions? We're ready to answer any inquiries you might have about our services.",
+    email: 'support@nexorago.com',
+    phone: '+91 99999 99999',
+    address: 'Indore, MP, India',
+    workingHours: 'Mon - Sat: 9:00 AM - 8:00 PM'
+  };
+
+  const {
+    title = defaultData.title,
+    subtitle = defaultData.subtitle,
+    email = defaultData.email,
+    phone = defaultData.phone,
+    address = defaultData.address,
+    workingHours = defaultData.workingHours
+  } = data || {};
 
   return (
     <section id="contact-us" className="py-16 px-6 bg-transparent">

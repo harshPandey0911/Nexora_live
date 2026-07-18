@@ -183,7 +183,7 @@ const AdminHeader = ({ onMenuClick }) => {
               icon={FiBell}
             />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold">
+              <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold pointer-events-none shadow-sm">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}

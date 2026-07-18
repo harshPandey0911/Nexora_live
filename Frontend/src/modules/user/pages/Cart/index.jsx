@@ -22,7 +22,7 @@ import { userAuthService } from '../../../../services/authService';
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cartItems, isLoading: loading, removeItem, updateItem } = useCart();
+  const { cartItems, isLoading: loading, removeItem, updateItem, platformFeeRate, maxCartItemQuantity, flushCartUpdates } = useCart();
   const [homeContent, setHomeContent] = useState(null);
   const [planBenefits, setPlanBenefits] = useState({ name: '', freeCategories: [], freeBrands: [], freeServices: [] });
   const [userPlanActive, setUserPlanActive] = useState(false);
@@ -117,7 +117,7 @@ const Cart = () => {
     }, 0);
 
     const netSubtotal = subtotal - primeSavings;
-    const delivery = netSubtotal > 0 ? 49 : 0;
+    const delivery = netSubtotal > 0 ? platformFeeRate : 0;
     
     return {
       subtotal,
@@ -126,7 +126,7 @@ const Cart = () => {
       delivery,
       total: Math.max(0, netSubtotal + Math.round(tax) + delivery)
     };
-  }, [cartItems]);
+  }, [cartItems, platformFeeRate]);
 
   const handleQuantityChange = async (itemId, currentCount, change) => {
     const newCount = currentCount + change;
@@ -137,9 +137,11 @@ const Cart = () => {
     
     try {
       const res = await updateItem(itemId, newCount);
-      if (!res.success) toast.error('Failed to update quantity');
+      if (!res.success && res.message !== 'Quantity limit reached') {
+        toast.error(res.message || 'Failed to update quantity', { id: 'failed-update' });
+      }
     } catch (error) {
-      toast.error('Error updating cart');
+      toast.error('Error updating cart', { id: 'failed-update' });
     }
   };
 
@@ -154,9 +156,9 @@ const Cart = () => {
   const handleRemove = async (itemId) => {
     try {
       const res = await removeItem(itemId);
-      if (res.success) toast.success('Item removed');
+      if (res.success) toast.success('Item removed', { id: 'cart-success' });
     } catch (error) {
-      toast.error('Failed to remove item');
+      toast.error('Failed to remove item', { id: 'cart-error' });
     }
   };
 
@@ -268,6 +270,11 @@ const Cart = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 sm:gap-4">
                             <span className="text-base sm:text-2xl font-bold text-gray-900">₹{item.price}</span>
+                            {item.serviceCount > 1 && (
+                              <span className="text-xs sm:text-sm text-gray-400 font-medium lowercase">
+                                ({item.serviceCount} &times; ₹{item.unitPrice || Math.round(item.price / item.serviceCount)})
+                              </span>
+                            )}
                             {item.originalPrice && item.originalPrice > item.price && (
                               <span className="text-[10px] sm:text-xs font-semibold text-gray-300 line-through">
                                 ₹{item.originalPrice}
@@ -286,7 +293,23 @@ const Cart = () => {
                             >
                               <FiMinus className="w-3 h-3" />
                             </button>
-                            <span className="w-8 sm:w-12 text-center text-xs sm:text-sm font-bold">{item.serviceCount || 1}</span>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.serviceCount || 1}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 1) {
+                                  if (val > maxCartItemQuantity) {
+                                    toast.error(`Maximum quantity limit is ${maxCartItemQuantity}`);
+                                    handleQuantityChange(item.id || item._id, 0, maxCartItemQuantity);
+                                  } else {
+                                    handleQuantityChange(item.id || item._id, 0, val);
+                                  }
+                                }
+                              }}
+                              className="w-8 sm:w-12 text-center text-xs sm:text-sm font-bold bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
                             <button 
                               onClick={(e) => { e.stopPropagation(); handleQuantityChange(item.id || item._id, item.serviceCount || 1, 1); }}
                               className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
@@ -341,7 +364,20 @@ const Cart = () => {
  
                 <button 
                   disabled={cartItems.length === 0}
-                  onClick={() => navigate('/user/checkout')}
+                  onClick={async () => {
+                    try {
+                      if (flushCartUpdates) {
+                        await Promise.race([
+                          flushCartUpdates(),
+                          new Promise(r => setTimeout(r, 400))
+                        ]);
+                      }
+                    } catch (e) {
+                      console.error('Flush error:', e);
+                    } finally {
+                      navigate('/user/checkout');
+                    }
+                  }}
                   className="w-full bg-[#00246b] text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg shadow-blue-900/10 active:scale-95 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:grayscale"
                 >
                   <FiZap className="w-4 h-4 fill-current" />

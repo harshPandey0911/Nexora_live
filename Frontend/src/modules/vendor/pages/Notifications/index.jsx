@@ -122,15 +122,19 @@ const Notifications = () => {
     const type = (notif.type || '').toLowerCase();
 
     if (filter === 'payments') {
-      return ['payment_', 'payout_', 'wallet_', 'refund_'].some(prefix => type.includes(prefix));
+      return ['payment', 'payout', 'wallet', 'refund', 'withdrawal', 'cash_limit'].some(keyword => type.includes(keyword));
     }
 
     if (filter === 'jobs') {
-      return ['booking_', 'job_', 'worker_', 'visit_', 'work_', 'journey_', 'vendor_'].some(prefix => type.includes(prefix));
+      // Exclude financial requests that happen to have 'vendor' prefix
+      if (['withdrawal', 'cash_limit'].some(keyword => type.includes(keyword))) {
+        return false;
+      }
+      return ['booking', 'job', 'worker', 'visit', 'work', 'reached', 'journey', 'vendor', 'scrap'].some(keyword => type.includes(keyword));
     }
 
     if (filter === 'alerts') {
-      return ['alert', 'general', 'security', 'account'].some(prefix => type.includes(prefix));
+      return ['approved', 'rejected', 'registration', 'review', 'general', 'alert', 'security', 'account'].some(keyword => type.includes(keyword));
     }
 
     return type === filter;

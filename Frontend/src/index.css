@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: 'Plus Jakarta Sans', 'Outfit', sans-serif;
   --color-brand: var(--brand-teal);
   --color-brand-light: rgba(var(--brand-teal-rgb), 0.1);
   --color-brand-dark: #001a4d;
@@ -296,7 +297,7 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Plus Jakarta Sans', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -460,4 +461,20 @@ html {
   scrollbar-width: thin !important;
   scrollbar-color: rgba(255, 255, 255, 0.1) transparent !important;
   -ms-overflow-style: auto !important;
+}
+
+/* Fix Google Places Autocomplete empty container displaying a line at the bottom of the screen */
+.pac-container {
+  border: none !important;
+  border-radius: 12px !important;
+  margin-top: 4px !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.pac-container:empty {
+  display: none !important;
+  border: none !important;
+  height: 0px !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }

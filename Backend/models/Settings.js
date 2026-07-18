@@ -72,6 +72,11 @@ const settingsSchema = new mongoose.Schema({
     default: 5, // 5 minutes default
     min: 1
   },
+  maxCartItemQuantity: {
+    type: Number,
+    default: 100, // Default max items in cart
+    min: 1
+  },
   waveDuration: {
     type: Number,
     default: 60, // 60 seconds per wave default

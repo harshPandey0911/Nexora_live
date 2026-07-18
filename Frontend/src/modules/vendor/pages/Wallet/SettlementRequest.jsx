@@ -350,8 +350,8 @@ const SettlementRequest = () => {
             {/* Action Button */}
             <button
               onClick={handleSubmit}
-              disabled={submitting || !formData.amount || !formData.paymentReference || !formData.paymentProof}
-              className="w-full py-6 rounded-3xl font-medium text-white text-[11px] capitalize tracking-[0.5em] flex items-center justify-center gap-4 transition-all active:scale-95 disabled:opacity-50 bg-blue-600 shadow-xl shadow-blue-900/40 group relative overflow-hidden"
+              disabled={submitting}
+              className="w-full py-6 rounded-3xl font-medium text-white text-[11px] capitalize tracking-[0.5em] flex items-center justify-center gap-4 transition-all active:scale-95 disabled:opacity-50 bg-blue-600 shadow-xl shadow-blue-900/40 group relative overflow-hidden cursor-pointer"
             >
               {submitting ? (
                 <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin" />

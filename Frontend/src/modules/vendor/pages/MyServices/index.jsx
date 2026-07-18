@@ -105,7 +105,10 @@ const MyServices = () => {
   const loadServiceRequests = async () => {
     try {
       const res = await vendorService.getMyServiceRequests();
-      if (res.success) setMyRequests(res.requests || []);
+      if (res.success) {
+        const serviceRequests = (res.requests || []).filter(r => !r.requestType || r.requestType === 'SERVICE');
+        setMyRequests(serviceRequests);
+      }
     } catch {}
   };
 
@@ -121,7 +124,8 @@ const MyServices = () => {
         categoryName: categoryName.trim(),
         serviceName: serviceName.trim(),
         suggestedPrice: Number(suggestedPrice),
-        description: requestForm.description.trim()
+        description: requestForm.description.trim(),
+        requestType: 'SERVICE'
       });
       if (res.success) {
         toast.success('Request submitted! Admin will review it.');
@@ -297,25 +301,35 @@ const MyServices = () => {
                         className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm w-full mt-2"
                       >
                         <div className="flex-1 w-full">
-                          <select
-                            value={selectedServiceId}
-                            onChange={(e) => setSelectedServiceId(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all"
-                          >
-                            <option value="">Select Service...</option>
-                            {adminServices
-                              .filter(s => {
-                                const sCatId = s.categoryId?._id || s.categoryId || '';
-                                const activeCatId = cat.id || cat._id || '';
-                                return sCatId.toString() === activeCatId.toString();
-                              })
-                              .map(s => (
-                                <option key={s._id || s.id} value={s._id || s.id}>
-                                  {s.title}
+                          {(() => {
+                            const availableServices = adminServices.filter(s => {
+                              const sCatId = s.categoryId?._id || s.categoryId || '';
+                              const activeCatId = cat.id || cat._id || '';
+                              const matchesCat = sCatId.toString() === activeCatId.toString();
+                              const isAlreadyAdded = (groupedServices[cat.id] || []).some(
+                                existing => existing.title?.toLowerCase().trim() === s.title?.toLowerCase().trim()
+                              );
+                              return matchesCat && !isAlreadyAdded;
+                            });
+
+                            return (
+                              <select
+                                value={selectedServiceId}
+                                onChange={(e) => setSelectedServiceId(e.target.value)}
+                                disabled={availableServices.length === 0}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                <option value="">
+                                  {availableServices.length === 0 ? 'All available skills added to portfolio' : 'Select Service...'}
                                 </option>
-                              ))
-                            }
-                          </select>
+                                {availableServices.map(s => (
+                                  <option key={s._id || s.id} value={s._id || s.id}>
+                                    {s.title}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
                         </div>
 
                         {selectedServiceId && (

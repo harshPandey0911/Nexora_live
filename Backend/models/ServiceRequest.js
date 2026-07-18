@@ -40,6 +40,11 @@ const serviceRequestSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: ''
+  },
+  requestType: {
+    type: String,
+    enum: ['SERVICE', 'PRODUCT'],
+    default: 'SERVICE'
   }
 }, {
   timestamps: true

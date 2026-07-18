@@ -85,7 +85,10 @@ const MyProducts = () => {
   const loadServiceRequests = async () => {
     try {
       const res = await vendorService.getMyServiceRequests();
-      if (res.success) setMyRequests(res.requests || []);
+      if (res.success) {
+        const productRequests = (res.requests || []).filter(r => r.requestType === 'PRODUCT');
+        setMyRequests(productRequests);
+      }
     } catch {}
   };
 
@@ -101,7 +104,8 @@ const MyProducts = () => {
         categoryName: categoryName.trim(),
         serviceName: serviceName.trim(),
         suggestedPrice: Number(suggestedPrice),
-        description: requestForm.description.trim()
+        description: requestForm.description.trim(),
+        requestType: 'PRODUCT'
       });
       if (res.success) {
         toast.success('Request submitted! Admin will review it.');
@@ -276,25 +280,35 @@ const MyProducts = () => {
                         className="flex flex-col sm:flex-row sm:items-center gap-3 bg-white p-3 rounded-xl border border-gray-100 shadow-sm w-full mt-2 mb-4"
                       >
                         <div className="flex-1 w-full">
-                          <select
-                            value={selectedProductId}
-                            onChange={(e) => setSelectedProductId(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all"
-                          >
-                            <option value="">Select Product...</option>
-                            {adminProducts
-                              .filter(s => {
-                                const sCatId = s.categoryId?._id || s.categoryId || '';
-                                const activeCatId = cat.id || cat._id || '';
-                                return sCatId.toString() === activeCatId.toString();
-                              })
-                              .map(s => (
-                                <option key={s._id || s.id} value={s._id || s.id}>
-                                  {s.title}
+                          {(() => {
+                            const availableProducts = adminProducts.filter(s => {
+                              const sCatId = s.categoryId?._id || s.categoryId || '';
+                              const activeCatId = cat.id || cat._id || '';
+                              const matchesCat = sCatId.toString() === activeCatId.toString();
+                              const isAlreadyAdded = (groupedProducts[cat.id] || []).some(
+                                existing => existing.title?.toLowerCase().trim() === s.title?.toLowerCase().trim()
+                              );
+                              return matchesCat && !isAlreadyAdded;
+                            });
+
+                            return (
+                              <select
+                                value={selectedProductId}
+                                onChange={(e) => setSelectedProductId(e.target.value)}
+                                disabled={availableProducts.length === 0}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                              >
+                                <option value="">
+                                  {availableProducts.length === 0 ? 'All available products added to portfolio' : 'Select Product...'}
                                 </option>
-                              ))
-                            }
-                          </select>
+                                {availableProducts.map(s => (
+                                  <option key={s._id || s.id} value={s._id || s.id}>
+                                    {s.title}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
                         </div>
 
                         {selectedProductId && (

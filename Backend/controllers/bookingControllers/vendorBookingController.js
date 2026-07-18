@@ -716,7 +716,7 @@ const assignWorker = async (req, res) => {
       booking.workerId = null; // null means vendor itself
       booking.assignedAt = new Date();
 
-      if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED) {
+      if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED || booking.status === BOOKING_STATUS.REQUESTED || booking.status === BOOKING_STATUS.SEARCHING || !booking.status) {
         booking.status = BOOKING_STATUS.ASSIGNED;
       }
 

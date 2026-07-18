@@ -70,30 +70,33 @@ const SwipeableNotification = ({ t, data, onClick, onReassign, onSelfAssignSucce
       }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       whileTap={{ scale: 0.98 }}
-      className="max-w-md w-full bg-[#1A1D21] border border-white/10 shadow-2xl rounded-3xl pointer-events-auto flex flex-col ring-1 ring-white/5 cursor-pointer overflow-hidden"
+      className="w-full min-w-[340px] sm:min-w-[500px] md:min-w-[560px] max-w-2xl bg-[#1A1D21] border border-white/10 shadow-2xl rounded-2xl sm:rounded-3xl pointer-events-auto flex flex-col ring-1 ring-white/5 cursor-pointer overflow-hidden"
       onClick={onClick}
     >
-      <div className="flex-1 w-0 p-5">
-        <div className="flex items-start">
-          <div className="flex-shrink-0 pt-0.5">
-            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg border border-white/10">
-              <span className="text-xl">{data.type === 'new_booking_request' ? '⚡' : '🔔'}</span>
+      <div className="w-full p-4 sm:p-5">
+        <div className="flex items-center gap-3.5">
+          <div className="flex-shrink-0">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg border border-white/10 shrink-0">
+              <span className="text-lg sm:text-xl">{data.type === 'new_booking_request' ? '⚡' : '🔔'}</span>
             </div>
           </div>
-          <div className="ml-4 flex-1">
-            <div className="flex items-center justify-between">
-              <p className="text-[13px] font-black text-white uppercase tracking-tight">
+          <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-bold text-white tracking-tight shrink-0 uppercase">
                 {data.title}
               </p>
-              {data.type === 'new_booking_request' && (
-                <span className="text-[9px] font-black px-2 py-1 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/20 uppercase tracking-widest animate-pulse">
-                  Urgent
-                </span>
+              {data.message && (
+                <span className="hidden sm:inline text-gray-500 text-xs font-bold">•</span>
               )}
+              <p className="text-xs font-normal text-gray-300 leading-snug sm:truncate">
+                {data.message}
+              </p>
             </div>
-            <p className="mt-1 text-[12px] font-medium text-gray-400 leading-relaxed">
-              {data.message}
-            </p>
+            {data.type === 'new_booking_request' && (
+              <span className="text-[9px] font-black px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-lg border border-blue-500/20 uppercase tracking-widest animate-pulse shrink-0 self-start sm:self-auto">
+                Urgent
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -268,7 +271,11 @@ export const SocketProvider = ({ children }) => {
 
     // Listen for generic notifications
     newSocket.on('notification', (data) => {
-      // console.log('🔔 App Notification received:', data);
+      // Skip showing generic notification to vendor if it's a new booking request,
+      // since 'new_booking_request' event handles this interactively.
+      if (userType === 'vendor' && (data.type === 'booking_request' || data.type === 'booking_requested')) {
+        return;
+      }
 
       if (isSoundEnabled(userType)) {
         playNotificationSound();
@@ -292,7 +299,8 @@ export const SocketProvider = ({ children }) => {
       ), {
         id: 'socket-notification', // Prevent stacking
         duration: 3500, // Slightly longer to allow interaction/reading since it's dismissible
-        position: 'top-right'
+        position: 'top-right',
+        style: { maxWidth: '100%', width: 'auto' }
       });
 
       // Dispatch update events to refresh UI components
@@ -344,10 +352,13 @@ export const SocketProvider = ({ children }) => {
           brandIcon: data.brandIcon,
           categoryIcon: data.categoryIcon,
           scheduledDate: data.scheduledDate,
-          scheduledTime: data.scheduledTime,
           timeSlot: {
-            date: new Date(data.scheduledDate).toLocaleDateString(),
-            time: data.scheduledTime
+            date: (data.scheduledDate && !isNaN(new Date(data.scheduledDate).getTime()))
+              ? new Date(data.scheduledDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+              : (data.createdAt && !isNaN(new Date(data.createdAt).getTime()) 
+                  ? new Date(data.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : 'Today'),
+            time: data.scheduledTime || 'Immediate'
           },
           status: 'requested',
           createdAt: data.createdAt || new Date().toISOString(),
@@ -411,7 +422,8 @@ export const SocketProvider = ({ children }) => {
         ), {
           id: `new-booking-${data.bookingId}`,
           duration: 10000, // Longer duration for critical alerts
-          position: 'top-right'
+          position: 'top-right',
+          style: { maxWidth: '100%', width: 'auto' }
         });
 
         // Notify app components to refresh
@@ -511,7 +523,8 @@ export const SocketProvider = ({ children }) => {
         ), {
           id: `worker-rejected-${data.bookingId}`,
           duration: 10000,
-          position: 'top-right'
+          position: 'top-right',
+          style: { maxWidth: '100%', width: 'auto' }
         });
       });
     }

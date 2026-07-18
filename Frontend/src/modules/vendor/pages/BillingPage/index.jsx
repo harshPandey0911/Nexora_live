@@ -1013,8 +1013,10 @@ const BillingPage = () => {
                   <input
                     type="number"
                     placeholder="0"
+                    min="0"
                     value={transportCharges || ''}
-                    onChange={e => setTransportCharges(Number(e.target.value))}
+                    onChange={e => setTransportCharges(Math.max(0, Number(e.target.value)))}
+                    onBlur={e => { if (Number(e.target.value) < 0) setTransportCharges(0); }}
                     className="w-full bg-gray-50 border border-gray-100 rounded-2xl md:rounded-[32px] pl-12 md:pl-16 pr-6 md:pr-10 py-4 md:py-8 text-2xl md:text-4xl font-medium outline-none focus:border-blue-500/50 transition-all text-gray-900 placeholder:text-gray-200 shadow-inner"
                   />
                 </div>
@@ -1216,7 +1218,17 @@ const BillingPage = () => {
           {currentStep === 4 && (
             <>
               <button onClick={() => setCurrentStep(3)} className="flex-1 py-3.5 md:py-6 text-gray-400 font-medium text-[10px] md:text-xs capitalize tracking-widest bg-gray-50 border border-gray-100 rounded-xl md:rounded-[28px] hover:bg-gray-100 transition-all shadow-inner">Back</button>
-              <button onClick={() => setCurrentStep(5)} className="flex-[2] py-3.5 md:py-6 bg-blue-600 text-white font-medium text-[10px] md:text-xs capitalize tracking-[0.2em] md:tracking-[0.25em] rounded-xl md:rounded-[28px] flex items-center justify-center gap-2 md:gap-4 shadow-2xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all">
+              <button
+                onClick={() => {
+                  if (Number(transportCharges) < 0) {
+                    toast.error('Transport amount cannot be negative.');
+                    setTransportCharges(0);
+                    return;
+                  }
+                  setCurrentStep(5);
+                }}
+                className="flex-[2] py-3.5 md:py-6 bg-blue-600 text-white font-medium text-[10px] md:text-xs capitalize tracking-[0.2em] md:tracking-[0.25em] rounded-xl md:rounded-[28px] flex items-center justify-center gap-2 md:gap-4 shadow-2xl shadow-blue-500/20 hover:bg-blue-700 active:scale-95 transition-all"
+              >
                 Final Review Protocol <FiArrowRight className="w-4 h-4 md:w-6 md:h-6" />
               </button>
             </>

@@ -37,14 +37,7 @@ const ContactPage = () => {
       />
       
       <main className="pt-10 pb-24">
-        {homeContent?.contactUs ? (
-          <ContactUs data={homeContent.contactUs} />
-        ) : (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] text-center px-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Contact Us</h2>
-            <p className="text-gray-500">Our support team is coming soon...</p>
-          </div>
-        )}
+        <ContactUs data={homeContent?.contactUs || {}} />
       </main>
 
       <BottomNav />

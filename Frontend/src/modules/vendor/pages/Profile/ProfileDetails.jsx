@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiArrowLeft } from 'react-icons/fi';
 import { vendorAuthService } from '../../../../services/authService';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
@@ -145,7 +145,7 @@ const ProfileDetails = () => {
             onClick={() => navigate(-1)}
             className="w-10 h-10 rounded-xl bg-white shadow-sm border border-black/[0.02] flex items-center justify-center"
           >
-            <FiUser className="w-5 h-5 text-gray-900 rotate-180" />
+            <FiArrowLeft className="w-5 h-5 text-gray-900" />
           </motion.button>
           <h1 className="text-xl font-[1000] text-gray-900 tracking-tight">Identity Details</h1>
         </div>

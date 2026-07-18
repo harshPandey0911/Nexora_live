@@ -14,6 +14,32 @@ const getUserCart = async (req, res) => {
     if (!cart) {
       // Create empty cart if doesn't exist
       cart = await Cart.create({ userId, items: [] });
+    } else if (cart.items && cart.items.length > 1) {
+      // Deduplicate any pre-existing duplicate items in the cart
+      const mergedMap = new Map();
+      let hasDuplicates = false;
+
+      cart.items.forEach(item => {
+        const sId = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : null;
+        const key = sId || (item.title ? item.title.trim().toLowerCase() : item._id.toString());
+
+        if (mergedMap.has(key)) {
+          hasDuplicates = true;
+          const existing = mergedMap.get(key);
+          const newCount = (existing.serviceCount || 1) + (item.serviceCount || 1);
+          const unit = existing.unitPrice || (existing.serviceCount ? existing.price / existing.serviceCount : existing.price) || 0;
+          existing.serviceCount = newCount;
+          existing.unitPrice = unit;
+          existing.price = unit * newCount;
+        } else {
+          mergedMap.set(key, item);
+        }
+      });
+
+      if (hasDuplicates) {
+        cart.items = Array.from(mergedMap.values());
+        await cart.save();
+      }
     }
 
     res.status(200).json({
@@ -89,29 +115,40 @@ const addToCart = async (req, res) => {
     }
 
     // Check if item already exists in cart
-    const existingItemIndex = cart.items.findIndex(
-      item => item.title === title && (!serviceId || item.serviceId?.toString() === serviceId)
-    );
+    const existingItemIndex = cart.items.findIndex(item => {
+      const sId1 = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : null;
+      const sId2 = serviceId ? serviceId.toString() : null;
+      if (sId1 && sId2) {
+        return sId1 === sId2;
+      }
+      return item.title && title && item.title.trim().toLowerCase() === title.trim().toLowerCase();
+    });
 
     if (existingItemIndex !== -1) {
       // Update quantity if item exists
       const existingItem = cart.items[existingItemIndex];
-      const newCount = (existingItem.serviceCount || 1) + (serviceCount || 1);
-      const newPrice = existingItem.unitPrice * newCount;
+      const addedCount = serviceCount || 1;
+      const newCount = (existingItem.serviceCount || 1) + addedCount;
+      const unit = existingItem.unitPrice || (existingItem.serviceCount ? existingItem.price / existingItem.serviceCount : existingItem.price) || (unitPrice || price || 0);
+      const newPrice = unit * newCount;
 
       cart.items[existingItemIndex].serviceCount = newCount;
+      cart.items[existingItemIndex].unitPrice = unit;
       cart.items[existingItemIndex].price = newPrice;
     } else {
       // Add new item
+      const count = serviceCount || 1;
+      const unit = unitPrice || (price && count ? price / count : price) || 0;
+
       const newItem = {
         title,
         description: description || '',
         icon: icon || '',
         category: category || 'General',
-        price: price || unitPrice || 0,
+        price: unit * count,
         originalPrice: originalPrice || null,
-        unitPrice: unitPrice || price || 0,
-        serviceCount: serviceCount || 1,
+        unitPrice: unit,
+        serviceCount: count,
         rating: rating || '4.8',
         reviews: reviews || '10k+',
         vendorId: vendorId || null,
@@ -179,14 +216,20 @@ const updateCartItem = async (req, res) => {
       });
     }
 
-    const item = cart.items.id(itemId);
-    if (!item) {
+    const itemIndex = cart.items.findIndex(item => {
+      const subId = item._id ? item._id.toString() : '';
+      const sId = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : '';
+      return subId === itemId || sId === itemId || item.id === itemId;
+    });
+
+    if (itemIndex === -1) {
       return res.status(404).json({
         success: false,
         message: 'Item not found in cart'
       });
     }
 
+    const item = cart.items[itemIndex];
     item.serviceCount = serviceCount;
     item.price = item.unitPrice * serviceCount;
     await cart.save();
@@ -221,7 +264,12 @@ const removeFromCart = async (req, res) => {
       });
     }
 
-    cart.items = cart.items.filter(item => item._id.toString() !== itemId);
+    cart.items = cart.items.filter(item => {
+      const subId = item._id ? item._id.toString() : '';
+      const sId = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : '';
+      return subId !== itemId && sId !== itemId && item.id !== itemId;
+    });
+
     await cart.save();
 
     res.status(200).json({

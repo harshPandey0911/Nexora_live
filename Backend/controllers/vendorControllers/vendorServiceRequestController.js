@@ -7,7 +7,7 @@ const ServiceRequest = require('../../models/ServiceRequest');
 const createServiceRequest = async (req, res) => {
   try {
     const vendorId = req.user.id;
-    const { categoryName, serviceName, suggestedPrice, description } = req.body;
+    const { categoryName, serviceName, suggestedPrice, description, requestType } = req.body;
 
     if (!categoryName || !serviceName || suggestedPrice === undefined) {
       return res.status(400).json({
@@ -21,7 +21,8 @@ const createServiceRequest = async (req, res) => {
       categoryName: categoryName.trim(),
       serviceName: serviceName.trim(),
       suggestedPrice: Number(suggestedPrice),
-      description: description?.trim() || ''
+      description: description?.trim() || '',
+      requestType: requestType || 'SERVICE'
     });
 
     res.status(201).json({

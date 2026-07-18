@@ -53,7 +53,9 @@ const createBooking = async (req, res) => {
       offeringType // Extract offeringType
     } = req.body;
 
-    let visitingCharges = 0; // Convenience fee disabled
+    let visitingCharges = reqVisitingCharges !== undefined 
+      ? Number(reqVisitingCharges) 
+      : (reqVisitationFee !== undefined ? Number(reqVisitationFee) : 0);
 
     // Calculate total value from booked items or fallback to base (Move to top)
     let totalServiceValue = 0;
@@ -283,13 +285,12 @@ const createBooking = async (req, res) => {
           basePrice = reqBasePrice;
           discount = reqDiscount || 0;
           tax = reqTax;
-          visitingCharges = 0; // Convenience fee disabled
-          finalAmount = (basePrice - discount + tax) + pendingPenalty;
+          // Keep visitingCharges passed from frontend (representing platform fee)
+          finalAmount = (basePrice - discount + tax + visitingCharges) + pendingPenalty;
         } else {
           // Backward compatibility: Reverse calculate
-          visitingCharges = 0; // Convenience fee disabled
-          basePrice = Math.round(amount / 1.18);
-          tax = amount - basePrice;
+          basePrice = Math.round((amount - visitingCharges) / 1.18);
+          tax = (amount - visitingCharges) - basePrice;
           discount = 0;
           finalAmount = amount + pendingPenalty;
         }

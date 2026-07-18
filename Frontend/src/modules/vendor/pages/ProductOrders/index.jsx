@@ -33,8 +33,12 @@ const ProductOrders = memo(() => {
           location: { address: order.address?.addressLine1 || 'Address' },
           price: order.finalAmount || 0,
           status: order.status,
-          date: order.scheduledDate ? new Date(order.scheduledDate).toLocaleDateString() : 'Date',
-          time: order.scheduledTime || 'Time'
+          date: (order.scheduledDate && !isNaN(new Date(order.scheduledDate).getTime()))
+            ? new Date(order.scheduledDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+            : (order.createdAt && !isNaN(new Date(order.createdAt).getTime())
+                ? new Date(order.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+                : 'Today'),
+          time: order.scheduledTime || 'ASAP'
         }));
         
       setOrders(ordersData);

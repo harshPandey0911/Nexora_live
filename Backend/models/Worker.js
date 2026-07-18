@@ -70,7 +70,10 @@ const workerSchema = new mongoose.Schema({
     city: String,
     state: String,
     pincode: String,
-    landmark: String
+    landmark: String,
+    fullAddress: String,
+    lat: Number,
+    lng: Number
   },
   rating: {
     type: Number,

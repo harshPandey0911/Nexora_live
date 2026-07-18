@@ -228,7 +228,29 @@ const BookingAlertCard = ({ booking, onAccept, onReject, onAssign, maxSearchTime
           <div className="flex items-start gap-2 pt-2 border-t border-gray-200">
             <FiClock className="text-gray-400 w-3.5 h-3.5 shrink-0 mt-0.5" />
             <span className="font-normal text-gray-800">
-              {booking.timeSlot?.date || (booking.scheduledDate ? new Date(booking.scheduledDate).toLocaleDateString() : '')} {booking.timeSlot?.time || booking.scheduledTime || 'N/A'}
+              {(() => {
+                const dateVal = booking.timeSlot?.date || booking.scheduledDate;
+                let formattedDate = 'Today';
+
+                if (dateVal && dateVal !== 'Invalid Date') {
+                  const d = new Date(dateVal);
+                  if (!isNaN(d.getTime())) {
+                    formattedDate = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                  } else if (typeof dateVal === 'string' && dateVal.trim()) {
+                    formattedDate = dateVal;
+                  }
+                } else if (booking.createdAt) {
+                  const d = new Date(booking.createdAt);
+                  if (!isNaN(d.getTime())) {
+                    formattedDate = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                  }
+                }
+
+                const timeVal = booking.timeSlot?.time || booking.scheduledTime;
+                const formattedTime = (timeVal && timeVal !== 'N/A') ? timeVal : 'Immediate';
+
+                return `${formattedDate} • ${formattedTime}`;
+              })()}
             </span>
           </div>
         </div>

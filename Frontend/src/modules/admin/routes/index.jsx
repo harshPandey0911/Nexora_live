@@ -25,6 +25,7 @@ const OfferBanners = lazy(() => import('../pages/OfferBanners'));
 const Support = lazy(() => import('../pages/Support'));
 const TrainingManagement = lazy(() => import('../pages/TrainingManagement'));
 const Settings = lazy(() => import('../pages/Settings'));
+const Notifications = lazy(() => import('../pages/Notifications'));
 
 // User App Config Pages
 const HomePage = lazy(() => import('../pages/UserCategories/pages/HomePage'));
@@ -92,6 +93,7 @@ const AdminRoutes = () => {
           <Route path="support" element={<Support />} />
           <Route path="training" element={<TrainingManagement />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="service-requests" element={<ServiceRequestsPage />} />
         </Route>
 

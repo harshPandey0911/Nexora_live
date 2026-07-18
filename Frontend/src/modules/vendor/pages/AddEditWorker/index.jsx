@@ -71,6 +71,7 @@ const AddEditWorker = () => {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [aadharFile, setAadharFile] = useState(null);
+  const [aadharPreview, setAadharPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
@@ -119,10 +120,14 @@ const AddEditWorker = () => {
               },
               serviceCategories: w.serviceCategories || (w.serviceCategory ? [w.serviceCategory] : []),
               address: {
-                addressLine1: w.address?.addressLine1 || '',
+                addressLine1: w.address?.addressLine1 || w.address?.fullAddress || '',
+                addressLine2: w.address?.addressLine2 || '',
                 city: w.address?.city || '',
                 state: w.address?.state || '',
-                pincode: w.address?.pincode || ''
+                pincode: w.address?.pincode || '',
+                fullAddress: w.address?.fullAddress || w.address?.addressLine1 || [w.address?.addressLine1, w.address?.addressLine2, w.address?.city, w.address?.state, w.address?.pincode].filter(Boolean).join(', '),
+                lat: w.address?.lat ?? w.location?.lat ?? null,
+                lng: w.address?.lng ?? w.location?.lng ?? null
               },
               status: w.status || 'active',
               profilePhoto: w.profilePhoto || ''
@@ -187,6 +192,11 @@ const AddEditWorker = () => {
         return;
       }
       setAadharFile(file);
+      if (file.type.startsWith('image/')) {
+        setAadharPreview(URL.createObjectURL(file));
+      } else {
+        setAadharPreview(null);
+      }
     }
   };
 
@@ -244,16 +254,23 @@ const AddEditWorker = () => {
       });
     }
 
+    const fullAddrFromLocation = location?.address || '';
+    const computedFullAddress = [houseNumber, addressLine2, city, state, pincode].filter(Boolean).join(', ');
+    const finalFullAddress = fullAddrFromLocation || computedFullAddress;
+    const finalAddressLine1 = (houseNumber && houseNumber.length > 5) ? houseNumber : (fullAddrFromLocation || houseNumber);
+
     setFormData(prev => ({
       ...prev,
       address: {
         ...prev.address,
-        addressLine1: houseNumber,
-        addressLine2: addressLine2,
+        addressLine1: finalAddressLine1 || prev.address.addressLine1,
+        addressLine2: addressLine2 || prev.address.addressLine2,
         city: city || prev.address.city,
         state: state || prev.address.state,
         pincode: pincode || prev.address.pincode,
-        fullAddress: location?.address || prev.address.fullAddress
+        fullAddress: finalFullAddress || prev.address.fullAddress,
+        lat: location?.lat !== undefined ? location.lat : prev.address.lat,
+        lng: location?.lng !== undefined ? location.lng : prev.address.lng
       }
     }));
     setIsAddressModalOpen(false);
@@ -357,7 +374,10 @@ const AddEditWorker = () => {
       navigate('/vendor/workers');
     } catch (error) {
       console.error('Save error:', error);
-      toast.error(error.response?.data?.message || 'Failed to save');
+      const validationErrorMsg = error.response?.data?.errors?.[0]?.msg 
+        ? `${error.response.data.errors[0].path ? error.response.data.errors[0].path + ': ' : ''}${error.response.data.errors[0].msg}`
+        : null;
+      toast.error(validationErrorMsg || error.response?.data?.message || 'Failed to save');
     } finally {
       setLoading(false);
       setUploading(false);
@@ -549,19 +569,57 @@ const AddEditWorker = () => {
             <div className="space-y-4">
               <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Operational Location</h4>
 
-              <div className="p-4 bg-blue-50/30 rounded-xl border border-blue-100/30 flex items-start gap-3">
-                <FiMapPin className="text-blue-900 w-4 h-4 mt-0.5 shrink-0" />
-                <p className="text-xs font-medium text-gray-800 leading-relaxed">
-                  {formData.address?.fullAddress ||
-                    (formData.address?.addressLine1 ? `${formData.address.addressLine1}, ${formData.address.city}` : 'No address assigned')
-                  }
-                </p>
-              </div>
+              {(() => {
+                const addr = formData.address || {};
+                const parts = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.pincode ? `PIN: ${addr.pincode}` : null].filter(Boolean);
+                const displayAddress = (addr.fullAddress && addr.fullAddress.length > 5)
+                  ? addr.fullAddress 
+                  : (parts.length > 0 ? parts.join(', ') : 'No address assigned');
+                const hasCoordinates = addr.lat !== undefined && addr.lat !== null && addr.lng !== undefined && addr.lng !== null;
+
+                return (
+                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-50 text-blue-900 rounded-lg shrink-0 mt-0.5">
+                        <FiMapPin className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-900 leading-snug">
+                          {displayAddress}
+                        </p>
+                        {parts.length > 0 && (
+                          <div className="mt-2 text-[11px] text-gray-500 font-medium grid grid-cols-2 gap-x-4 gap-y-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
+                            {addr.addressLine1 && (
+                              <div><span className="text-gray-400">Address:</span> {addr.addressLine1}</div>
+                            )}
+                            {addr.city && (
+                              <div><span className="text-gray-400">City:</span> {addr.city}</div>
+                            )}
+                            {addr.state && (
+                              <div><span className="text-gray-400">State:</span> {addr.state}</div>
+                            )}
+                            {addr.pincode && (
+                              <div><span className="text-gray-400">Pincode:</span> {addr.pincode}</div>
+                            )}
+                          </div>
+                        )}
+                        {hasCoordinates && (
+                          <p className="text-[10px] text-emerald-600 font-semibold mt-2 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            GPS: {Number(addr.lat).toFixed(4)}, {Number(addr.lng).toFixed(4)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={() => setIsAddressModalOpen(true)}
                 className="w-full py-2.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
               >
+                <FiMapPin className="w-4 h-4 text-blue-900" />
                 Set Location Coordinates
               </button>
             </div>
@@ -661,20 +719,33 @@ const AddEditWorker = () => {
                     className="hidden"
                     onChange={handleAadharChange}
                   />
-                  <div className="flex flex-col items-center relative z-10">
-                    {aadharFile ? (
+                  <div className="flex flex-col items-center relative z-10 w-full">
+                    {aadharPreview || (formData.aadhar.document && !formData.aadhar.document.toLowerCase().endsWith('.pdf') && formData.aadhar.document !== 'data:image/png;base64,placeholder') ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <img 
+                          src={aadharPreview || formData.aadhar.document} 
+                          alt="Digital Identity Preview" 
+                          className="w-[80%] max-h-52 rounded-lg object-contain shadow-sm border border-gray-200 bg-white"
+                        />
+                        <span className="text-[10px] text-gray-500 font-medium">
+                          {aadharFile ? aadharFile.name : "Uploaded Document"} (Click to change)
+                        </span>
+                      </div>
+                    ) : aadharFile ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-10 h-10 bg-blue-900 text-white rounded-lg flex items-center justify-center shadow-sm">
                           <FiCheck className="w-4 h-4" />
                         </div>
                         <span className="text-xs text-gray-800 truncate max-w-[180px]">{aadharFile.name}</span>
+                        <span className="text-[10px] text-gray-500">(Click to change)</span>
                       </div>
-                    ) : formData.aadhar.document && formData.aadhar.document !== 'data:image/png;base64,placeholder' ? (
+                    ) : (formData.aadhar.document && formData.aadhar.document !== 'data:image/png;base64,placeholder') ? (
                       <div className="flex flex-col items-center gap-2">
                         <div className="w-10 h-10 bg-white border border-blue-100 text-blue-900 rounded-lg flex items-center justify-center shadow-sm">
-                          <FiUpload className="w-4 h-4" />
+                          <FiCheck className="w-4 h-4 text-blue-900" />
                         </div>
-                        <p className="text-xs text-blue-900">Document Verified</p>
+                        <span className="text-xs text-blue-900 font-medium">Document Verified (PDF)</span>
+                        <span className="text-[10px] text-gray-500">(Click to change)</span>
                       </div>
                     ) : (
                       <>

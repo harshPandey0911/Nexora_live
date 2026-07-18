@@ -106,13 +106,15 @@ export default function BookingDetails() {
         price: (apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0)).toFixed(2),
 
         timeSlot: {
-          date: apiData.scheduledDate ? new Date(apiData.scheduledDate).toLocaleDateString() : 'Today',
-          time: apiData.scheduledTime || apiData.timeSlot?.start ? `${apiData.timeSlot.start} - ${apiData.timeSlot.end}` : 'Flexible'
+          date: apiData.scheduledDate ? new Date(apiData.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today',
+          time: apiData.scheduledTime 
+            ? apiData.scheduledTime 
+            : (apiData.timeSlot?.start 
+                ? `${apiData.timeSlot.start} - ${apiData.timeSlot.end}` 
+                : 'Flexible')
         },
         status: apiData.status,
-        description: apiData.description || apiData.notes || 'No description provided',
-        assignedTo: apiData.workerId ? { name: apiData.workerId.name } : (apiData.assignedAt ? { name: 'You (Self)' } : null),
-        workerResponse: apiData.workerResponse,
+        assignedTo: apiData.workerId ? { name: apiData.workerId.name || 'Worker' } : (apiData.assignedAt || !apiData.workerId ? { name: 'You (Self)' } : null),
         workerResponseAt: apiData.workerResponseAt,
         paymentMethod: apiData.paymentMethod,
         paymentStatus: apiData.paymentStatus,
@@ -616,9 +618,28 @@ export default function BookingDetails() {
           >
             <FiX className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </motion.button>
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             <h1 className="text-lg md:text-xl font-medium text-gray-900 tracking-tight leading-none">Job Intel</h1>
-            <span className="text-[9px] md:text-[10px] font-medium text-blue-600 capitalize tracking-widest mt-1 md:mt-1.5">Deployment ID: {id?.slice(-6).toUpperCase()}</span>
+            {booking && (
+              <div className="flex items-center gap-2">
+                <span className={`text-[9px] md:text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                  booking.status === 'completed' ? 'bg-green-100 text-green-700' :
+                  booking.status === 'in_progress' || booking.status === 'visited' ? 'bg-amber-100 text-amber-700' :
+                  booking.status === 'confirmed' || booking.status === 'accepted' ? 'bg-blue-100 text-blue-700' :
+                  booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                  booking.status === 'work_done' ? 'bg-purple-100 text-purple-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {booking.status?.replace(/_/g, ' ')}
+                </span>
+                {booking.timeSlot?.date && booking.timeSlot.date !== 'Today' && (
+                  <>
+                    <span className="text-gray-300 text-[10px]">·</span>
+                    <span className="text-[9px] md:text-[10px] text-gray-400 font-medium tracking-wide">{booking.timeSlot.date}</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <motion.button 
@@ -631,46 +652,47 @@ export default function BookingDetails() {
       </header>
 
       <main className="px-4 pt-4 pb-16 md:px-6 md:pt-8 md:pb-20 relative z-10 max-w-7xl mx-auto">
-        {/* Service Archetype Card */}
-        <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-100 shadow-sm">
-          <div className="flex items-start justify-between gap-3 md:gap-6">
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] md:text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1.5 md:mb-2">Service Specialization</p>
-              <h2 className="text-lg md:text-2xl font-medium text-gray-900 tracking-tight leading-tight capitalize">
-                {booking.serviceType}
-              </h2>
+        {/* Service Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+          <div className="flex items-center gap-4 p-4 md:p-5">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center shadow-md shrink-0">
+              <FiTool className="w-5 h-5 text-white" />
             </div>
-            <div className="flex flex-col items-end gap-2 md:gap-3 shrink-0">
-              <div className={`px-3.5 py-1.5 md:px-5 md:py-2 rounded-lg md:rounded-xl text-[9px] md:text-[10px] font-medium capitalize tracking-widest ${
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Service</p>
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">{booking.serviceType}</h2>
+            </div>
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              <span className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
                 booking.workerResponse === 'REJECTED' && !booking.assignedTo
-                  ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'
-                  : 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                  ? 'bg-red-100 text-red-600'
+                  : booking.status === 'completed' ? 'bg-green-100 text-green-700'
+                  : booking.status === 'in_progress' || booking.status === 'visited' ? 'bg-amber-100 text-amber-700'
+                  : 'bg-blue-100 text-blue-700'
               }`}>
                 {booking.workerResponse === 'REJECTED' && !booking.assignedTo
-                  ? 'Rejected by Worker'
-                  : booking.status.replace('_', ' ')}
-              </div>
+                  ? 'Worker Declined'
+                  : booking.status.replace(/_/g, ' ')}
+              </span>
               {booking.assignedTo?.name === 'You (Self)' && (
-                <span className="text-[9px] md:text-[10px] font-medium text-blue-600 bg-blue-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg border border-blue-100 capitalize tracking-widest">
-                  Internal Ops
+                <span className="text-[9px] font-semibold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100 uppercase tracking-widest">
+                  Self Assigned
                 </span>
               )}
             </div>
           </div>
         </div>
 
-        {/* Identity Matrix Card */}
-        <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 md:gap-5">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                <FiUser className="w-6 h-6 md:w-8 md:h-8 text-gray-300" />
-              </div>
-              <div>
-                <p className="text-[9px] md:text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1 md:mb-1.5">Target Client</p>
-                <p className="text-base md:text-xl font-medium text-gray-900 leading-tight tracking-tight capitalize">{booking.user?.name || booking.customerName || 'Client'}</p>
-                <p className="text-[9px] md:text-[10px] font-normal text-blue-600 capitalize tracking-widest mt-0.5 md:mt-1">Verified Network</p>
-              </div>
+        {/* Client Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4">
+          <div className="flex items-center gap-4 p-4 md:p-5">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+              <FiUser className="w-5 h-5 text-gray-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Customer</p>
+              <p className="text-lg font-bold text-gray-900 leading-tight tracking-tight capitalize">{booking.user?.name || booking.customerName || 'Client'}</p>
+              <p className="text-[10px] font-medium text-green-600 mt-0.5">✓ Verified</p>
             </div>
             {(() => {
               const phone = booking.user?.phone || booking.customerPhone;
@@ -678,41 +700,40 @@ export default function BookingDetails() {
               return isPhoneValid ? (
                 <a
                   href={`tel:${phone}`}
-                  className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all cursor-pointer"
+                  className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/25 hover:bg-blue-700 transition-all shrink-0"
                 >
-                  <FiPhone className="w-4.5 h-4.5 md:w-6 md:h-6 text-white" />
+                  <FiPhone className="w-5 h-5 text-white" />
                 </a>
               ) : (
                 <button
-                  onClick={() => toast.error('Phone number not available or hidden before booking is accepted')}
-                  className="w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gray-300 flex items-center justify-center cursor-not-allowed shadow-none"
+                  onClick={() => toast.error('Phone number not available before booking is accepted')}
+                  className="w-11 h-11 rounded-2xl bg-gray-100 flex items-center justify-center cursor-not-allowed shrink-0"
                   title="Phone number hidden"
                 >
-                  <FiPhone className="w-4.5 h-4.5 md:w-6 md:h-6 text-gray-500" />
+                  <FiPhone className="w-5 h-5 text-gray-400" />
                 </button>
               );
             })()}
           </div>
         </div>
 
-        {/* Geospatial Deployment Base */}
-        <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-100 shadow-sm">
-          <div className="flex items-start gap-4 md:gap-5 mb-4 md:mb-6">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-              <FiMapPin className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+        {/* Location Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 overflow-hidden">
+          <div className="flex items-start gap-4 p-4 md:p-5">
+            <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+              <FiMapPin className="w-5 h-5 text-red-500" />
             </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <p className="text-[9px] md:text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1.5 md:mb-2">Service Base Coordinates</p>
-              <p className="text-sm md:text-base font-normal text-gray-800 leading-relaxed tracking-tight capitalize">{booking?.location?.address || 'Location not specified'}</p>
-              <div className="flex items-center gap-2.5 mt-2 md:mt-3">
-                <span className="text-[9px] md:text-[10px] font-medium text-blue-600 bg-blue-50 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg border border-blue-100 capitalize tracking-widest">
-                  {booking?.location?.distance || 'N/A'} Proximal
-                </span>
-              </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Location</p>
+              <p className="text-sm font-medium text-gray-800 leading-relaxed">{booking?.location?.address || 'Location not specified'}</p>
+              {booking?.location?.distance && booking.location.distance !== 'N/A' && (
+                <p className="text-[10px] font-medium text-blue-600 mt-1">{booking.location.distance} away</p>
+              )}
             </div>
           </div>
 
-          <div className="w-full h-44 md:h-64 rounded-2xl md:rounded-[32px] overflow-hidden mb-4 md:mb-8 border border-white/5 relative group cursor-pointer shadow-2xl" onClick={() => navigate(`/vendor/booking/${booking.id}/map`)}>
+          {/* Map */}
+          <div className="w-full h-44 md:h-56 relative group cursor-pointer border-t border-gray-100" onClick={() => navigate(`/vendor/booking/${booking.id}/map`)}>
             {(() => {
               const hasCoordinates = booking.location.lat && booking.location.lng && booking.location.lat !== 0 && booking.location.lng !== 0;
               const mapQuery = hasCoordinates ? `${booking.location.lat},${booking.location.lng}` : encodeURIComponent(booking.location.address);
@@ -726,27 +747,24 @@ export default function BookingDetails() {
                     src={`https://maps.google.com/maps?q=${mapQuery}&z=15&output=embed`}
                     allowFullScreen
                   />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                    <motion.span 
-                      whileHover={{ scale: 1.05 }}
-                      className="bg-blue-600 text-white px-5 py-2.5 md:px-8 md:py-4 rounded-xl md:rounded-2xl text-[10px] md:text-xs font-medium capitalize tracking-[0.2em] shadow-2xl"
-                    >
-                      Maximize Analytics
-                    </motion.span>
+                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/45 transition-colors flex items-center justify-center">
+                    <span className="bg-white text-gray-800 px-4 py-2 rounded-xl text-xs font-semibold shadow-lg flex items-center gap-2">
+                      <FiMapPin className="w-3.5 h-3.5 text-red-500" /> Open Full Map
+                    </span>
                   </div>
                 </>
               );
             })()}
           </div>
 
-          <div className="flex gap-3 md:gap-4">
+          <div className="flex gap-3 p-4 md:p-5 border-t border-gray-100">
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={() => navigate(`/vendor/booking/${booking.id || id}/map`)}
-              className="flex-1 py-2.5 md:py-4 rounded-xl md:rounded-2xl font-medium text-[9px] md:text-[10px] capitalize tracking-widest border border-gray-200 flex items-center justify-center gap-2 md:gap-3 bg-white text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+              className="flex-1 py-2.5 rounded-xl font-semibold text-xs border border-gray-200 flex items-center justify-center gap-2 bg-gray-50 text-gray-700 hover:bg-gray-100 transition-all"
             >
-              <FiMapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-600" />
-              Base View
+              <FiMapPin className="w-3.5 h-3.5 text-blue-600" />
+              View Map
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.95 }}
@@ -755,24 +773,24 @@ export default function BookingDetails() {
                 const dest = hasCoords ? `${booking.location.lat},${booking.location.lng}` : encodeURIComponent(booking.location.address);
                 window.location.href = `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
               }}
-              className="flex-1 py-2.5 md:py-4 rounded-xl md:rounded-2xl font-medium text-[9px] md:text-[10px] capitalize tracking-widest text-white flex items-center justify-center gap-2 md:gap-3 bg-blue-600 shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
+              className="flex-1 py-2.5 rounded-xl font-semibold text-xs text-white flex items-center justify-center gap-2 bg-blue-600 shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all"
             >
-              <FiNavigation className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-200" />
+              <FiNavigation className="w-3.5 h-3.5 text-blue-200" />
               Navigate
             </motion.button>
           </div>
         </div>
 
-        {/* Schedule Intel */}
-        <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 mb-4 md:mb-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-4 md:gap-5">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl bg-amber-50 flex items-center justify-center shrink-0 border border-amber-100">
-              <FiClock className="w-5 h-5 md:w-6 md:h-6 text-amber-500" />
+        {/* Schedule Card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4">
+          <div className="flex items-center gap-4 p-4 md:p-5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+              <FiClock className="w-5 h-5 text-amber-500" />
             </div>
-            <div>
-              <p className="text-[9px] md:text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1 md:mb-1.5">Temporal Slot</p>
-              <p className="text-sm md:text-base font-normal text-gray-800 tracking-tight">{booking?.timeSlot?.date || 'Date not set'}</p>
-              <p className="text-[9px] md:text-[10px] font-normal text-amber-600 capitalize tracking-widest mt-0.5 md:mt-1">{booking?.timeSlot?.time || 'Time not set'}</p>
+            <div className="flex-1">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-0.5">Scheduled</p>
+              <p className="text-base font-bold text-gray-900 tracking-tight">{booking?.timeSlot?.date || 'Date not set'}</p>
+              <p className="text-[11px] font-medium text-amber-600 mt-0.5">{booking?.timeSlot?.time || 'Flexible time'}</p>
             </div>
           </div>
         </div>

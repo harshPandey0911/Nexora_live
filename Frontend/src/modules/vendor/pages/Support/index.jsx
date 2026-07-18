@@ -152,8 +152,8 @@ const SupportList = () => {
                   <span className="text-[8px] font-medium capitalize tracking-[0.15em] text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">{ticket.category}</span>
                   <div className="flex items-center gap-1.5 text-gray-400">
                     <FiClock className="w-3 h-3" />
-                    <span className="text-[8px] font-medium capitalize tracking-widest">
-                      {new Date(ticket.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <span className="text-[8px] font-medium tracking-widest">
+                      {new Date(ticket.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}, {new Date(ticket.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
                     </span>
                   </div>
                 </div>
@@ -167,11 +167,13 @@ const SupportList = () => {
       {showCreateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 lg:p-10 bg-gray-900/40 backdrop-blur-md">
           <div className="bg-white rounded-[40px] w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
-            <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-xs font-medium text-gray-900 capitalize tracking-[0.4em]">Initialize Support Protocol</h3>
+            <div className="px-5 py-5 border-b border-gray-50 flex justify-between items-center gap-3 bg-gray-50/50">
+              <h3 className="text-xs font-semibold text-gray-900 capitalize tracking-widest leading-snug">
+                Initialize Support Protocol
+              </h3>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors border border-gray-100 shadow-sm"
+                className="w-9 h-9 shrink-0 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors border border-gray-100 shadow-sm"
               >
                 ✕
               </button>

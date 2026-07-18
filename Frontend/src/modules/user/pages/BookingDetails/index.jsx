@@ -25,7 +25,8 @@ import {
   FiChevronRight,
   FiSearch,
   FiHome,
-  FiAlertCircle
+  FiAlertCircle,
+  FiCopy
 } from 'react-icons/fi';
 import { bookingService } from '../../../../services/bookingService';
 import { paymentService } from '../../../../services/paymentService';
@@ -611,15 +612,31 @@ const BookingDetails = () => {
         <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/40 border-b border-black/[0.03] px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/user/my-bookings')}
+              onClick={() => navigate('/user/my-bookings', { replace: true })}
               className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.02]"
             >
               <FiArrowLeft className="w-5 h-5 text-gray-800" />
             </button>
             <div className="flex-1">
               <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">Booking Details</h1>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">
-                ID: <span className="font-mono">{booking.bookingNumber || booking._id?.slice(-8).toUpperCase()}</span>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                ID: <span className="font-mono">{(() => {
+                  const fullID = booking.bookingNumber || booking._id || '';
+                  return fullID.length > 12 ? `${fullID.slice(0, 8)}...${fullID.slice(-4)}` : fullID;
+                })()}</span>
+                <button
+                  onClick={() => {
+                    const fullID = booking.bookingNumber || booking._id || '';
+                    if (fullID) {
+                      navigator.clipboard.writeText(fullID);
+                      toast.success('Booking ID copied!');
+                    }
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  title="Copy full ID"
+                >
+                  <FiCopy className="w-3 h-3" />
+                </button>
               </p>
             </div>
           </div>
@@ -1402,11 +1419,6 @@ const BookingDetails = () => {
             </a>
             <a
               href={`mailto:${supportInfo.email || 'help@homestr.in'}`}
-              onClick={(e) => {
-                // Prevent default behavior to handle navigation explicitly
-                e.preventDefault();
-                window.location.href = `mailto:${supportInfo.email || 'help@homestr.in'}`;
-              }}
               className="col-span-1 flex flex-col items-center justify-center gap-1.5 p-4 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-colors active:scale-95 text-center"
             >
               <FiMail className="w-5 h-5 text-gray-700" />

@@ -30,7 +30,7 @@ const Checkout = () => {
   const location = useLocation();
   const category = location.state?.category || null;
   const plan = location.state?.plan || null;
-  const { fetchCart: fetchCartGlobal, clearCart: clearCartGlobal, removeCategoryItems: removeCategoryGlobal, updateItem: updateItemGlobal, removeItem: removeItemGlobal } = useCart();
+  const { cartItems: globalCartItems, isInitialized: isCartInitialized, fetchCart: fetchCartGlobal, clearCart: clearCartGlobal, removeCategoryItems: removeCategoryGlobal, updateItem: updateItemGlobal, removeItem: removeItemGlobal, flushCartUpdates: flushCartGlobal, platformFeeRate } = useCart();
 
   const [cartItems, setCartItems] = useState([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -112,6 +112,9 @@ const Checkout = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        if (flushCartGlobal) {
+          await flushCartGlobal();
+        }
 
         if (plan) {
           setCartItems([{
@@ -176,7 +179,7 @@ const Checkout = () => {
             }
 
             // Set Cart Items
-            let items = response.cartItems || [];
+            let items = (isCartInitialized && globalCartItems && globalCartItems.length >= 0) ? globalCartItems : (response.cartItems || []);
             if (category) {
               const normalizedCategory = category.toLowerCase().trim();
               items = items.filter(item => {
@@ -196,6 +199,21 @@ const Checkout = () => {
 
     fetchData();
   }, [category, plan]);
+
+  // Keep Checkout cart items in sync with global CartContext ONLY when on the initial 'details' step
+  useEffect(() => {
+    if (!plan && isCartInitialized && Array.isArray(globalCartItems) && currentStep === 'details' && !bookingRequest) {
+      let items = globalCartItems;
+      if (category) {
+        const normalizedCategory = category.toLowerCase().trim();
+        items = items.filter(item => {
+          const itemCat = (item.category || 'Other').toLowerCase().trim();
+          return itemCat === normalizedCategory;
+        });
+      }
+      setCartItems(items);
+    }
+  }, [globalCartItems, isCartInitialized, category, plan, currentStep, bookingRequest]);
 
   const loadCart = async () => {
     try {
@@ -363,7 +381,7 @@ const Checkout = () => {
         basePrice: totalOriginalPrice,
         discount: savings,
         tax: taxesAndFee,
-        visitationFee: 0, // Convenience fee disabled
+        visitingCharges: platformFee,
 
         // Metadata for better data capture
         serviceCategory: firstItem.categoryTitle || firstItem.category || 'General',
@@ -608,7 +626,7 @@ const Checkout = () => {
         basePrice: totalOriginalPrice,
         discount: savings,
         tax: taxesAndFee,
-        visitationFee: 0, // Convenience fee disabled
+        visitingCharges: platformFee,
 
         // Metadata for better data capture
         serviceCategory: firstItem.categoryTitle || firstItem.category || 'General',
@@ -636,7 +654,7 @@ const Checkout = () => {
       setBookingRequest(booking);
       toast.dismiss();
 
-      // Clear cart immediately as search starts (consumes items) - ONLY if vendors found
+      // Clear cart in context immediately as search starts - keep local cartItems in Checkout for accurate display
       if (!bookingResponse.noVendorsFound) {
         try {
           if (category) {
@@ -644,7 +662,6 @@ const Checkout = () => {
           } else {
             await clearCartGlobal();
           }
-          setCartItems([]);
         } catch (err) {
           console.error('Failed to clear cart after search start', err);
         }
@@ -1065,9 +1082,19 @@ const Checkout = () => {
     return item.price || 0;
   };
 
-  const itemTotal = cartItems.reduce((sum, item) => sum + calculateItemPrice(item), 0);
+  const effectiveCartItems = cartItems.length > 0 ? cartItems : (bookingRequest?.bookedItems?.map(b => ({
+    _id: b._id || b.id || Math.random().toString(),
+    title: b.card?.title || 'Booked Service',
+    description: b.card?.description || '',
+    price: b.card?.price || 0,
+    serviceCount: b.quantity || 1,
+    brand: b.brandName || '',
+    icon: b.card?.imageUrl || ''
+  })) || []);
+
+  const itemTotal = effectiveCartItems.reduce((sum, item) => sum + calculateItemPrice(item), 0);
   // Calculate savings including Plan Savings
-  const totalOriginalPrice = cartItems.reduce((sum, item) => {
+  const totalOriginalPrice = effectiveCartItems.reduce((sum, item) => {
     const original = (item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1);
     // If priced 0, original is huge saving
     return sum + original;
@@ -1075,28 +1102,24 @@ const Checkout = () => {
 
   const savings = totalOriginalPrice - itemTotal;
   const taxesAndFee = Math.round(
-    cartItems.reduce((sum, item) => {
+    effectiveCartItems.reduce((sum, item) => {
       const price = calculateItemPrice(item);
       const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
       return sum + (price * (itemGst / 100));
     }, 0)
   );
-  // Visited fee logic: if Total is 0 (All free), user might still pay visited fee?
-  // User says "no payemtn". So maybe visited fee also waived? Or user pays visited fee?
-  // "ask direct servicebooking" -> implies fully free.
-  // I'll set visitedFee to 0 if itemTotal is 0?
-  // Configurable?
-  // Assuming "Free under plan" means NO Payment.
-  const finalVisitedFee = 0; // Convenience fee permanently disabled
 
-  const totalAmount = itemTotal + taxesAndFee; // No convenience fee
+  const finalVisitedFee = 0; // Convenience fee permanently disabled
+  const platformFee = itemTotal > 0 ? platformFeeRate : 0;
+
+  const totalAmount = itemTotal + taxesAndFee + platformFee; // Include platform fee
   const amountToPay = totalAmount;
 
   // Helper for Free Plan Full Breakdown Display
   // If the booking is free, we still want to show what the Tax/Fee WOULD have been
   const displayTax = totalAmount === 0 
     ? Math.round(
-        cartItems.reduce((sum, item) => {
+        effectiveCartItems.reduce((sum, item) => {
           const original = (item.originalPrice || item.unitPrice || (item.price / (item.serviceCount || 1))) * (item.serviceCount || 1);
           const itemGst = item.gstPercentage !== undefined ? item.gstPercentage : gstPercentage;
           return sum + (original * (itemGst / 100));
@@ -1104,7 +1127,7 @@ const Checkout = () => {
       )
     : taxesAndFee;
   const displayFee = totalAmount === 0 ? visitedFee : finalVisitedFee;
-  const displaySavings = totalAmount === 0 ? (totalOriginalPrice + displayTax + displayFee) : savings;
+  const displaySavings = totalAmount === 0 ? (totalOriginalPrice + displayTax + displayFee + 49) : savings;
 
   // Date and time slot helper functions
   const getDates = () => {
@@ -1419,7 +1442,7 @@ const Checkout = () => {
 
             {/* Cart Items */}
             <div className="space-y-4">
-              {cartItems.map((item) => {
+              {effectiveCartItems.map((item) => {
                 const brandName = item.brand || item.sectionTitle;
                 const categoryName = item.categoryTitle || item.category;
 
@@ -1582,12 +1605,12 @@ const Checkout = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">Item Total</span>
                   <span className="text-sm font-medium text-slate-900">
-                    ₹{totalOriginalPrice.toLocaleString('en-IN')}
+                    ₹{(totalAmount === 0 ? displaySavings : totalOriginalPrice).toLocaleString('en-IN')}
                   </span>
                 </div>
 
-                {/* Discount */}
-                {displaySavings > 0 && (
+                {/* Discount — only show when not fully plan-covered */}
+                {displaySavings > 0 && totalAmount > 0 && (
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-green-600">Discount</span>
                     <span className="text-sm font-medium text-green-600">-₹{displaySavings.toLocaleString('en-IN')}</span>
@@ -1614,6 +1637,14 @@ const Checkout = () => {
                     <span className="text-sm font-medium text-slate-700">₹{displayTax.toLocaleString('en-IN')}</span>
                   </div>
                 )}
+
+                {/* Platform Fee */}
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-500">Platform Fee</span>
+                  <span className={`text-sm font-medium ${platformFee === 0 ? 'text-green-600' : 'text-slate-700'}`}>
+                    {platformFee === 0 ? 'FREE' : `₹${platformFee.toLocaleString('en-IN')}`}
+                  </span>
+                </div>
 
                 {/* Divider */}
                 <div className="border-t border-slate-200 pt-4 mt-2">
@@ -1648,7 +1679,7 @@ const Checkout = () => {
                   <div>
                     <h3 className="text-lg font-bold text-green-800 mb-1">Covered by {planBenefits.name}</h3>
                     <p className="text-sm text-green-700 leading-relaxed font-medium opacity-90">
-                      You save <span className="font-bold">₹{Math.round(totalOriginalPrice + displayTax + displayFee).toLocaleString('en-IN')}</span> on this booking!
+                      You save <span className="font-bold">₹{displaySavings.toLocaleString('en-IN')}</span> on this booking!
                       Your plan covers all costs.
                     </p>
                   </div>

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'; // Updated index to .jsx
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import AppRoutes from './routes';
@@ -9,6 +9,25 @@ import { CityProvider } from './context/CityContext';
 import { AuthProvider } from './context/AuthContext';
 import { initializePushNotifications, setupForegroundNotificationHandler } from './services/pushNotificationService';
 import { LocationPermissionChecker } from './components/common';
+
+// Scroll to top helper component on route change
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    // Reset window scroll (covers most user-facing pages)
+    window.scrollTo(0, 0);
+
+    // Also reset any scrollable <main> container used by layout wrappers
+    // (Vendor and Admin layouts scroll inside a <main overflow-y-auto> instead of window)
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTop = 0;
+    }
+  }, [pathname]);
+
+  return null;
+};
 
 function App() {
   // Initialize push notifications on app load
@@ -45,8 +64,8 @@ function App() {
         if ('Notification' in window && Notification.permission === 'granted') {
           navigator.serviceWorker.ready.then((registration) => {
             registration.showNotification(payload.notification?.title || '🔔 Test Notification', {
-              body: payload.notification?.body || 'This is a test notification from Appzeto!',
-              icon: '/cleaning-expert-logo.png',
+              body: payload.notification?.body || 'This is a notification from Nexora!',
+              icon: '/nexora-go-logo.png',
               tag: 'test-notification',
               renotify: true
             });
@@ -58,6 +77,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <SocketProvider>
           <CityProvider>

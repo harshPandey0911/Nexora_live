@@ -8,7 +8,7 @@ const libraries = ['places', 'geometry'];
 
 const mapContainerStyle = {
   width: '100%',
-  height: '190px'
+  height: '100%'
 };
 
 const defaultCenter = {
@@ -227,7 +227,7 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
 
   return (
     <div className="w-full">
-      <div className="relative h-64 bg-gray-200">
+      <div className="relative h-[280px] bg-gray-200">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={marker}
@@ -247,18 +247,14 @@ const LocationPicker = ({ onLocationSelect, initialPosition = null }) => {
           {marker && <Marker position={marker} />}
         </GoogleMap>
 
-        {/* Pin Instruction Overlay */}
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-lg text-sm z-10">
-          {loading ? 'Fetching address...' : 'Place the pin accurately on map'}
-        </div>
+
 
         {/* Locate Me Button */}
-        {/* Locate Me Button - Now on right */}
         <button
           onClick={handleCurrentLocation}
-          className="absolute bottom-16 right-4 p-3 bg-white rounded-xl shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all z-10"
+          className="absolute bottom-3 right-3 p-2 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-gray-50 active:scale-95 transition-all z-10"
         >
-          <FiCrosshair className="w-6 h-6 text-gray-700" />
+          <FiCrosshair className="w-5 h-5 text-gray-700" />
         </button>
       </div>
     </div>

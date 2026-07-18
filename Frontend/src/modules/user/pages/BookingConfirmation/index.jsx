@@ -263,7 +263,7 @@ const BookingConfirmation = () => {
         <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/40 border-b border-black/[0.03] px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/user')}
               className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm border border-black/[0.02]"
             >
               <FiArrowLeft className="w-5 h-5 text-gray-800" />
@@ -496,7 +496,11 @@ const BookingConfirmation = () => {
               {/* Total */}
               <div className="border-t border-slate-200 pt-4 mt-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-base font-bold text-slate-900">Total Paid</span>
+                  <span className="text-base font-bold text-slate-900">
+                    {booking.paymentStatus?.toLowerCase() === 'paid' || booking.paymentMethod === 'plan_benefit' || booking.paymentId
+                      ? 'Total Paid'
+                      : 'Total Payable'}
+                  </span>
                   <span className="text-xl font-black text-slate-900">
                     ₹{(booking.paymentMethod === 'plan_benefit' ? 0 : (booking.finalAmount || booking.totalAmount || 0)).toLocaleString('en-IN')}
                   </span>

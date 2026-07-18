@@ -76,10 +76,21 @@ const BookingAlerts = () => {
             }
           });
 
-          localStorage.setItem('vendorPendingJobs', JSON.stringify(mergedPending));
+          // Deduplicate by string ID to guarantee no duplicate requests are displayed
+          const seenIds = new Set();
+          const finalPending = [];
+          mergedPending.forEach(job => {
+            const idStr = String(job._id || job.id || '');
+            if (idStr && !seenIds.has(idStr)) {
+              seenIds.add(idStr);
+              finalPending.push(job);
+            }
+          });
+
+          localStorage.setItem('vendorPendingJobs', JSON.stringify(finalPending));
 
           // Map for PendingJobCard parity (now using already calculated/filtered results)
-          const mappedAlerts = mergedPending.map(b => ({
+          const mappedAlerts = finalPending.map(b => ({
             ...b,
             serviceName: b.serviceName || b.serviceId?.title || 'New Booking Request',
             serviceCategory: b.serviceCategory || b.serviceId?.categoryId?.title || 'General Service',

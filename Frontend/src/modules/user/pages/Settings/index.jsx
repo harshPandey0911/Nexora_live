@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../../theme';
 import { userAuthService } from '../../../../services/authService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
+import { messaging } from '../../../../firebase';
 import BottomNav from '../../components/layout/BottomNav';
 import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
@@ -41,25 +42,39 @@ const Settings = () => {
     };
   }, []);
 
-  const handleToggle = async (key) => {
-    // Optimistic update
-    setNotifications(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+  const [isTogglingPush, setIsTogglingPush] = useState(false);
 
+  const handleToggle = async (key) => {
     // Handle Push Toggle specifically
     if (key === 'push') {
+      // Guard: prevent multiple concurrent operations
+      if (isTogglingPush) return;
+
+      // Compute newState BEFORE the optimistic update, from current state
       const newState = !notifications.push;
+
+      // Optimistic update
+      setIsTogglingPush(true);
+      setNotifications(prev => ({
+        ...prev,
+        [key]: newState
+      }));
+
       const toastId = toast.loading(newState ? 'Enabling notifications...' : 'Disabling notifications...');
 
       try {
         if (newState) {
+          // Check if Firebase is even configured before trying
+          if (!messaging) {
+            toast.error('Push notifications are not available in this environment.', { id: toastId });
+            setNotifications(prev => ({ ...prev, push: false }));
+            return;
+          }
+
           // Enable
           const token = await registerFCMToken('user', true);
           if (!token) {
-            toast.error('Failed to enable. Check permissions.', { id: toastId });
-            // Revert state
+            toast.error('Failed to enable. Check browser notification permissions.', { id: toastId });
             setNotifications(prev => ({ ...prev, push: false }));
             return;
           }
@@ -77,11 +92,22 @@ const Settings = () => {
 
       } catch (error) {
         console.error('Error updating notification settings:', error);
-        toast.error('Failed to update settings', { id: toastId });
+        // Show the actual error so users know if it's a permission issue
+        const errMsg = error?.message || 'Failed to update settings';
+        toast.error(errMsg, { id: toastId });
         // Revert
         setNotifications(prev => ({ ...prev, push: !newState }));
+      } finally {
+        setIsTogglingPush(false);
       }
+      return;
     }
+
+    // For other toggles (email, etc.) — simple optimistic toggle
+    setNotifications(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const confirmLogout = async () => {
@@ -135,13 +161,12 @@ const Settings = () => {
               </div>
               <button
                 onClick={() => handleToggle('push')}
-                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${notifications.push ? 'bg-green-700' : 'bg-gray-300'
-                  }`}
+                disabled={isTogglingPush}
+                className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${notifications.push ? 'bg-green-700' : 'bg-gray-300'} ${isTogglingPush ? 'opacity-50 cursor-not-allowed' : ''}`}
                 style={notifications.push ? { backgroundColor: '#15803d' } : {}}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${notifications.push ? 'translate-x-6' : 'translate-x-0'
-                    }`}
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${notifications.push ? 'translate-x-6' : 'translate-x-0'}`}
                 />
               </button>
             </div>
