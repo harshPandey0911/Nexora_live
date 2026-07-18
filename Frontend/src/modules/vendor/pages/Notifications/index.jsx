@@ -99,6 +99,37 @@ const Notifications = () => {
     }
   };
 
+  const handleNotificationClick = async (notif) => {
+    // 1. Mark as read if unread
+    if (!notif.read) {
+      try {
+        await markAsRead(notif.id);
+        setNotifications(prev =>
+          prev.map(n => n.id === notif.id ? { ...n, read: true } : n)
+        );
+      } catch (error) {
+        console.error('Failed to mark as read', error);
+      }
+    }
+
+    const type = (notif.type || '').toLowerCase();
+    const relatedType = (notif.relatedType || '').toLowerCase();
+    const bookingId = notif.relatedId || notif.bookingId;
+
+    // 2. Redirect to specific page based on notification context
+    if (type.includes('payment') || type.includes('payout') || type.includes('wallet') || type.includes('withdrawal') || type.includes('cash_limit')) {
+      navigate('/vendor/wallet');
+    } else if (type.includes('product') || type.includes('order')) {
+      navigate('/vendor/product-orders');
+    } else if (bookingId) {
+      navigate(`/vendor/booking/${bookingId}`);
+    } else if (relatedType === 'booking') {
+      navigate(`/vendor/booking/${notif.relatedId}`);
+    } else {
+      navigate('/vendor/dashboard');
+    }
+  };
+
   const handleClearAll = () => {
     setShowClearConfirm(true);
   };
@@ -250,7 +281,8 @@ const Notifications = () => {
             {filteredNotifications.map((notif) => (
               <div
                 key={notif.id}
-                className={`bg-white rounded-2xl p-4 border transition-all relative group hover:shadow-md ${
+                onClick={() => handleNotificationClick(notif)}
+                className={`bg-white rounded-2xl p-4 border transition-all relative group hover:shadow-md cursor-pointer ${
                   !notif.read ? 'border-blue-200 bg-blue-50/10 shadow-sm' : 'border-gray-100'
                 }`}
               >
@@ -278,13 +310,19 @@ const Notifications = () => {
                     {notif.type === 'job_rejected' && notif.relatedId && (
                       <div className="flex gap-2 mt-2">
                         <button
-                          onClick={() => navigate(`/vendor/booking/${notif.relatedId}/assign-worker`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/vendor/booking/${notif.relatedId}/assign-worker`);
+                          }}
                           className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider hover:bg-blue-500 transition-all"
                         >
                           Reassign Worker
                         </button>
                         <button
-                          onClick={() => handleSelfAssign(notif.relatedId)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelfAssign(notif.relatedId);
+                          }}
                           className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-800 text-[9px] font-bold uppercase tracking-wider hover:bg-gray-200 transition-all border border-gray-200"
                         >
                           Do It Myself
@@ -298,14 +336,9 @@ const Notifications = () => {
                       
                       {(notif.action || notif.relatedType === 'booking' || notif.type === 'payout_requested') && (
                         <button
-                          onClick={() => {
-                            if (notif.relatedType === 'booking' && notif.relatedId) {
-                              navigate(`/vendor/booking/${notif.relatedId}`);
-                            } else if (notif.action === 'view_booking' && notif.bookingId) {
-                              navigate(`/vendor/booking/${notif.bookingId}`);
-                            } else if (notif.action === 'view_wallet') {
-                              navigate('/vendor/wallet');
-                            }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNotificationClick(notif);
                           }}
                           className="text-[8px] font-medium text-blue-600 flex items-center gap-1 capitalize tracking-widest hover:underline"
                         >
@@ -318,7 +351,7 @@ const Notifications = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="absolute top-4 right-4 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-4 right-4 flex gap-1.5 transition-all">
                   {!notif.read && (
                     <button
                       onClick={(e) => {
