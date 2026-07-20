@@ -41,8 +41,19 @@ const AssignWorker = () => {
         setLoading(true);
         // Load booking details
         const bookingRes = await getBookingById(id);
-        if (bookingRes.booking || bookingRes.data) {
-          setBooking(bookingRes.booking || bookingRes.data);
+        const bData = bookingRes.booking || bookingRes.data;
+        if (bData) {
+          setBooking(bData);
+
+          const unassignableStatuses = [
+            'completed', 'work_done', 'in_progress', 'visited', 'journey_started',
+            'on_the_way', 'reached', 'cancelled', 'rejected', 'vendor_rejected', 'vendor rejected'
+          ];
+          if (unassignableStatuses.includes(bData.status?.toLowerCase())) {
+            toast.error(`Worker cannot be assigned because booking is "${bData.status}"`);
+            navigate(`/vendor/booking/${id}`);
+            return;
+          }
         } else {
           throw new Error('Booking not found');
         }

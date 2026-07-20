@@ -285,7 +285,7 @@ const ActiveJobs = memo(() => {
                         </p>
                       </div>
                       
-                      {job.workerResponse === 'REJECTED' && !job.assignedTo ? (
+                      {job.workerResponse === 'REJECTED' && !job.assignedTo && !['completed', 'cancelled', 'rejected', 'work_done'].includes(job.status?.toLowerCase()) ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

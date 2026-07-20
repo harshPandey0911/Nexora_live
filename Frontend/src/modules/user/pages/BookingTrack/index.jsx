@@ -274,11 +274,18 @@ const BookingTrack = () => {
 
       const handleBookingUpdate = (data) => {
         if (data.bookingId === id || data.relatedId === id || data.data?.bookingId === id) {
+          const updatedPayload = data.data || data;
           setBooking(prev => {
             if (!prev) return prev;
-            return { ...prev, ...(data.data || data) };
+            return { ...prev, ...updatedPayload };
           });
-          if (data.qrPaymentInitiated) {
+
+          const isPaidOrCollected = updatedPayload.cashCollected ||
+            ['collected_by_vendor', 'success', 'paid'].includes(updatedPayload.paymentStatus?.toLowerCase());
+
+          if (isPaidOrCollected) {
+            toast.success('Cash payment verified successfully!');
+          } else if (data.qrPaymentInitiated) {
             setShowPaymentModal(true);
             toast.success('Professional has initiated payment!');
           } else if (data.customerConfirmationOTP) {

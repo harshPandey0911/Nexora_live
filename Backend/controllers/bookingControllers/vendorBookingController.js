@@ -852,6 +852,37 @@ const assignWorker = async (req, res) => {
       });
     }
 
+    // Prevent worker assignment if booking is in a final or active work state
+    const UNASSIGNABLE_STATUSES = [
+      BOOKING_STATUS.COMPLETED,
+      'completed',
+      'closed',
+      'paid',
+      BOOKING_STATUS.WORK_DONE,
+      'work_done',
+      BOOKING_STATUS.IN_PROGRESS,
+      'in_progress',
+      BOOKING_STATUS.VISITED,
+      'visited',
+      BOOKING_STATUS.JOURNEY_STARTED,
+      'journey_started',
+      'on_the_way',
+      'reached',
+      BOOKING_STATUS.CANCELLED,
+      'cancelled',
+      BOOKING_STATUS.REJECTED,
+      'rejected',
+      BOOKING_STATUS.VENDOR_REJECTED,
+      'Vendor Rejected'
+    ];
+
+    if (UNASSIGNABLE_STATUSES.includes(booking.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Worker cannot be assigned because booking status is "${booking.status}".`
+      });
+    }
+
     // Handle "Assign to Self"
     if (workerId === 'SELF') {
       booking.workerId = null; // null means vendor itself

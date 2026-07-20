@@ -7,6 +7,13 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
   const [isOnlinePaymentEnabled, setIsOnlinePaymentEnabled] = useState(true);
   const [configLoading, setConfigLoading] = useState(true);
 
+  // Helper to check if payment is complete (cash or online)
+  const isPaymentComplete =
+    booking?.cashCollected === true ||
+    ['success', 'paid', 'collected_by_vendor', 'cash_collected', 'plan_covered'].includes(booking?.paymentStatus?.toLowerCase()) ||
+    booking?.paymentMethod === 'cash collected' ||
+    (['completed', 'work_done'].includes(booking?.status?.toLowerCase()) && booking?.cashCollected);
+
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -25,6 +32,16 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
       fetchConfig();
     }
   }, [isOpen]);
+
+  // Auto-close modal after 2.5 seconds if payment is complete
+  useEffect(() => {
+    if (isOpen && isPaymentComplete) {
+      const timer = setTimeout(() => {
+        if (onClose) onClose();
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isPaymentComplete, onClose]);
 
   if (!isOpen || !booking) return null;
 
@@ -248,14 +265,18 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
 
             {/* Actions */}
             <div className="mt-8 space-y-3">
-              {booking.paymentStatus === 'success' ? (
+              {isPaymentComplete ? (
                 <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
                     <FiCheckCircle className="w-5 h-5" />
                   </div>
                   <div>
                     <p className="text-emerald-900 font-bold text-sm">Payment Verified</p>
-                    <p className="text-emerald-700 text-xs">Transaction completed successfully.</p>
+                    <p className="text-emerald-700 text-xs">
+                      {booking.cashCollected || booking.paymentStatus === 'collected_by_vendor' || booking.paymentMethod === 'cash collected'
+                        ? 'Cash payment collected successfully.'
+                        : 'Transaction completed successfully.'}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -285,7 +306,7 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
                   </div>
 
                   {/* Cash Code */}
-                  {(booking.customerConfirmationOTP || booking.paymentOtp) && (
+                  {!isPaymentComplete && (booking.customerConfirmationOTP || booking.paymentOtp) && (
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
                       <p className="text-xs font-bold text-slate-700 mb-2">Paying Cash? Share Code</p>
                       <div className="bg-white border-2 border-dashed border-slate-300 rounded-lg py-2 px-4 inline-block mb-1">

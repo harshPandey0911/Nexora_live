@@ -1031,7 +1031,7 @@ export default function BookingDetails() {
             </div>
           )}
 
-          {!booking.assignedTo && !['completed', 'cancelled', 'rejected'].includes(booking.status) && (
+          {!booking.assignedTo && !['completed', 'work_done', 'in_progress', 'visited', 'journey_started', 'cancelled', 'rejected', 'vendor_rejected', 'vendor rejected'].includes(booking.status?.toLowerCase()) && (
             <div className="bg-white rounded-2xl md:rounded-3xl p-4 md:p-6 border border-gray-100 mb-4 md:mb-6 shadow-sm">
               <div className="flex flex-col items-center text-center p-2">
                 <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-3">
@@ -1064,7 +1064,7 @@ export default function BookingDetails() {
           )}
 
           {/* Service Deployment Protocol (Simplified Flow) */}
-          {booking.offeringType !== 'PRODUCT' && !['completed', 'cancelled', 'rejected'].includes(booking.status) && (
+          {booking.offeringType !== 'PRODUCT' && !['completed', 'cancelled', 'rejected', 'vendor_rejected', 'vendor rejected'].includes(booking.status?.toLowerCase()) && (
             <div className="bg-white rounded-2xl md:rounded-3xl p-5 md:p-8 border border-gray-100 mb-4 md:mb-6 shadow-sm">
               <div className="text-center mb-5 md:mb-8">
                 <div className={`w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-3 md:mb-4 border shadow-md ${
