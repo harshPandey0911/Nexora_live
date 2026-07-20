@@ -114,11 +114,33 @@ const addToCart = async (req, res) => {
       cart = await Cart.create({ userId, items: [] });
     }
 
-    // Category Validation: Ensure all services belong to the same category
+    // Category & Shop/Vendor Validation: Ensure all items belong to the same category and vendor
     if (cart.items && cart.items.length > 0) {
       if (req.body.replaceCart) {
         cart.items = [];
       } else {
+        // 1. Check Vendor / Shop Conflict
+        const getVendorKey = (item) => {
+          if (!item) return '';
+          if (item.vendorId) return String(item.vendorId._id || item.vendorId).trim();
+          if (item.sectionTitle) return String(item.sectionTitle).trim().toLowerCase();
+          return '';
+        };
+
+        const existingVendorKey = getVendorKey(cart.items[0]);
+        const newVendorKey = getVendorKey({ vendorId, sectionTitle });
+
+        if (existingVendorKey && newVendorKey && existingVendorKey !== newVendorKey) {
+          return res.status(400).json({
+            success: false,
+            categoryConflict: true,
+            shopConflict: true,
+            existingShopName: cart.items[0].sectionTitle || cart.items[0].category || 'current shop',
+            message: 'Your cart already contains items from another shop/restaurant. You can only order from one shop at a time.'
+          });
+        }
+
+        // 2. Check Category Conflict
         const getCatKey = (item) => {
           if (!item) return '';
           if (item.categoryId) return String(item.categoryId._id || item.categoryId).trim().toLowerCase();

@@ -20,10 +20,18 @@ export const CartProvider = ({ children }) => {
   const [platformFeeRate, setPlatformFeeRate] = useState(49);
   const [maxCartItemQuantity, setMaxCartItemQuantity] = useState(100);
 
-  // Category Conflict Modal State
+  // Refs for operation queues and async locks
+  const pendingCreations = useRef({});
+  const pendingOperations = useRef({});
+  const debounceTimers = useRef({});
+
+  // Category & Shop Conflict Modal State
   const [conflictModal, setConflictModal] = useState({
     isOpen: false,
     pendingItemData: null,
+    existingShopName: '',
+    newShopName: '',
+    conflictType: 'category', // 'category' | 'shop'
     resolvePromise: null,
   });
 
@@ -48,6 +56,34 @@ export const CartProvider = ({ children }) => {
   const isCategoryMatch = (itemA, itemB) => {
     const keyA = getCategoryKey(itemA);
     const keyB = getCategoryKey(itemB);
+    if (keyA && keyB) {
+      return keyA === keyB;
+    }
+    return true;
+  };
+
+  // Vendor / Shop comparison helper
+  const getVendorKey = (item) => {
+    if (!item) return '';
+    if (item.vendorId) {
+      if (typeof item.vendorId === 'object') {
+        if (item.vendorId._id) return String(item.vendorId._id);
+        if (item.vendorId.id) return String(item.vendorId.id);
+      }
+      return String(item.vendorId).trim();
+    }
+    if (item.sectionTitle && typeof item.sectionTitle === 'string') {
+      return item.sectionTitle.trim().toLowerCase();
+    }
+    if (item.brandName && typeof item.brandName === 'string') {
+      return item.brandName.trim().toLowerCase();
+    }
+    return '';
+  };
+
+  const isVendorMatch = (itemA, itemB) => {
+    const keyA = getVendorKey(itemA);
+    const keyB = getVendorKey(itemB);
     if (keyA && keyB) {
       return keyA === keyB;
     }
@@ -127,15 +163,23 @@ export const CartProvider = ({ children }) => {
       return { success: false, message: 'Authentication required' };
     }
 
-    // ── CATEGORY VALIDATION ──
-    // A customer can add multiple services to the cart only if all services belong to the same service category.
+    // ── CATEGORY & SHOP/RESTAURANT VALIDATION ──
+    // A customer can add multiple items only if all items belong to the same category and shop/restaurant.
     if (!options?.skipCategoryCheck && cartItems.length > 0) {
-      const isConflict = cartItems.some(existing => !isCategoryMatch(existing, itemData));
-      if (isConflict) {
+      const isVendorConflict = cartItems.some(existing => !isVendorMatch(existing, itemData));
+      const isCategoryConflict = cartItems.some(existing => !isCategoryMatch(existing, itemData));
+
+      if (isVendorConflict || isCategoryConflict) {
+        const existingShopName = cartItems[0]?.sectionTitle || cartItems[0]?.brandName || cartItems[0]?.category || 'current shop';
+        const newShopName = itemData?.sectionTitle || itemData?.brandName || itemData?.category || 'new shop';
+
         return new Promise((resolve) => {
           setConflictModal({
             isOpen: true,
             pendingItemData: itemData,
+            existingShopName,
+            newShopName,
+            conflictType: isVendorConflict ? 'shop' : 'category',
             resolvePromise: resolve,
           });
         });
@@ -495,12 +539,19 @@ export const CartProvider = ({ children }) => {
     setIsInitialized(false);
   }, []);
 
-  // Modal Action Handlers for Category Conflict
+  // Modal Action Handlers for Category / Shop Conflict
   const handleReplaceCart = async () => {
     const itemToAdd = conflictModal.pendingItemData;
     const resolve = conflictModal.resolvePromise;
 
-    setConflictModal({ isOpen: false, pendingItemData: null, resolvePromise: null });
+    setConflictModal({
+      isOpen: false,
+      pendingItemData: null,
+      existingShopName: '',
+      newShopName: '',
+      conflictType: 'category',
+      resolvePromise: null,
+    });
 
     if (!itemToAdd) return;
 
@@ -508,11 +559,11 @@ export const CartProvider = ({ children }) => {
       // 1. Remove all existing cart items
       await clearCart();
 
-      // 2. Add the newly selected service
-      const res = await addToCart(itemToAdd, { skipCategoryCheck: true });
+      // 2. Add the newly selected service/product with replaceCart flag
+      const res = await addToCart({ ...itemToAdd, replaceCart: true }, { skipCategoryCheck: true });
 
       // 3. Show success message
-      toast.success("Cart updated successfully.");
+      toast.success("Cart updated with new items.");
 
       if (resolve) {
         resolve({ success: true, replaced: true, data: res?.data });
@@ -528,7 +579,14 @@ export const CartProvider = ({ children }) => {
   const handleCancelConflict = () => {
     const resolve = conflictModal.resolvePromise;
 
-    setConflictModal({ isOpen: false, pendingItemData: null, resolvePromise: null });
+    setConflictModal({
+      isOpen: false,
+      pendingItemData: null,
+      existingShopName: '',
+      newShopName: '',
+      conflictType: 'category',
+      resolvePromise: null,
+    });
 
     if (resolve) {
       resolve({ success: false, cancelled: true, message: 'Cart unchanged' });
@@ -557,6 +615,9 @@ export const CartProvider = ({ children }) => {
       {children}
       <CategoryConflictModal
         isOpen={conflictModal.isOpen}
+        conflictType={conflictModal.conflictType}
+        existingShopName={conflictModal.existingShopName}
+        newShopName={conflictModal.newShopName}
         onReplace={handleReplaceCart}
         onCancel={handleCancelConflict}
       />

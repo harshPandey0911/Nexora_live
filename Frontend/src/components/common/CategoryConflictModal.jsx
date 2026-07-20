@@ -2,8 +2,17 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiAlertCircle, FiRefreshCw, FiX } from 'react-icons/fi';
 
-const CategoryConflictModal = ({ isOpen, onReplace, onCancel }) => {
+const CategoryConflictModal = ({
+  isOpen,
+  conflictType = 'category',
+  existingShopName = '',
+  newShopName = '',
+  onReplace,
+  onCancel
+}) => {
   if (!isOpen) return null;
+
+  const isShopConflict = conflictType === 'shop';
 
   return (
     <AnimatePresence>
@@ -41,7 +50,7 @@ const CategoryConflictModal = ({ isOpen, onReplace, onCancel }) => {
             </div>
             <div>
               <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">
-                Different Service Category
+                {isShopConflict ? 'Different Shop / Restaurant' : 'Different Service Category'}
               </h3>
             </div>
           </div>
@@ -49,10 +58,14 @@ const CategoryConflictModal = ({ isOpen, onReplace, onCancel }) => {
           {/* Dialog Message */}
           <div className="space-y-3 text-xs sm:text-sm text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <p>
-              Your cart already contains services from another category. You can only book one service category in a single booking.
+              {isShopConflict
+                ? `Your cart contains items from ${existingShopName ? `"${existingShopName}"` : 'another shop/restaurant'}. You can only order items from one shop or restaurant at a time.`
+                : 'Your cart already contains services from another category. You can only book one service category in a single booking.'}
             </p>
             <p className="font-bold text-slate-900">
-              Would you like to replace your current cart with this new service?
+              {isShopConflict
+                ? `Would you like to clear your cart and add items from ${newShopName ? `"${newShopName}"` : 'the new shop'} instead?`
+                : 'Would you like to replace your current cart with this new service?'}
             </p>
           </div>
 
