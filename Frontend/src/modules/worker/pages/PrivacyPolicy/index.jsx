@@ -10,15 +10,41 @@ const PrivacyPolicy = () => {
   const [data, setData] = useState({
     title: 'Nexora Go Worker Privacy Policy',
     lastUpdated: 'July 15, 2026',
-    introduction: 'This Privacy Policy details how we handle the personal information of our service professionals.',
-    sections: []
+    introduction: 'This Privacy Policy details how we handle the personal information and location data of our service professionals.',
+    sections: [
+      {
+        title: "1. Data Collection & Identity Documents",
+        content: "We collect personal information including name, phone number, email address, bank details, and government-issued ID proofs (Aadhar/PAN) strictly for partner verification and payout processing.",
+        iconType: "eye"
+      },
+      {
+        title: "2. Real-Time Location Tracking",
+        content: "When duty status is set to ONLINE, we collect real-time device location data to assign nearby jobs, optimize dispatch routes, and display live ETA to customers and vendors.",
+        iconType: "map"
+      },
+      {
+        title: "3. Data Sharing & Privacy",
+        content: "Your contact details and first name are shared with customers only for active booking coordination. We do not sell your personal information to third parties.",
+        iconType: "share"
+      },
+      {
+        title: "4. Data Security & Storage",
+        content: "All partner records and identity documents are encrypted and stored in secure cloud infrastructure with strict access control mechanisms.",
+        iconType: "lock"
+      },
+      {
+        title: "5. Notifications & Communication",
+        content: "We send transactional SMS, push notifications, and app alerts regarding new job assignments, earnings updates, and platform announcements.",
+        iconType: "bell"
+      }
+    ]
   });
 
   useEffect(() => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.workerPrivacyPolicy) {
+        if (res.success && res.settings && res.settings.workerPrivacyPolicy && Array.isArray(res.settings.workerPrivacyPolicy.sections) && res.settings.workerPrivacyPolicy.sections.length > 0) {
           setData(res.settings.workerPrivacyPolicy);
         }
       } catch (error) {

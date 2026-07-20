@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBriefcase, FiClock, FiCheckCircle, FiXCircle, FiMapPin, FiChevronRight, FiUser, FiSearch } from 'react-icons/fi';
+import { FiBriefcase, FiClock, FiMapPin, FiUser, FiSearch, FiChevronRight } from 'react-icons/fi';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import workerService from '../../../../services/workerService';
@@ -115,76 +115,67 @@ const AssignedJobs = () => {
   });
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
-      <Header title="My Jobs" showSearch={true} />
+    <div className="min-h-screen pb-24" style={{ background: themeColors.backgroundGradient }}>
+      <Header title="My Jobs" showSearch={false} showBack={true} />
 
-      <main className="px-4 py-6">
-        {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative">
-            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        {/* Search & Filter Header Container */}
+        <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/80 shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:justify-between gap-4">
+          
+          {/* Search Bar */}
+          <div className="relative flex-1 max-w-md">
+            <FiSearch className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search jobs..."
+              placeholder="Search by customer or service..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-0"
-              style={{ focusRingColor: themeColors.button }}
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500/30"
             />
           </div>
-        </div>
 
-        {/* Filter Buttons */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'confirmed', label: 'Pending' },
-            { id: 'in_progress', label: 'Active' },
-            { id: 'completed', label: 'Completed' },
-          ].map((filterOption) => (
-            <button
-              key={filterOption.id}
-              onClick={() => setFilter(filterOption.id)}
-              className={`px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap transition-all ${filter === filterOption.id
-                ? 'text-white'
-                : 'bg-white text-gray-700'
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            {[
+              { id: 'all', label: 'All Jobs' },
+              { id: 'confirmed', label: 'Pending' },
+              { id: 'in_progress', label: 'Active' },
+              { id: 'completed', label: 'Completed' },
+            ].map((filterOption) => (
+              <button
+                key={filterOption.id}
+                onClick={() => setFilter(filterOption.id)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                  filter === filterOption.id
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200/60'
                 }`}
-              style={
-                filter === filterOption.id
-                  ? {
-                    background: themeColors.button,
-                    boxShadow: `0 2px 8px ${themeColors.button}40`,
-                  }
-                  : {
-                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                  }
-              }
-            >
-              {filterOption.label}
-            </button>
-          ))}
+              >
+                {filterOption.label}
+              </button>
+            ))}
+          </div>
+
         </div>
 
-        {/* Jobs List */}
+        {/* Jobs Grid */}
         {loading ? (
           <div className="py-2">
-            <SkeletonList count={5} cardHeight="140px" />
+            <SkeletonList count={6} cardHeight="140px" />
           </div>
         ) : filteredJobs.length === 0 ? (
-          <div
-            className="bg-white rounded-xl p-8 text-center shadow-md"
-            style={{
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <FiBriefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-600 font-semibold mb-2">No jobs found</p>
-            <p className="text-sm text-gray-500">
-              {searchQuery ? 'Try a different search term' : 'No jobs assigned at the moment'}
+          <div className="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-200 shadow-sm space-y-3">
+            <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto text-slate-400">
+              <FiBriefcase className="w-8 h-8" />
+            </div>
+            <h4 className="text-base font-bold text-slate-900">No Jobs Found</h4>
+            <p className="text-xs text-slate-500 max-w-xs mx-auto font-medium">
+              {searchQuery ? 'Try adjusting your search criteria.' : 'No assigned jobs under this category.'}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredJobs.map((job) => {
               const statusColor = getStatusColor(job.status);
 
@@ -192,84 +183,69 @@ const AssignedJobs = () => {
                 <div
                   key={job._id}
                   onClick={() => navigate(`/worker/job/${job._id}`)}
-                  className="rounded-xl p-4 shadow-lg cursor-pointer active:scale-98 transition-all duration-200 relative overflow-hidden"
-                  style={{
-                    background: 'linear-gradient(135deg, #FFFFFF 0%, #F9FAFB 100%)',
-                    boxShadow: `0 8px 24px ${hexToRgba(statusColor, 0.15)}, 0 4px 12px ${hexToRgba(statusColor, 0.1)}, 0 0 0 2px ${hexToRgba(statusColor, 0.2)}`,
-                    border: `2px solid ${hexToRgba(statusColor, 0.3)}`,
-                  }}
+                  className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 cursor-pointer active:scale-98 relative overflow-hidden flex flex-col justify-between group"
                 >
-                  {/* Left border accent */}
-                  <div
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl"
-                    style={{
-                      background: `linear-gradient(180deg, ${statusColor} 0%, ${statusColor}dd 100%)`,
-                    }}
-                  />
+                  <div className="space-y-3">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-bold group-hover:scale-105 transition-transform"
+                          style={{
+                            background: `${statusColor}15`,
+                            color: statusColor,
+                          }}
+                        >
+                          <FiBriefcase className="w-5 h-5" />
+                        </div>
 
-                  <div className="relative z-10 pl-2">
-                    {/* Header Section */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div
-                            className="p-1.5 rounded-lg"
+                        <div className="min-w-0">
+                          <h3 className="font-extrabold text-slate-900 text-sm truncate tracking-tight">{job.serviceName}</h3>
+                          <span
+                            className="inline-block text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg mt-1"
                             style={{
                               background: `${statusColor}15`,
-                            }}
-                          >
-                            <FiBriefcase className="w-4 h-4" style={{ color: statusColor }} />
-                          </div>
-                          <h3 className="font-bold text-gray-800 text-base">{job.serviceName}</h3>
-                        </div>
-                        <div className="ml-8 mb-2">
-                          <span
-                            className="text-xs font-bold px-3 py-1.5 rounded-full"
-                            style={{
-                              background: `linear-gradient(135deg, ${statusColor} 0%, ${statusColor}dd 100%)`,
-                              color: '#FFFFFF',
-                              boxShadow: `0 2px 8px ${hexToRgba(statusColor, 0.3)}`,
+                              color: statusColor,
+                              border: `1px solid ${statusColor}30`
                             }}
                           >
                             {getStatusLabel(job.status)}
                           </span>
                         </div>
                       </div>
-                      <div
-                        className="px-3 py-2 rounded-lg font-bold text-lg"
-                        style={{
-                          background: `linear-gradient(135deg, ${themeColors.button}15 0%, ${themeColors.button}10 100%)`,
-                          color: themeColors.button,
-                          border: `1px solid ${hexToRgba(themeColors.button, 0.2)}`,
-                        }}
-                      >
-                        ₹{job.finalAmount}
+
+                      <div className="text-right shrink-0">
+                        <span className="text-base font-black text-slate-900">
+                          ₹{job.finalAmount}
+                        </span>
                       </div>
                     </div>
 
-                    {/* Info Section */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="p-1 rounded" style={{ background: 'rgba(0, 0, 0, 0.03)' }}>
-                          <FiUser className="w-4 h-4" style={{ color: statusColor }} />
-                        </div>
-                        <span className="text-gray-700 font-medium">{job.userId?.name || 'Customer'}</span>
+                    {/* Customer & Location Details */}
+                    <div className="bg-slate-50/70 rounded-2xl p-3 space-y-2 border border-slate-100 text-xs">
+                      <div className="flex items-center gap-2 text-slate-700 font-medium">
+                        <FiUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{job.userId?.name || 'Customer'}</span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="p-1 rounded" style={{ background: 'rgba(0, 0, 0, 0.03)' }}>
-                          <FiMapPin className="w-4 h-4" style={{ color: statusColor }} />
-                        </div>
-                        <span className="text-gray-700 font-medium truncate">{job.address?.addressLine1 || 'Address not available'}</span>
+                      <div className="flex items-center gap-2 text-slate-600 font-medium">
+                        <FiMapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{job.address?.addressLine1 || 'Address unavailable'}</span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm">
-                        <div className="p-1 rounded" style={{ background: 'rgba(0, 0, 0, 0.03)' }}>
-                          <FiClock className="w-4 h-4" style={{ color: statusColor }} />
-                        </div>
-                        <span className="text-gray-700 font-medium">{job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'N/A'} • {job.scheduledTime || 'N/A'}</span>
+                      <div className="flex items-center gap-2 text-slate-500 font-medium">
+                        <FiClock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>
+                          {job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'} • {job.scheduledTime || 'N/A'}
+                        </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Footer Arrow Action */}
+                  <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 text-xs font-bold text-teal-700 group-hover:text-teal-800">
+                    <span>View Details</span>
+                    <FiChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
               );

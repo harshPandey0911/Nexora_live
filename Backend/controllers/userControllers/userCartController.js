@@ -114,6 +114,31 @@ const addToCart = async (req, res) => {
       cart = await Cart.create({ userId, items: [] });
     }
 
+    // Category Validation: Ensure all services belong to the same category
+    if (cart.items && cart.items.length > 0) {
+      if (req.body.replaceCart) {
+        cart.items = [];
+      } else {
+        const getCatKey = (item) => {
+          if (!item) return '';
+          if (item.categoryId) return String(item.categoryId._id || item.categoryId).trim().toLowerCase();
+          if (item.category) return String(item.category).trim().toLowerCase();
+          return '';
+        };
+
+        const existingKey = getCatKey(cart.items[0]);
+        const newKey = getCatKey({ categoryId, category });
+
+        if (existingKey && newKey && existingKey !== newKey) {
+          return res.status(400).json({
+            success: false,
+            categoryConflict: true,
+            message: 'Your cart already contains services from another category. You can only book one service category in a single booking.'
+          });
+        }
+      }
+    }
+
     // Check if item already exists in cart
     const existingItemIndex = cart.items.findIndex(item => {
       const sId1 = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : null;
@@ -201,6 +226,9 @@ const updateCartItem = async (req, res) => {
     const { itemId } = req.params;
     const { serviceCount } = req.body;
 
+    console.log("req.params.itemId:", itemId);
+    console.log("typeof req.params.itemId:", typeof itemId);
+
     if (serviceCount < 1) {
       return res.status(400).json({
         success: false,
@@ -221,6 +249,8 @@ const updateCartItem = async (req, res) => {
       const sId = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : '';
       return subId === itemId || sId === itemId || item.id === itemId;
     });
+
+    console.log("findIndex result:", itemIndex);
 
     if (itemIndex === -1) {
       return res.status(404).json({
@@ -255,6 +285,9 @@ const removeFromCart = async (req, res) => {
   try {
     const userId = req.user.id;
     const { itemId } = req.params;
+
+    console.log("req.params.itemId:", itemId);
+    console.log("typeof req.params.itemId:", typeof itemId);
 
     const cart = await Cart.findOne({ userId });
     if (!cart) {

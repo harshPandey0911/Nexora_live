@@ -15,18 +15,23 @@ export const cartService = {
   // Add item to cart
   addToCart: async (itemData) => {
     const response = await api.post('/users/cart', itemData);
+    console.log("cartService.addToCart RETURN VALUE:", response.data);
     return response.data;
   },
 
   // Update cart item quantity
   updateItem: async (itemId, serviceCount) => {
+    console.log("URL:", `/users/cart/${itemId}`);
     const response = await api.put(`/users/cart/${itemId}`, { serviceCount });
+    console.log("cartService.updateItem RETURN VALUE:", response.data);
     return response.data;
   },
 
   // Remove item from cart
   removeItem: async (itemId) => {
+    console.log("URL:", `/users/cart/${itemId}`);
     const response = await api.delete(`/users/cart/${itemId}`);
+    console.log("cartService.removeItem RETURN VALUE:", response.data);
     return response.data;
   },
 

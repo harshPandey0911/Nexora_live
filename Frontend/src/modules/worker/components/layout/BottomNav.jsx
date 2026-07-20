@@ -69,7 +69,7 @@ const BottomNav = memo(() => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom md:hidden">
       <div className="mx-4 mb-4 bg-white/80 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden h-[72px]">
         <div className="flex items-center justify-around h-full px-2 relative">
           {navItems.map((item) => {

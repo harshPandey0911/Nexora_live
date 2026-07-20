@@ -25,6 +25,11 @@ const workerService = {
     return response.data;
   },
 
+  getReviews: async (params) => {
+    const response = await api.get('/workers/reviews', { params });
+    return response.data;
+  },
+
   // Jobs
   getAssignedJobs: async (params) => {
     const response = await api.get('/workers/jobs', { params });

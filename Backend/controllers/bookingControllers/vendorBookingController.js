@@ -5,6 +5,7 @@ const VendorBill = require('../../models/VendorBill');
 const User = require('../../models/User');
 const UserService = require('../../models/UserService');
 const Category = require('../../models/Category');
+const Admin = require('../../models/Admin');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 const { createNotification } = require('../notificationControllers/notificationController');
@@ -216,7 +217,7 @@ const getBookingById = async (req, res) => {
 };
 
 /**
- * Accept booking
+ * Accept booking and perform personally
  */
 const acceptBooking = async (req, res) => {
   try {
@@ -224,10 +225,8 @@ const acceptBooking = async (req, res) => {
     const { id } = req.params;
 
     // Only skip if already in a post-acceptance state for this vendor.
-    // Admin-assigned bookings already have vendorId set but status is still REQUESTED —
-    // do NOT return early for those; they still need to go through the accept flow.
     const POST_ACCEPT_STATUSES = [
-      BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACCEPTED,
+      BOOKING_STATUS.VENDOR_ACCEPTED, BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.ACCEPTED,
       BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.JOURNEY_STARTED,
       BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.WORK_DONE
     ];
@@ -245,12 +244,21 @@ const acceptBooking = async (req, res) => {
       });
     }
 
+    const now = new Date();
+    const activityEntry = {
+      action: 'Vendor Accepted',
+      actorId: vendorId,
+      actorModel: 'Vendor',
+      timestamp: now,
+      note: 'Vendor accepted and decided to perform service personally'
+    };
+
     // ATOMIC UPDATE: Check status and vendorId in query to prevent race conditions
     // Only accept if status is REQUESTED/SEARCHING and NO vendor is assigned yet
     const updatedBooking = await Booking.findOneAndUpdate(
       {
         _id: id,
-        status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] },
+        status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING, BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE] },
         $or: [
           { vendorId: null },
           { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true }
@@ -259,10 +267,12 @@ const acceptBooking = async (req, res) => {
       {
         $set: {
           vendorId: vendorId,
-          acceptedAt: new Date(),
-          // Check payment method for optimized status update logic
-          status: BOOKING_STATUS.CONFIRMED, // Default to confirmed
+          acceptedAt: now,
+          status: BOOKING_STATUS.VENDOR_ACCEPTED,
           adminAssignmentStatus: 'ACCEPTED'
+        },
+        $push: {
+          activityLog: activityEntry
         }
       },
       { new: true } // Return updated doc
@@ -285,6 +295,7 @@ const acceptBooking = async (req, res) => {
 
     // Booking successfully accepted by THIS vendor
     const booking = updatedBooking;
+    const vendorName = req.user.businessName || req.user.name || 'Vendor';
 
     // Update vendor availability to ON_JOB
     const Vendor = require('../../models/Vendor');
@@ -296,49 +307,38 @@ const acceptBooking = async (req, res) => {
     // Mark this vendor's request as ACCEPTED
     await BookingRequest.findOneAndUpdate(
       { bookingId: id, vendorId },
-      { status: 'ACCEPTED', respondedAt: new Date() }
+      { status: 'ACCEPTED', respondedAt: now }
     );
 
     // Mark all other vendors' requests as EXPIRED/CANCELLED
     await BookingRequest.updateMany(
       { bookingId: id, vendorId: { $ne: vendorId } },
-      { status: 'EXPIRED', respondedAt: new Date() }
+      { status: 'EXPIRED', respondedAt: now }
     );
 
-    // Check payment status correction (if needed, though we set CONFIRMED above)
-    if (booking.paymentMethod === 'plan_benefit' && booking.paymentStatus === PAYMENT_STATUS.SUCCESS) {
-      // already good
-    }
-
     // NOTIFY OTHER VENDORS to remove this job
-    // Use the stored notifiedVendors list
     const io = req.app.get('io');
     if (io && booking.notifiedVendors && booking.notifiedVendors.length > 0) {
-      console.log(`[AcceptBooking] Notifying ${booking.notifiedVendors.length} other vendors that job ${booking._id} was taken`);
       booking.notifiedVendors.forEach(otherVendorId => {
-        // Skip the current vendor
         if (otherVendorId.toString() !== vendorId.toString()) {
           const room = `vendor_${otherVendorId.toString()}`;
-          console.log(`[AcceptBooking] Emitting booking_taken to room: ${room}`);
           io.to(room).emit('booking_taken', {
-            bookingId: booking._id.toString(), // Ensure string for frontend comparison
+            bookingId: booking._id.toString(),
             message: 'This job has been accepted by someone else.'
           });
         }
       });
-    } else {
-      console.log('[AcceptBooking] No other vendors to notify or io not available');
     }
 
-    // Emit real-time updates to USER
+    // Emit real-time updates to USER and ADMIN
     if (io) {
       if (booking.assignedByAdmin) {
         io.emit('adminBookingAccept', {
           bookingId: booking._id,
           bookingNumber: booking.bookingNumber,
           vendorId: vendorId,
-          vendorName: req.user.businessName || req.user.name,
-          message: `Vendor ${req.user.businessName || req.user.name} accepted manual booking assignment: ${booking.bookingNumber}`
+          vendorName: vendorName,
+          message: `Vendor ${vendorName} accepted manual booking assignment: ${booking.bookingNumber}`
         });
       }
 
@@ -362,13 +362,13 @@ const acceptBooking = async (req, res) => {
       });
     }
 
-    // Send notification to user
-    const notificationMessage = `Your booking ${booking.bookingNumber} is confirmed! ${req.user.businessName || req.user.name} will arrive at scheduled time.`;
+    // Send notification to customer
+    const notificationMessage = `Your booking ${booking.bookingNumber} is confirmed! ${vendorName} has accepted your booking request.`;
 
     await createNotification({
       userId: booking.userId,
       type: 'booking_accepted',
-      title: 'Booking Confirmed!',
+      title: 'Booking Accepted!',
       message: notificationMessage,
       relatedId: booking._id,
       relatedType: 'booking',
@@ -376,11 +376,34 @@ const acceptBooking = async (req, res) => {
         type: 'booking_accepted',
         bookingId: booking._id.toString(),
         link: `/user/booking/${booking._id}`
-        // dataOnly: true // Ensure user sees this
       }
     });
 
-    // Send Push Notification to user (handled by createNotification)
+    // Send notification to Admin(s)
+    try {
+      const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
+      if (activeAdmins.length > 0) {
+        await Promise.all(
+          activeAdmins.map(admin =>
+            createNotification({
+              adminId: admin._id,
+              type: 'general',
+              title: 'Vendor Accepted Booking',
+              message: `Vendor ${vendorName} accepted booking #${booking.bookingNumber}.`,
+              relatedId: booking._id,
+              relatedType: 'booking',
+              data: {
+                bookingId: booking._id.toString(),
+                bookingNumber: booking.bookingNumber,
+                vendorId: vendorId.toString()
+              }
+            })
+          )
+        );
+      }
+    } catch (adminNotifErr) {
+      console.error('[AcceptBooking] Admin notification error:', adminNotifErr.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -581,7 +604,47 @@ const rejectBooking = async (req, res) => {
       }
     }
 
-    // If this booking was admin-assigned directly to this vendor, handle immediately
+    const now = new Date();
+    booking.rejectedAt = now;
+    booking.status = BOOKING_STATUS.VENDOR_REJECTED;
+    booking.activityLog.push({
+      action: 'Vendor Rejected',
+      actorId: vendorId,
+      actorModel: 'Vendor',
+      timestamp: now,
+      note: reason || 'Rejected by vendor'
+    });
+
+    const vendorName = req.user.businessName || req.user.name || 'Vendor';
+
+    // Send notification to Admin(s)
+    try {
+      const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
+      if (activeAdmins.length > 0) {
+        await Promise.all(
+          activeAdmins.map(admin =>
+            createNotification({
+              adminId: admin._id,
+              type: 'general',
+              title: 'Vendor Rejected Booking',
+              message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}.`,
+              relatedId: booking._id,
+              relatedType: 'booking',
+              data: {
+                bookingId: booking._id.toString(),
+                bookingNumber: booking.bookingNumber,
+                vendorId: vendorId.toString(),
+                reason: reason || ''
+              }
+            })
+          )
+        );
+      }
+    } catch (adminNotifErr) {
+      console.error('[RejectBooking] Admin notification error:', adminNotifErr.message);
+    }
+
+    // Check if this booking was admin-assigned directly to this vendor, handle immediately
     const isAdminAssigned = booking.assignedByAdmin && booking.vendorId?.toString() === vendorId.toString();
     if (isAdminAssigned) {
       booking.adminAssignmentStatus = 'DECLINED';
@@ -611,7 +674,7 @@ const rejectBooking = async (req, res) => {
       { bookingId: id, vendorId },
       {
         status: 'REJECTED',
-        respondedAt: new Date(),
+        respondedAt: now,
         rejectReason: reason || 'Rejected by vendor'
       }
     );
@@ -666,7 +729,6 @@ const rejectBooking = async (req, res) => {
         }
       }
     }
-    // Otherwise, booking stays SEARCHING for other vendors
 
     await booking.save();
 
@@ -680,6 +742,85 @@ const rejectBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to reject booking. Please try again.'
+    });
+  }
+};
+
+/**
+ * Vendor chooses worker assignment flow.
+ * Requirement: Do not assign worker yet. Simply open/return vendor's worker selection flow.
+ */
+const chooseWorkerAssignment = async (req, res) => {
+  try {
+    const vendorId = req.user._id || req.user.id;
+    const { id } = req.params;
+
+    const booking = await Booking.findById(id);
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    const now = new Date();
+    booking.activityLog.push({
+      action: 'Vendor Chose Worker Assignment',
+      actorId: vendorId,
+      actorModel: 'Vendor',
+      timestamp: now,
+      note: 'Vendor initiated worker assignment flow'
+    });
+    await booking.save();
+
+    // Fetch active workers of vendor
+    const workers = await Worker.find({
+      vendorId: vendorId,
+      status: { $in: ['active', 'ONLINE', 'OFFLINE'] }
+    }).select('_id name phone rating profileImage isOnline availability').lean();
+
+    res.status(200).json({
+      success: true,
+      message: 'Worker selection flow opened successfully',
+      data: {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        serviceName: booking.serviceName,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
+        workers: workers
+      }
+    });
+  } catch (error) {
+    console.error('Choose worker assignment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to open worker selection flow'
+    });
+  }
+};
+
+/**
+ * Unified vendor response handler for booking requests.
+ * Actions:
+ * - ACCEPT_SELF: Vendor accepts & performs service personally
+ * - ASSIGN_WORKER: Vendor opens worker selection flow
+ * - REJECT: Vendor rejects booking
+ */
+const respondToBooking = async (req, res) => {
+  const { action } = req.body;
+  const normalizedAction = (action || '').toUpperCase();
+
+  if (normalizedAction === 'ACCEPT_SELF' || normalizedAction === 'ACCEPT') {
+    return acceptBooking(req, res);
+  } else if (normalizedAction === 'ASSIGN_WORKER' || normalizedAction === 'CHOOSE_WORKER') {
+    return chooseWorkerAssignment(req, res);
+  } else if (normalizedAction === 'REJECT') {
+    return rejectBooking(req, res);
+  } else {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid action. Allowed values are 'ACCEPT_SELF', 'ASSIGN_WORKER', or 'REJECT'."
     });
   }
 };
@@ -1934,6 +2075,8 @@ module.exports = {
   getBookingById,
   acceptBooking,
   rejectBooking,
+  chooseWorkerAssignment,
+  respondToBooking,
   assignWorker,
   updateBookingStatus,
   addVendorNotes,

@@ -84,7 +84,7 @@ const ProductDetailsPage = () => {
       };
 
       const res = await addToCart(cartItemData);
-      if (res.success) {
+      if (res && res.success && !res.replaced) {
         toast.success('Added to cart!');
       }
     } catch (error) {

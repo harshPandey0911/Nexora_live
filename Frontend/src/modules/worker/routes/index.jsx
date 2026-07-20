@@ -69,6 +69,7 @@ const Wallet = lazyLoad(() => import('../pages/Wallet'));
 const BillingPage = lazyLoad(() => import('../pages/BillingPage'));
 const TermsConditions = lazyLoad(() => import('../pages/TermsConditions'));
 const PrivacyPolicy = lazyLoad(() => import('../pages/PrivacyPolicy'));
+const Reviews = lazyLoad(() => import('../pages/Reviews'));
 
 // Loading fallback component
 import LogoLoader from '../../../components/common/LogoLoader';
@@ -123,6 +124,7 @@ const WorkerRoutes = () => {
               <Route path="/settings" element={<ProtectedRoute userType="worker"><Settings /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute userType="worker"><Notifications /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute userType="worker"><Wallet /></ProtectedRoute>} />
+              <Route path="/reviews" element={<ProtectedRoute userType="worker"><Reviews /></ProtectedRoute>} />
             </Routes>
           </PageTransition>
         </Suspense>

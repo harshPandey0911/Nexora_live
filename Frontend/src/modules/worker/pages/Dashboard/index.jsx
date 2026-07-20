@@ -1,70 +1,76 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBriefcase, FiCheckCircle, FiClock, FiTrendingUp, FiChevronRight, FiUser, FiBell, FiMapPin, FiArrowRight, FiSettings } from 'react-icons/fi';
-import { FaWallet, FaToggleOn, FaToggleOff } from 'react-icons/fa';
+import { 
+  FiBriefcase, FiCheckCircle, FiClock, FiTrendingUp, 
+  FiUser, FiBell, FiMapPin, FiArrowRight, FiSettings, 
+  FiRefreshCw, FiStar, FiZap, FiCalendar, FiDollarSign, FiChevronRight 
+} from 'react-icons/fi';
+import { FaWallet } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
-import { workerTheme as themeColors, vendorTheme } from '../../../../theme';
+import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import workerService from '../../../../services/workerService';
 import { registerFCMToken } from '../../../../services/pushNotificationService';
 import { SkeletonProfileHeader, SkeletonDashboardStats, SkeletonList } from '../../../../components/common/SkeletonLoaders';
-import OptimizedImage from '../../../../components/common/OptimizedImage';
 import { useSocket } from '../../../../context/SocketContext';
 import WorkerJobAlertModal from '../../components/bookings/WorkerJobAlertModal';
-import LogoLoader from '../../../../components/common/LogoLoader';
-
+import WorkerRatingsModal from '../../components/ratings/WorkerRatingsModal';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const socket = useSocket();
 
-  // Helper function to convert hex to rgba
-  const hexToRgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-
-  // Helper function to get status label
-  const getStatusLabel = (status) => {
-    const statusMap = {
-      'PENDING': 'Pending',
-      'ACCEPTED': 'Accepted',
-      'REJECTED': 'Rejected',
-      'COMPLETED': 'Completed',
-      'ASSIGNED': 'Assigned',
-      'VISITED': 'Visited',
-      'WORK_DONE': 'Work Done',
+  const getStatusBadge = (status) => {
+    const s = String(status || '').toUpperCase();
+    const config = {
+      'PENDING': { label: 'Pending', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+      'ASSIGNED': { label: 'Assigned', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+      'ACCEPTED': { label: 'Accepted', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+      'CONFIRMED': { label: 'Confirmed', bg: 'bg-sky-50 text-sky-700 border-sky-200' },
+      'VISITED': { label: 'Visited', bg: 'bg-purple-50 text-purple-700 border-purple-200' },
+      'IN_PROGRESS': { label: 'In Progress', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+      'WORK_DONE': { label: 'Work Done', bg: 'bg-teal-50 text-teal-700 border-teal-200' },
+      'COMPLETED': { label: 'Completed', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+      'REJECTED': { label: 'Rejected', bg: 'bg-rose-50 text-rose-700 border-rose-200' }
     };
-    return statusMap[status] || status;
+    return config[s] || { label: status || 'Unknown', bg: 'bg-gray-50 text-gray-700 border-gray-200' };
   };
 
   const [stats, setStats] = useState({
     pendingJobs: 0,
     acceptedJobs: 0,
+    inProgressJobs: 0,
     completedJobs: 0,
     totalEarnings: 0,
-    thisMonthEarnings: 0,
     rating: 0,
   });
+
   const [workerProfile, setWorkerProfile] = useState({
-    name: 'Worker Name',
-    phone: '+91 9876543210',
+    name: 'Worker Partner',
+    phone: '',
     photo: null,
     categories: [],
     address: null,
+    rating: 0,
   });
+
   const [recentJobs, setRecentJobs] = useState([]);
+  const [activeTab, setActiveTab] = useState('ALL');
   const [isOnline, setIsOnline] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
-  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [alertJobId, setAlertJobId] = useState(null);
+  const [showRatingsModal, setShowRatingsModal] = useState(false);
+  const [reviewsList, setReviewsList] = useState([]);
+  const [totalReviews, setTotalReviews] = useState(0);
 
-  // Set background gradient
+  // Background gradient setup
   useLayoutEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     const root = document.getElementById('root');
-    const bgStyle = themeColors.backgroundGradient;
+    const bgStyle = '#F8FAFC';
 
     if (html) html.style.background = bgStyle;
     if (body) body.style.background = bgStyle;
@@ -77,111 +83,154 @@ const Dashboard = () => {
     };
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const socket = useSocket();
-
-  const [alertJobId, setAlertJobId] = useState(null);
-
-
-  // Fetch Dashboard Data Function
-  const fetchDashboardData = async () => {
+  // Main Data Fetcher
+  const fetchDashboardData = useCallback(async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
+      else setIsRefreshing(true);
 
-      // Fetch Profile, Stats and Recent Jobs in parallel (Stats also includes recent jobs but let's be robust)
-      const [profileRes, statsRes] = await Promise.all([
-        workerService.getProfile(),
-        workerService.getDashboardStats()
+      const [profileRes, statsRes, jobsRes] = await Promise.all([
+        workerService.getProfile().catch(() => ({ success: false })),
+        workerService.getDashboardStats().catch(() => ({ success: false })),
+        workerService.getAssignedJobs({ limit: 15 }).catch(() => ({ success: false }))
       ]);
 
-      if (profileRes.success) {
+      if (profileRes.success && profileRes.worker) {
         const profile = profileRes.worker;
+        let addrStr = '';
+        if (typeof profile.address === 'string') {
+          addrStr = profile.address;
+        } else if (profile.address && typeof profile.address === 'object') {
+          addrStr = profile.address.city || profile.address.fullAddress || profile.address.addressLine1 || '';
+        }
+
         setWorkerProfile({
-          name: profile.name || 'Worker Name',
+          name: profile.name || 'Worker Partner',
           phone: profile.phone || '',
           photo: profile.profilePhoto || null,
-          categories: profile.serviceCategories || (profile.serviceCategory ? [profile.serviceCategory] : []),
-          address: profile.address,
+          categories: Array.isArray(profile.serviceCategories) 
+            ? profile.serviceCategories 
+            : (profile.serviceCategory ? [profile.serviceCategory] : []),
+          address: addrStr,
         });
+        setIsOnline(profile.status === 'ONLINE');
       }
 
-      if (statsRes.success) {
-        const { totalEarnings, activeJobs, completedJobs, rating, recentJobs: apiRecentJobs } = statsRes.data;
+      const parseLocation = (addr) => {
+        if (!addr) return 'Local Area';
+        if (typeof addr === 'string') return addr;
+        if (typeof addr === 'object') return addr.city || addr.addressLine1 || addr.fullAddress || 'Local Area';
+        return 'Local Area';
+      };
 
-        setStats(prev => ({
-          ...prev,
-          totalEarnings: totalEarnings || 0,
-          thisMonthEarnings: totalEarnings || 0, // Assuming total is this month for now or total
-          pendingJobs: activeJobs || 0, // Using active for pending display for now, or map specifically if needed
-          acceptedJobs: activeJobs || 0, // Overlap in meaning, simplify
-          completedJobs: completedJobs || 0,
-          rating: rating || 0
+      let fetchedJobsList = [];
+      if (jobsRes.success && Array.isArray(jobsRes.data)) {
+        fetchedJobsList = jobsRes.data.map(job => ({
+          id: job._id || job.id,
+          serviceType: typeof job.serviceId === 'object' ? (job.serviceId?.title || 'Service Request') : (job.serviceName || 'Service Request'),
+          customerName: typeof job.userId === 'object' ? (job.userId?.name || 'Customer') : 'Authorized Customer',
+          location: parseLocation(job.address),
+          time: job.scheduledTime || (job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Today'),
+          status: (job.status || 'PENDING').toUpperCase(),
+          price: job.vendorEarnings || job.finalAmount || 0,
+          rawJob: job
         }));
+        setRecentJobs(fetchedJobsList);
+      } else if (statsRes.success && Array.isArray(statsRes.data?.recentJobs)) {
+        fetchedJobsList = statsRes.data.recentJobs.map(job => ({
+          id: job._id || job.id,
+          serviceType: typeof job.serviceId === 'object' ? (job.serviceId?.title || 'Service Request') : (job.serviceName || 'Service Request'),
+          customerName: typeof job.userId === 'object' ? (job.userId?.name || 'Customer') : 'Customer',
+          location: parseLocation(job.address),
+          time: job.scheduledTime || 'Today',
+          status: (job.status || 'PENDING').toUpperCase(),
+          price: job.finalAmount || 0,
+          rawJob: job
+        }));
+        setRecentJobs(fetchedJobsList);
+      }
 
-        // Use recent jobs from stats API
-        if (apiRecentJobs && apiRecentJobs.length > 0) {
-          setRecentJobs(apiRecentJobs.map(job => ({
-            id: job._id,
-            serviceType: job.serviceId?.title || job.serviceName || 'Service',
-            customerName: job.userId?.name || 'Customer',
-            location: job.address?.city || 'Location N/A',
-            time: job.scheduledTime || 'N/A',
-            status: job.status,
-            price: job.finalAmount,
-          })));
+      if (statsRes.success && statsRes.data) {
+        const { totalEarnings, rating } = statsRes.data;
+        
+        // Compute real job counts from fetchedJobsList
+        const pending = fetchedJobsList.filter(j => ['ASSIGNED', 'PENDING', 'REQUESTED'].includes(j.status)).length;
+        const accepted = fetchedJobsList.filter(j => ['ACCEPTED', 'CONFIRMED'].includes(j.status)).length;
+        const inProgress = fetchedJobsList.filter(j => ['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED'].includes(j.status)).length;
+        const completed = fetchedJobsList.filter(j => ['COMPLETED', 'WORK_DONE'].includes(j.status)).length;
+
+        const fetchedRating = (typeof statsRes.data?.rating === 'number')
+          ? statsRes.data.rating
+          : (typeof profileRes.worker?.rating === 'number' ? profileRes.worker.rating : 0);
+
+        setStats({
+          totalEarnings: totalEarnings || 0,
+          pendingJobs: pending,
+          acceptedJobs: accepted,
+          inProgressJobs: inProgress,
+          completedJobs: typeof statsRes.data?.completedJobs === 'number' ? statsRes.data.completedJobs : completed,
+          rating: fetchedRating
+        });
+
+        if (Array.isArray(statsRes.data?.reviewsList)) {
+          setReviewsList(statsRes.data.reviewsList);
+        }
+        if (typeof statsRes.data?.totalReviews === 'number') {
+          setTotalReviews(statsRes.data.totalReviews);
         }
       }
-
-      if (profileRes.success) {
-        setIsOnline(profileRes.worker.status === 'ONLINE');
-      }
-
-      setLoading(false);
     } catch (err) {
-      console.error('Dashboard fetch error:', err);
-      setError('Failed to load dashboard data');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []);
 
-  // Load real data from API
+  // Initial Load + Auto Polling (Every 15s)
   useEffect(() => {
     fetchDashboardData();
 
-    // Ask for notification permission and register FCM
     registerFCMToken('worker', true).catch(err => console.error('FCM registration failed:', err));
 
-    // Listen for updates
-    const handleUpdate = () => {
-      fetchDashboardData();
-    };
+    const interval = setInterval(() => {
+      fetchDashboardData(true);
+    }, 15000);
+
+    const handleUpdate = () => fetchDashboardData(true);
     window.addEventListener('workerJobsUpdated', handleUpdate);
 
     return () => {
+      clearInterval(interval);
       window.removeEventListener('workerJobsUpdated', handleUpdate);
     };
+  }, [fetchDashboardData]);
 
-  }, []);
-
-
-
-  // Socket Listener for New Jobs
+  // Socket Listener for Dynamic Real-Time Updates
   useEffect(() => {
     if (!socket) return;
 
     const handleNotification = (notif) => {
-      // Listen for new job assignments
       if ((notif.type === 'booking_created' || notif.type === 'job_assigned') && notif.relatedId) {
         setAlertJobId(notif.relatedId);
       }
+      fetchDashboardData(true);
     };
 
     socket.on('notification', handleNotification);
-    return () => socket.off('notification', handleNotification);
-  }, [socket]);
+    socket.on('job_status_updated', () => fetchDashboardData(true));
+    socket.on('booking_updated', () => fetchDashboardData(true));
 
+    return () => {
+      socket.off('notification', handleNotification);
+      socket.off('job_status_updated');
+      socket.off('booking_updated');
+    };
+  }, [socket, fetchDashboardData]);
+
+  // Toggle Online/Offline Status
   const toggleStatus = async () => {
+    if (statusUpdating) return;
     try {
       setStatusUpdating(true);
       const newStatus = isOnline ? 'OFFLINE' : 'ONLINE';
@@ -190,6 +239,7 @@ const Dashboard = () => {
       if (response.success) {
         setIsOnline(!isOnline);
         toast.success(`You are now ${newStatus === 'ONLINE' ? 'Online' : 'Offline'}`);
+        window.dispatchEvent(new Event('workerStatusUpdated'));
       } else {
         toast.error(response.message || 'Failed to update status');
       }
@@ -201,15 +251,10 @@ const Dashboard = () => {
     }
   };
 
-  // Share toggle state and handler globally with Header
+  // Sync state with global Header toggle handler
   useEffect(() => {
     window.isWorkerOnlineGlobally = isOnline;
-    window.handleWorkerToggleGlobally = async () => {
-      if (!statusUpdating) {
-        await toggleStatus();
-      }
-    };
-    // Force React to re-render header component by dispatching a custom event if needed
+    window.handleWorkerToggleGlobally = toggleStatus;
     window.dispatchEvent(new Event('workerStatusUpdated'));
     return () => {
       delete window.isWorkerOnlineGlobally;
@@ -217,309 +262,369 @@ const Dashboard = () => {
     };
   }, [isOnline, statusUpdating]);
 
+  // Filter Jobs list
+  const filteredJobs = recentJobs.filter(job => {
+    if (activeTab === 'ALL') return true;
+    if (activeTab === 'PENDING') return ['ASSIGNED', 'PENDING', 'REQUESTED', 'ACCEPTED'].includes(job.status);
+    if (activeTab === 'ACTIVE') return ['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'CONFIRMED'].includes(job.status);
+    if (activeTab === 'COMPLETED') return ['COMPLETED', 'WORK_DONE'].includes(job.status);
+    return true;
+  });
+
   if (loading) {
     return (
-      <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
+      <div className="min-h-screen bg-slate-50 pb-24">
         <Header title="Dashboard" showBack={false} />
-        <main className="px-4 py-4 space-y-6">
+        <main className="px-4 py-4 space-y-6 max-w-7xl mx-auto">
           <SkeletonProfileHeader />
           <SkeletonDashboardStats />
-          <div className="space-y-4">
-            <div className="h-6 w-32 bg-slate-200 rounded animate-pulse"></div>
-            <SkeletonList count={3} />
-          </div>
+          <SkeletonList count={3} />
         </main>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
+    <div className="min-h-screen bg-slate-50 pb-20 md:pb-12">
       <Header title="Dashboard" showBack={false} notificationCount={stats.pendingJobs} />
 
-      <main className="pt-0">
-        {/* Sections removed (Profile welcome card & service categories) */}
+      <main className="px-4 pt-4 pb-8 max-w-7xl mx-auto">
+        
+        {/* ── RESPONSIVE GRID LAYOUT (1 col on mobile, 2 cols on Desktop lg:grid-cols-12) ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* ── LEFT COLUMN (Hero, Earnings & Stats) ── */}
+          <div className="lg:col-span-5 space-y-5">
+            
+            {/* HERO BANNER: Profile & Online Status */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-gray-900 to-teal-950 p-5 shadow-xl text-white">
+              <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-        {/* Earnings Highlight - Full Width */}
-        <div className="px-4 pt-4">
-          <div
-            onClick={() => navigate('/worker/wallet')}
-            className="rounded-2xl p-5 relative overflow-hidden cursor-pointer active:scale-98 transition-all"
-            style={{
-              background: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)',
-              boxShadow: '0 10px 25px rgba(13, 148, 136, 0.05)',
-              border: '1.5px solid #99F6E4',
-            }}
-          >
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-teal-800 font-bold opacity-75 uppercase tracking-[0.2em] mb-1">Total Earnings</p>
-                <h3 className="text-3xl font-black text-teal-950 tracking-tight">
-                  ₹{stats.thisMonthEarnings.toLocaleString()}
-                </h3>
-                <div className="flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-full bg-teal-800/10 border border-teal-200/50 w-fit">
-                  <FiTrendingUp className="w-3 h-3 text-emerald-700" />
-                  <span className="text-[10px] text-teal-800 font-bold">This Month</span>
+              <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-2xl ring-2 ring-teal-400/40 overflow-hidden bg-slate-800 flex items-center justify-center shrink-0 shadow-inner">
+                      {workerProfile.photo ? (
+                        <img src={workerProfile.photo} alt={workerProfile.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <FiUser className="w-7 h-7 text-teal-300" />
+                      )}
+                    </div>
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-slate-900 ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-extrabold tracking-tight text-white">{workerProfile.name}</h2>
+                      <span 
+                        onClick={() => navigate('/worker/reviews')}
+                        className="bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 cursor-pointer hover:bg-teal-500/30 transition-colors"
+                        title="View Customer Ratings & Reviews"
+                      >
+                        <FiStar className="w-3 h-3 text-amber-400 fill-amber-400" />
+                        {typeof stats.rating === 'number' ? stats.rating.toFixed(1) : '0.0'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-300 mt-0.5 flex items-center gap-1.5 font-medium">
+                      <span>{workerProfile.categories.slice(0, 2).join(', ') || 'Certified Partner'}</span>
+                      {workerProfile.address && (
+                        <>
+                          <span className="text-gray-500">•</span>
+                          <span className="text-gray-400 truncate max-w-[120px]">{workerProfile.address}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick Online Switcher */}
+                <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/15 px-4 py-2 rounded-2xl w-full sm:w-auto justify-between">
+                  <div>
+                    <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Duty Status</p>
+                    <p className={`text-xs font-bold ${isOnline ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {isOnline ? 'Online & Ready' : 'Offline'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={toggleStatus}
+                    disabled={statusUpdating}
+                    className={`relative w-12 h-6.5 rounded-full transition-all duration-300 ${isOnline ? 'bg-emerald-500' : 'bg-gray-600'} disabled:opacity-50`}
+                  >
+                    <div className={`absolute top-0.5 w-5.5 h-5.5 rounded-full bg-white shadow-md transition-all duration-300 ${isOnline ? 'left-6' : 'left-0.5'}`} />
+                  </button>
                 </div>
               </div>
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.9)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid #CCFBF1',
-                }}
-              >
-                <FaWallet className="w-7 h-7 text-teal-700" />
-              </div>
             </div>
-            {/* Decorative background shape */}
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-          </div>
-        </div>
 
-        {/* Stats Grid - 3 Cards in a Row */}
-        <div className="px-4 pt-4">
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {/* Pending Jobs */}
-            <div
-              onClick={() => navigate('/worker/jobs')}
-              className="rounded-2xl p-3 flex flex-col items-center justify-center relative active:scale-95 transition-all text-center"
-              style={{
-                background: '#fef3c7', // light amber
-                border: '1px solid #fde68a',
-                boxShadow: '0 4px 10px rgba(251, 191, 36, 0.1)',
-              }}
+            {/* TOTAL EARNINGS HIGHLIGHT CARD */}
+            <div 
+              onClick={() => navigate('/worker/wallet')}
+              className="rounded-3xl p-5 bg-gradient-to-r from-teal-700 via-teal-800 to-slate-900 text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all relative overflow-hidden group"
             >
-              <div className="w-10 h-10 rounded-xl mb-2 flex items-center justify-center bg-white shadow-sm">
-                <FiClock className="w-5 h-5 text-amber-500" />
-              </div>
-              <p className="text-[14px] font-black text-amber-900 leading-tight">{stats.pendingJobs}</p>
-              <p className="text-[9px] font-bold text-amber-700 uppercase tracking-tighter">Pending</p>
-              <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-md">
-                <FiArrowRight className="w-3 h-3 text-white" />
-              </div>
-            </div>
-
-            {/* Accepted Jobs */}
-            <div
-              onClick={() => navigate('/worker/jobs')}
-              className="rounded-2xl p-3 flex flex-col items-center justify-center relative active:scale-95 transition-all text-center"
-              style={{
-                background: '#e0f2fe', // light blue
-                border: '1px solid #bae6fd',
-                boxShadow: '0 4px 10px rgba(14, 165, 233, 0.1)',
-              }}
-            >
-              <div className="w-10 h-10 rounded-xl mb-2 flex items-center justify-center bg-white shadow-sm">
-                <FiCheckCircle className="w-5 h-5 text-sky-500" />
-              </div>
-              <p className="text-[14px] font-black text-sky-900 leading-tight">{stats.acceptedJobs}</p>
-              <p className="text-[9px] font-bold text-sky-700 uppercase tracking-tighter">Accepted</p>
-              <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-sky-500 flex items-center justify-center shadow-md">
-                <FiArrowRight className="w-3 h-3 text-white" />
-              </div>
-            </div>
-
-            {/* Completed Jobs */}
-            <div
-              onClick={() => navigate('/worker/jobs')}
-              className="rounded-2xl p-3 flex flex-col items-center justify-center relative active:scale-95 transition-all text-center"
-              style={{
-                background: '#f0fdf4', // light green
-                border: '1px solid #dcfce7',
-                boxShadow: '0 4px 10px rgba(34, 197, 94, 0.1)',
-              }}
-            >
-              <div className="w-10 h-10 rounded-xl mb-2 flex items-center justify-center bg-white shadow-sm">
-                <FiBriefcase className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-[14px] font-black text-green-900 leading-tight">{stats.completedJobs}</p>
-              <p className="text-[9px] font-bold text-green-700 uppercase tracking-tighter">Completed</p>
-              <div className="absolute bottom-2 right-2 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center shadow-md">
-                <FiArrowRight className="w-3 h-3 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-
-        {/* Recent Jobs Section */}
-        <div className="px-4 pt-4 pb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Recent Jobs</h2>
-            {recentJobs.length > 0 && (
-              <button
-                onClick={() => navigate('/worker/jobs')}
-                className="px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 active:scale-95 text-teal-800"
-                style={{
-                  background: 'linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)',
-                  border: '1.5px solid #99F6E4',
-                  boxShadow: '0 4px 12px rgba(13, 148, 136, 0.05)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                View All
-              </button>
-            )}
-          </div>
-          {recentJobs.length > 0 ? (
-            <div className="space-y-3">
-              {recentJobs.map((job, index) => {
-                // Alternating colors (softer premium light-teals)
-                const isEven = index % 2 === 0;
-                const accentColor = isEven ? '#14B8A6' : '#2DD4BF';
-
-                return (
-                  <div
-                    key={job.id}
-                    onClick={() => navigate(`/worker/job/${job.id}`)}
-                    className="bg-white rounded-xl shadow-lg cursor-pointer active:scale-98 transition-all duration-200 relative overflow-hidden"
-                    style={{
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08)',
-                      border: '1px solid rgba(0, 0, 0, 0.1)',
-                    }}
-                  >
-                    {/* Left accent border */}
-                    <div
-                      className="absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl"
-                      style={{
-                        background: `linear-gradient(180deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                      }}
-                    />
-
-                    {/* Compact Content */}
-                    <div className="px-3 py-2.5">
-                      <div className="flex items-center gap-3">
-                        {/* Profile Image Circle */}
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-                          style={{
-                            border: `2.5px solid ${accentColor}40`,
-                            boxShadow: `0 2px 8px ${accentColor}40, inset 0 1px 0 rgba(255, 255, 255, 0.4)`,
-                            background: `linear-gradient(135deg, ${accentColor}20 0%, ${accentColor}10 100%)`,
-                          }}
-                        >
-                          <FiUser className="w-5 h-5" style={{ color: accentColor }} />
-                        </div>
-
-                        {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Name and Service in one line */}
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <p className="text-sm font-bold text-gray-800 truncate">{job.customerName}</p>
-                            <span
-                              className="text-xs font-bold px-2 py-0.5 rounded-lg shrink-0"
-                              style={{
-                                background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                                color: '#FFFFFF',
-                                boxShadow: `0 2px 5px ${hexToRgba(accentColor, 0.3)}`,
-                              }}
-                            >
-                              {job.serviceType || 'Service'}
-                            </span>
-                          </div>
-
-                          {/* Address, Time, Status in one line */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div
-                              className="flex items-center gap-1 px-2 py-0.5 rounded"
-                              style={{
-                                background: 'rgba(0, 166, 166, 0.1)',
-                                border: '1px solid rgba(0, 166, 166, 0.2)',
-                              }}
-                            >
-                              <FiMapPin className="w-3 h-3" style={{ color: themeColors.button }} />
-                              <span className="text-xs font-semibold text-gray-700 truncate max-w-[100px]">{job.location}</span>
-                            </div>
-                            <div
-                              className="flex items-center gap-1 px-2 py-0.5 rounded"
-                              style={{
-                                background: 'rgba(245, 158, 11, 0.1)',
-                                border: '1px solid rgba(245, 158, 11, 0.2)',
-                              }}
-                            >
-                              <FiClock className="w-3 h-3" style={{ color: '#F59E0B' }} />
-                              <span className="text-xs font-semibold text-gray-700">{job.time}</span>
-                            </div>
-                            <span
-                              className="text-xs font-bold px-2 py-0.5 rounded-full"
-                              style={{
-                                background: `${accentColor}15`,
-                                color: accentColor,
-                                border: `1px solid ${accentColor}30`,
-                              }}
-                            >
-                              {getStatusLabel(job.status)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Navigate Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/worker/job/${job.id}`);
-                          }}
-                          className="p-2 rounded-lg shrink-0 transition-all duration-300 active:scale-95"
-                          style={{
-                            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-                            boxShadow: `0 3px 10px ${hexToRgba(accentColor, 0.3)}, 0 2px 5px ${hexToRgba(accentColor, 0.2)}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.1)';
-                            e.currentTarget.style.boxShadow = `0 5px 14px ${hexToRgba(accentColor, 0.4)}, 0 3px 7px ${hexToRgba(accentColor, 0.3)}`;
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = `0 3px 10px ${hexToRgba(accentColor, 0.3)}, 0 2px 5px ${hexToRgba(accentColor, 0.2)}`;
-                          }}
-                        >
-                          <FiArrowRight className="w-4 h-4" style={{ color: '#FFFFFF' }} />
-                        </button>
-                      </div>
-                    </div>
+              <div className="absolute right-0 top-0 w-48 h-48 bg-white/5 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
+              
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-teal-200 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                    <FiDollarSign className="w-3.5 h-3.5 text-teal-300" />
+                    Total Payout Balance
+                  </p>
+                  <h3 className="text-3xl font-black tracking-tight text-white">
+                    ₹{Number(stats.totalEarnings).toLocaleString('en-IN')}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[11px] font-medium text-teal-100 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/15 backdrop-blur-sm flex items-center gap-1">
+                      <FiTrendingUp className="w-3 h-3 text-emerald-400" />
+                      Updated Live
+                    </span>
+                    <span className="text-[11px] text-teal-200 font-semibold underline flex items-center gap-0.5">
+                      View Wallet <FiChevronRight className="w-3 h-3" />
+                    </span>
                   </div>
-                );
-              })}
+                </div>
+
+                <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">
+                  <FaWallet className="w-7 h-7 text-teal-200" />
+                </div>
+              </div>
             </div>
-          ) : (
-            <div
-              className="bg-white rounded-xl p-8 text-center shadow-md"
-              style={{
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-              <FiBriefcase className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-600 font-semibold mb-2">No jobs assigned yet</p>
-              <p className="text-sm text-gray-500">
-                You'll see assigned jobs here when vendors assign work to you
-              </p>
+
+            {/* KPI METRICS STATS GRID (4 Cards) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-3">
+              {/* Pending / Alerts */}
+              <div 
+                onClick={() => navigate('/worker/notifications')}
+                className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all active:scale-95 bg-white"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700">
+                    <FiClock className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest">Pending</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-amber-950">{stats.pendingJobs}</p>
+                  <p className="text-[10px] text-amber-700 font-semibold mt-0.5">Needs Response</p>
+                </div>
+              </div>
+
+              {/* Active / In-Progress */}
+              <div 
+                onClick={() => navigate('/worker/jobs')}
+                className="bg-sky-50/70 border border-sky-200/80 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all active:scale-95 bg-white"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/20 flex items-center justify-center text-sky-700">
+                    <FiZap className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-sky-800 uppercase tracking-widest">Active</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-sky-950">{stats.inProgressJobs + stats.acceptedJobs}</p>
+                  <p className="text-[10px] text-sky-700 font-semibold mt-0.5">In Progress</p>
+                </div>
+              </div>
+
+              {/* Completed Jobs */}
+              <div 
+                onClick={() => navigate('/worker/jobs')}
+                className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all active:scale-95 bg-white"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-700">
+                    <FiCheckCircle className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-widest">Done</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-emerald-950">{stats.completedJobs}</p>
+                  <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">Completed</p>
+                </div>
+              </div>
+
+              {/* Rating Score */}
+              <div 
+                onClick={() => navigate('/worker/reviews')}
+                className="bg-purple-50/70 border border-purple-200/80 rounded-2xl p-3.5 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all active:scale-95 bg-white"
+                title="Click to view Customer Ratings & Reviews"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-700">
+                    <FiStar className="w-4 h-4 fill-purple-600" />
+                  </div>
+                  <span className="text-[10px] font-extrabold text-purple-800 uppercase tracking-widest">Rating</span>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-purple-950">
+                    {typeof stats.rating === 'number' ? stats.rating.toFixed(1) : '0.0'}★
+                  </p>
+                  <p className="text-[10px] text-purple-700 font-semibold mt-0.5">Customer Score</p>
+                </div>
+              </div>
             </div>
-          )}
+
+          </div>
+
+          {/* ── RIGHT COLUMN: RECENT JOBS FEED (lg:col-span-7) ── */}
+          <div className="lg:col-span-7">
+            <div className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-md">
+              
+              {/* Header & Refresh */}
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">Recent Assigned Jobs</h3>
+                  <p className="text-xs text-slate-500 font-medium">Real-time deployments and task history</p>
+                </div>
+
+                <button
+                  onClick={() => fetchDashboardData(true)}
+                  disabled={isRefreshing}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-1 text-xs font-semibold"
+                  title="Refresh Dashboard Data"
+                >
+                  <FiRefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-teal-600' : ''}`} />
+                  <span className="hidden sm:inline">Refresh</span>
+                </button>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4 overflow-x-auto no-scrollbar">
+                {[
+                  { id: 'ALL', label: 'All Jobs', count: recentJobs.length },
+                  { id: 'PENDING', label: 'Pending', count: stats.pendingJobs },
+                  { id: 'ACTIVE', label: 'In Progress', count: stats.inProgressJobs + stats.acceptedJobs },
+                  { id: 'COMPLETED', label: 'Completed', count: stats.completedJobs },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                      activeTab === tab.id
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Jobs List */}
+              {filteredJobs.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredJobs.map((job) => {
+                    const badge = getStatusBadge(job.status);
+                    return (
+                      <div
+                        key={job.id}
+                        onClick={() => navigate(`/worker/job/${job.id}`)}
+                        className="p-4 rounded-2xl border border-slate-200/70 bg-slate-50/50 hover:bg-white hover:border-teal-300 hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-2xl bg-teal-500/10 border border-teal-200 flex items-center justify-center shrink-0 text-teal-800 font-bold group-hover:scale-105 transition-transform">
+                              <FiBriefcase className="w-5 h-5" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-slate-900 truncate tracking-tight">{job.customerName}</h4>
+                              <p className="text-xs font-semibold text-teal-700 mt-0.5">{job.serviceType}</p>
+                              
+                              <div className="flex items-center gap-3 mt-2 flex-wrap text-xs text-slate-500 font-medium">
+                                <span className="flex items-center gap-1">
+                                  <FiMapPin className="w-3.5 h-3.5 text-slate-400" />
+                                  {job.location}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <FiCalendar className="w-3.5 h-3.5 text-slate-400" />
+                                  {job.time}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg border ${badge.bg}`}>
+                              {badge.label}
+                            </span>
+
+                            {job.price > 0 && (
+                              <span className="text-sm font-black text-slate-900">
+                                ₹{Number(job.price).toLocaleString('en-IN')}
+                              </span>
+                            )}
+
+                            <div className="w-7 h-7 rounded-xl bg-slate-100 group-hover:bg-teal-600 group-hover:text-white flex items-center justify-center text-slate-500 transition-all mt-1">
+                              <FiArrowRight className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-16 px-4 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200">
+                  <div className="w-14 h-14 bg-slate-200/60 rounded-2xl flex items-center justify-center mx-auto mb-3 text-slate-400">
+                    <FiBriefcase className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-800">No Jobs Found</h4>
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto font-medium">
+                    {activeTab === 'ALL' 
+                      ? 'No tasks assigned to you yet. Stay online to receive new job alerts!' 
+                      : `No ${activeTab.toLowerCase()} jobs at the moment.`}
+                  </p>
+                  
+                  <div className="flex items-center justify-center gap-2 mt-4">
+                    <button
+                      onClick={() => navigate('/worker/jobs')}
+                      className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold shadow-md hover:bg-slate-800 transition-all active:scale-95"
+                    >
+                      View All Jobs
+                    </button>
+                    <button
+                      onClick={() => fetchDashboardData(true)}
+                      className="px-4 py-2 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold hover:bg-teal-100 transition-all active:scale-95"
+                    >
+                      Check Updates
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
         </div>
+
       </main>
 
+      {/* ── RATINGS & REVIEWS MODAL ── */}
+      <WorkerRatingsModal
+        isOpen={showRatingsModal}
+        onClose={() => setShowRatingsModal(false)}
+        rating={stats.rating}
+        totalReviews={totalReviews}
+        reviewsList={reviewsList}
+      />
 
+      {/* ── JOB ALERT POPUP MODAL ── */}
       <WorkerJobAlertModal
         isOpen={!!alertJobId}
         jobId={alertJobId}
         onClose={() => setAlertJobId(null)}
         onJobAccepted={(id) => {
-          fetchDashboardData();
+          fetchDashboardData(true);
           navigate(`/worker/job/${id}`);
         }}
       />
-
-
-    </div >
+    </div>
   );
 };
 
 export default Dashboard;
-

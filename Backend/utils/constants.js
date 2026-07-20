@@ -38,6 +38,9 @@ const WORKER_STATUS = {
 // Booking Status
 const BOOKING_STATUS = {
   SEARCHING: 'searching', // Initial search phase
+  WAITING_FOR_VENDOR_RESPONSE: 'Waiting for Vendor Response', // Waiting for vendor response
+  VENDOR_ACCEPTED: 'Vendor Accepted', // Vendor accepted booking directly
+  VENDOR_REJECTED: 'Vendor Rejected', // Vendor rejected booking request
   ESCALATED: 'escalated', // Escalated to admin for manual assignment
   REQUESTED: 'requested', // Waiting for vendor to accept
   AWAITING_PAYMENT: 'awaiting_payment', // Accepted by vendor, waiting for user payment

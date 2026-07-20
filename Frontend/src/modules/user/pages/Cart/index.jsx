@@ -128,20 +128,39 @@ const Cart = () => {
     };
   }, [cartItems, platformFeeRate]);
 
-  const handleQuantityChange = async (itemId, currentCount, change) => {
+  const logItemState = (item) => {
+    console.log("Clicked item:", item);
+    console.log("item.id:", item?.id);
+    console.log("item._id:", item?._id);
+    console.log("typeof item._id:", typeof item?._id);
+  };
+
+  const handleQuantityChange = async (item, change) => {
+    console.log("ENTER handleQuantityChange");
+    logItemState(item);
+    const itemId = item?.id || item?._id;
+    const currentCount = item?.serviceCount || 1;
     const newCount = currentCount + change;
     
     if (newCount <= 0) {
-      return handleRemove(itemId);
+      return handleRemove(item);
     }
     
     try {
       const res = await updateItem(itemId, newCount);
-      if (!res.success && res.message !== 'Quantity limit reached') {
+      console.log("RES:", res);
+      if (res && !res.success && res.message !== 'Quantity limit reached') {
+        console.log("ABOUT TO SHOW ERROR TOAST");
         toast.error(res.message || 'Failed to update quantity', { id: 'failed-update' });
       }
+      console.log("RETURNING");
     } catch (error) {
+      console.log("CATCH EXECUTED");
+      console.log(error);
+      console.log(error?.stack);
+      console.log("ABOUT TO SHOW ERROR TOAST");
       toast.error('Error updating cart', { id: 'failed-update' });
+      console.log("RETURNING");
     }
   };
 
@@ -153,12 +172,23 @@ const Cart = () => {
     navigate(isProduct ? `/user/product/${id}` : `/user/service/${id}`);
   };
 
-  const handleRemove = async (itemId) => {
+  const handleRemove = async (item) => {
+    console.log("ENTER handleRemove");
+    logItemState(item);
+    const itemId = item?.id || item?._id;
     try {
+      console.log("Calling removeItem");
       const res = await removeItem(itemId);
-      if (res.success) toast.success('Item removed', { id: 'cart-success' });
+      console.log("removeItem returned successfully", res);
+      if (res && res.success) toast.success('Item removed', { id: 'cart-success' });
+      console.log("RETURNING");
     } catch (error) {
+      console.log("REMOVE CATCH EXECUTED");
+      console.log(error);
+      console.log(error?.stack);
+      console.log("ABOUT TO SHOW REMOVE ERROR TOAST");
       toast.error('Failed to remove item', { id: 'cart-error' });
+      console.log("RETURNING");
     }
   };
 
@@ -256,7 +286,7 @@ const Cart = () => {
                             </h3>
                           </div>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); handleRemove(item.id || item._id); }}
+                            onClick={(e) => { e.stopPropagation(); handleRemove(item); }}
                             className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-red-50 text-red-500 flex items-center justify-center transition-all hover:bg-red-500 hover:text-white"
                           >
                             <FiTrash2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -288,7 +318,7 @@ const Cart = () => {
                             className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-100"
                           >
                             <button 
-                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item.id || item._id, item.serviceCount || 1, -1); }}
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, -1); }}
                               className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
                             >
                               <FiMinus className="w-3 h-3" />
@@ -302,16 +332,16 @@ const Cart = () => {
                                 if (!isNaN(val) && val >= 1) {
                                   if (val > maxCartItemQuantity) {
                                     toast.error(`Maximum quantity limit is ${maxCartItemQuantity}`);
-                                    handleQuantityChange(item.id || item._id, 0, maxCartItemQuantity);
+                                    handleQuantityChange(item, maxCartItemQuantity - (item.serviceCount || 1));
                                   } else {
-                                    handleQuantityChange(item.id || item._id, 0, val);
+                                    handleQuantityChange(item, val - (item.serviceCount || 1));
                                   }
                                 }
                               }}
                               className="w-8 sm:w-12 text-center text-xs sm:text-sm font-bold bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                             <button 
-                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item.id || item._id, item.serviceCount || 1, 1); }}
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, 1); }}
                               className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
                             >
                               <FiPlus className="w-3 h-3" />

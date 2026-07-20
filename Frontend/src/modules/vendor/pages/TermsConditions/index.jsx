@@ -11,14 +11,40 @@ const TermsConditions = () => {
     title: 'Nexora Go Vendor Terms of Service',
     lastUpdated: 'July 15, 2026',
     introduction: 'Please read these Terms & Conditions carefully before registering as a Vendor/Agency on our platform.',
-    sections: []
+    sections: [
+      {
+        title: "1. Vendor Registration & Service Catalog",
+        content: "Vendors must provide valid business documentation, GST/PAN details, and maintain an accurate catalog of services, pricing, and available inventory.",
+        iconType: "user"
+      },
+      {
+        title: "2. Worker Management & Job Allocation",
+        content: "Vendors are responsible for allocating verified workers to customer bookings in a timely manner. Service quality and customer satisfaction are the primary responsibility of the vendor partner.",
+        iconType: "shield"
+      },
+      {
+        title: "3. Settlements, Billings & Commission",
+        content: "Platform billing fees and commissions are automatically calculated per order. Settlement payouts are disbursed to your registered business wallet based on settlement schedules.",
+        iconType: "payment"
+      },
+      {
+        title: "4. Order Fulfillment & Dispute Resolution",
+        content: "Vendors must ensure services and product deliveries adhere to specified timelines. Disputes regarding work quality or billing will be mediated by Nexora Admin team.",
+        iconType: "alert"
+      },
+      {
+        title: "5. Account Compliance & Renewal",
+        content: "Non-compliance with service SLAs, fraudulent pricing, or customer complaints may lead to account suspension or level downgrade. Terms are updated periodically.",
+        iconType: "file"
+      }
+    ]
   });
 
   useEffect(() => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.vendorTermsAndConditions) {
+        if (res.success && res.settings && res.settings.vendorTermsAndConditions && Array.isArray(res.settings.vendorTermsAndConditions.sections) && res.settings.vendorTermsAndConditions.sections.length > 0) {
           setData(res.settings.vendorTermsAndConditions);
         }
       } catch (error) {

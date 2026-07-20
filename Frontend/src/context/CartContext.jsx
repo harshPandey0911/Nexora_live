@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, use
 import { cartService } from '../services/cartService';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
+import CategoryConflictModal from '../components/common/CategoryConflictModal';
 
 /**
  * Cart Context
@@ -19,12 +20,39 @@ export const CartProvider = ({ children }) => {
   const [platformFeeRate, setPlatformFeeRate] = useState(49);
   const [maxCartItemQuantity, setMaxCartItemQuantity] = useState(100);
 
-  // Promise-lock for items still being created in the backend
-  const pendingCreations = useRef({});
-  // Sequential queue for cart updates/removals to prevent out-of-order execution
-  const pendingOperations = useRef({});
-  // Debounce timers for quantity inputs
-  const debounceTimers = useRef({});
+  // Category Conflict Modal State
+  const [conflictModal, setConflictModal] = useState({
+    isOpen: false,
+    pendingItemData: null,
+    resolvePromise: null,
+  });
+
+  // Category comparison helper
+  const getCategoryKey = (item) => {
+    if (!item) return '';
+    if (item.categoryId) {
+      if (typeof item.categoryId === 'object') {
+        if (item.categoryId._id) return String(item.categoryId._id);
+        if (item.categoryId.id) return String(item.categoryId.id);
+        if (item.categoryId.title) return item.categoryId.title.trim().toLowerCase();
+      }
+      return String(item.categoryId).trim().toLowerCase();
+    }
+    const title = item.category || item.categoryTitle || item.serviceCategory;
+    if (title && typeof title === 'string') {
+      return title.trim().toLowerCase();
+    }
+    return '';
+  };
+
+  const isCategoryMatch = (itemA, itemB) => {
+    const keyA = getCategoryKey(itemA);
+    const keyB = getCategoryKey(itemB);
+    if (keyA && keyB) {
+      return keyA === keyB;
+    }
+    return true;
+  };
 
   // Initialize config on mount
   useEffect(() => {
@@ -88,7 +116,7 @@ export const CartProvider = ({ children }) => {
   }, [fetchCart]);
 
   // Add item to cart - instant update + server sync
-  const addToCart = useCallback(async (itemData) => {
+  const addToCart = useCallback(async (itemData, options = {}) => {
     // Guest access check
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -97,6 +125,21 @@ export const CartProvider = ({ children }) => {
         window.location.href = '/user/login';
       }
       return { success: false, message: 'Authentication required' };
+    }
+
+    // ── CATEGORY VALIDATION ──
+    // A customer can add multiple services to the cart only if all services belong to the same service category.
+    if (!options?.skipCategoryCheck && cartItems.length > 0) {
+      const isConflict = cartItems.some(existing => !isCategoryMatch(existing, itemData));
+      if (isConflict) {
+        return new Promise((resolve) => {
+          setConflictModal({
+            isOpen: true,
+            pendingItemData: itemData,
+            resolvePromise: resolve,
+          });
+        });
+      }
     }
 
     // Check if the item already exists in the cart to avoid duplicate items
@@ -233,6 +276,7 @@ export const CartProvider = ({ children }) => {
         resolveId(null);
       }
       delete pendingCreations.current[tempId];
+      console.log("CartContext.addToCart RETURN VALUE:", response);
       return response;
     } catch (error) {
       // Revert on error
@@ -284,6 +328,9 @@ export const CartProvider = ({ children }) => {
           }
         }
 
+        console.log("Sending itemId:", targetId);
+        console.log("typeof itemId:", typeof targetId);
+
         // Mutation Queue: serialize operations on this item to prevent concurrent race conditions
         const previousOp = pendingOperations.current[targetId] || Promise.resolve();
         const currentOp = (async () => {
@@ -299,6 +346,7 @@ export const CartProvider = ({ children }) => {
 
         try {
           const response = await currentOp;
+          console.log("API Response:", response);
           if (response.success && response.data) {
             // Find the updated item from the server response (which returns the full array of items)
             const serverItem = Array.isArray(response.data)
@@ -320,6 +368,9 @@ export const CartProvider = ({ children }) => {
           }
           resolve(response);
         } catch (error) {
+          console.log("Caught Error:", error);
+          console.log("Axios Response:", error?.response);
+          console.log("Axios Data:", error?.response?.data);
           fetchCart();
           resolve({ success: false, error });
         }
@@ -355,6 +406,9 @@ export const CartProvider = ({ children }) => {
       }
     }
 
+    console.log("Sending itemId:", targetId);
+    console.log("typeof itemId:", typeof targetId);
+
     // Mutation Queue: serialize operations on this item to prevent concurrent race conditions
     const previousOp = pendingOperations.current[targetId] || Promise.resolve();
     const currentOp = (async () => {
@@ -370,12 +424,16 @@ export const CartProvider = ({ children }) => {
 
     try {
       const response = await currentOp;
+      console.log("API Response:", response);
       if (!response.success) {
         // Re-fetch on failure to ensure correct state
         fetchCart();
       }
       return response;
     } catch (error) {
+      console.log("Caught Error:", error);
+      console.log("Axios Response:", error?.response);
+      console.log("Axios Data:", error?.response?.data);
       fetchCart();
       throw error;
     }
@@ -437,6 +495,46 @@ export const CartProvider = ({ children }) => {
     setIsInitialized(false);
   }, []);
 
+  // Modal Action Handlers for Category Conflict
+  const handleReplaceCart = async () => {
+    const itemToAdd = conflictModal.pendingItemData;
+    const resolve = conflictModal.resolvePromise;
+
+    setConflictModal({ isOpen: false, pendingItemData: null, resolvePromise: null });
+
+    if (!itemToAdd) return;
+
+    try {
+      // 1. Remove all existing cart items
+      await clearCart();
+
+      // 2. Add the newly selected service
+      const res = await addToCart(itemToAdd, { skipCategoryCheck: true });
+
+      // 3. Show success message
+      toast.success("Cart updated successfully.");
+
+      if (resolve) {
+        resolve({ success: true, replaced: true, data: res?.data });
+      }
+    } catch (error) {
+      toast.error("Failed to update cart");
+      if (resolve) {
+        resolve({ success: false, error });
+      }
+    }
+  };
+
+  const handleCancelConflict = () => {
+    const resolve = conflictModal.resolvePromise;
+
+    setConflictModal({ isOpen: false, pendingItemData: null, resolvePromise: null });
+
+    if (resolve) {
+      resolve({ success: false, cancelled: true, message: 'Cart unchanged' });
+    }
+  };
+
   const value = {
     cartItems,
     cartCount,
@@ -457,6 +555,11 @@ export const CartProvider = ({ children }) => {
   return (
     <CartContext.Provider value={value}>
       {children}
+      <CategoryConflictModal
+        isOpen={conflictModal.isOpen}
+        onReplace={handleReplaceCart}
+        onCancel={handleCancelConflict}
+      />
     </CartContext.Provider>
   );
 };

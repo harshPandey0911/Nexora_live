@@ -297,6 +297,7 @@ const bookingSchema = new mongoose.Schema({
   },
   // Timestamps
   acceptedAt: { type: Date, default: null },
+  rejectedAt: { type: Date, default: null },
   assignedAt: { type: Date, default: null },
   startedAt: { type: Date, default: null },
   journeyStartedAt: { type: Date, default: null },
@@ -380,7 +381,23 @@ const bookingSchema = new mongoose.Schema({
   // 13. NOTES
   // ==========================================
   vendorNotes: { type: String, default: null },
-  workerNotes: { type: String, default: null }
+  workerNotes: { type: String, default: null },
+
+  // ==========================================
+  // 14. ACTIVITY LOG
+  // ==========================================
+  activityLog: [{
+    action: {
+      type: String,
+      enum: ['Vendor Accepted', 'Vendor Rejected', 'Vendor Chose Worker Assignment', 'Booking Created', 'Worker Assigned', 'Status Updated'],
+      required: true
+    },
+    actorId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    actorModel: { type: String, enum: ['User', 'Vendor', 'Worker', 'Admin'], default: null },
+    timestamp: { type: Date, default: Date.now },
+    note: { type: String, default: '' },
+    details: { type: mongoose.Schema.Types.Mixed, default: {} }
+  }]
 
 }, {
   timestamps: true

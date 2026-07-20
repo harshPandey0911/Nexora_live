@@ -11,14 +11,40 @@ const TermsConditions = () => {
     title: 'Nexora Go Worker Terms of Service',
     lastUpdated: 'July 15, 2026',
     introduction: 'Please read these Terms & Conditions carefully before joining our platform as a service professional.',
-    sections: []
+    sections: [
+      {
+        title: "1. Worker Onboarding & Background Check",
+        content: "To accept job assignments on Nexora Go, workers must undergo verification, submit valid identity proof (Aadhar/PAN), and maintain clean background check records. Account approval is subject to admin review.",
+        iconType: "user"
+      },
+      {
+        title: "2. Job Acceptance & Service Quality",
+        content: "Workers must maintain professional conduct, punctuality, and follow quality standards. Repeated rejection of assigned jobs, late arrivals, or customer complaints may result in account suspension.",
+        iconType: "shield"
+      },
+      {
+        title: "3. Payouts & Commission Structure",
+        content: "Earnings for completed jobs are credited to your worker wallet after deducting platform fees/commission. Payout settlements can be requested directly to your registered bank account or UPI ID.",
+        iconType: "payment"
+      },
+      {
+        title: "4. Safety & Work Conduct",
+        content: "Workers must ensure safety protocols are followed on job sites. Any safety hazard, customer dispute, or property damage must be reported immediately to Nexora support.",
+        iconType: "alert"
+      },
+      {
+        title: "5. Termination & Policy Updates",
+        content: "Nexora Go reserves the right to terminate worker access for violations of terms, fraudulent activity, or unresponsiveness. Policy updates will be notified in-app.",
+        iconType: "file"
+      }
+    ]
   });
 
   useEffect(() => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.workerTermsAndConditions) {
+        if (res.success && res.settings && res.settings.workerTermsAndConditions && Array.isArray(res.settings.workerTermsAndConditions.sections) && res.settings.workerTermsAndConditions.sections.length > 0) {
           setData(res.settings.workerTermsAndConditions);
         }
       } catch (error) {

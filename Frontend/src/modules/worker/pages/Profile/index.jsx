@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiChevronRight, FiTag, FiLogOut } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiStar, FiChevronRight, FiTag, FiLogOut, FiFileText, FiShield } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors, vendorTheme } from '../../../../theme';
 import { workerAuthService } from '../../../../services/authService';
@@ -200,9 +200,13 @@ const Profile = () => {
                 <div className="mb-2"></div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 bg-teal-800/10 px-2.5 py-0.5 rounded-lg border border-teal-850/15">
+                  <div 
+                    onClick={() => navigate('/worker/reviews')}
+                    className="flex items-center gap-1 bg-teal-800/10 hover:bg-teal-800/20 px-2.5 py-0.5 rounded-lg border border-teal-850/15 cursor-pointer transition-colors"
+                    title="View Customer Reviews"
+                  >
                     <FiStar className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                    <span className="text-teal-900 text-sm font-bold">{profile.rating}</span>
+                    <span className="text-teal-900 text-sm font-bold">{profile.rating || 0}</span>
                   </div>
                 </div>
               </div>
@@ -308,6 +312,39 @@ const Profile = () => {
               <p className="text-sm text-gray-600">Completed</p>
               <p className="text-2xl font-bold text-gray-800">{profile.completedJobs}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Legal & Policies */}
+        <div
+          className="bg-white rounded-xl p-4 mb-4 shadow-md"
+          style={{
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          <h3 className="font-bold text-gray-800 mb-3">Legal & Policies</h3>
+          <div className="space-y-2">
+            <button
+              onClick={() => navigate('/worker/terms')}
+              className="w-full py-2.5 px-3 rounded-lg flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <FiFileText className="w-5 h-5" style={{ color: themeColors.button }} />
+                <span className="text-sm font-semibold text-gray-800">Terms & Conditions</span>
+              </div>
+              <FiChevronRight className="w-4 h-4 text-gray-400" />
+            </button>
+
+            <button
+              onClick={() => navigate('/worker/privacy')}
+              className="w-full py-2.5 px-3 rounded-lg flex items-center justify-between hover:bg-gray-50 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <FiShield className="w-5 h-5" style={{ color: themeColors.button }} />
+                <span className="text-sm font-semibold text-gray-800">Privacy Policy</span>
+              </div>
+              <FiChevronRight className="w-4 h-4 text-gray-400" />
+            </button>
           </div>
         </div>
 

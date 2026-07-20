@@ -11,14 +11,40 @@ const PrivacyPolicy = () => {
     title: 'Nexora Go Vendor Privacy Policy',
     lastUpdated: 'July 15, 2026',
     introduction: 'This Privacy Policy explains how we collect and process data for Vendor/Agency accounts.',
-    sections: []
+    sections: [
+      {
+        title: "1. Business Data Collection",
+        content: "We collect business name, tax identification details (GST/PAN), contact information, and banking details required for vendor account operations and settlements.",
+        iconType: "eye"
+      },
+      {
+        title: "2. Customer & Job Data Usage",
+        content: "Customer contact details and job locations provided during booking assignments must be used strictly for order fulfillment and service delivery purposes.",
+        iconType: "map"
+      },
+      {
+        title: "3. Secure Financial Records",
+        content: "All transaction logs, settlement histories, and billing records are stored securely using industry-standard encryption standards.",
+        iconType: "lock"
+      },
+      {
+        title: "4. Information Sharing & Third Parties",
+        content: "We do not sell or lease vendor business intelligence to third parties. Data is shared with payment gateways and verification providers strictly for operational fulfillment.",
+        iconType: "share"
+      },
+      {
+        title: "5. System Notifications",
+        content: "Vendors receive alerts for new booking requests, worker status updates, settlement receipts, and administrative policy updates.",
+        iconType: "bell"
+      }
+    ]
   });
 
   useEffect(() => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.vendorPrivacyPolicy) {
+        if (res.success && res.settings && res.settings.vendorPrivacyPolicy && Array.isArray(res.settings.vendorPrivacyPolicy.sections) && res.settings.vendorPrivacyPolicy.sections.length > 0) {
           setData(res.settings.vendorPrivacyPolicy);
         }
       } catch (error) {

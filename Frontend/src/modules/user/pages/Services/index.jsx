@@ -167,7 +167,7 @@ const ServicesPage = () => {
       };
 
       const res = await addToCart(cartItemData);
-      if (res.success) {
+      if (res && res.success && !res.replaced) {
         toast.success(`${service.title} added to cart!`);
       }
     } catch (error) {

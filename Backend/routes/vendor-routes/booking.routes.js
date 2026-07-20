@@ -9,6 +9,8 @@ const {
   getBookingById,
   acceptBooking,
   rejectBooking,
+  chooseWorkerAssignment,
+  respondToBooking,
   assignWorker,
   updateBookingStatus,
   addVendorNotes,
@@ -25,6 +27,10 @@ const {
 // Validation rules
 const rejectBookingValidation = [
   body('reason').optional().trim()
+];
+
+const respondBookingValidation = [
+  body('action').notEmpty().withMessage('Action is required')
 ];
 
 const assignWorkerValidation = [
@@ -51,7 +57,10 @@ router.get('/pending', authenticate, isVendor, getPendingBookings); // Fetch mis
 router.get('/ratings', authenticate, isVendor, getVendorRatings);
 router.get('/', authenticate, isVendor, getVendorBookings);
 router.get('/:id', authenticate, isVendor, getBookingById);
+router.post('/:id/respond', authenticate, isVendor, respondBookingValidation, respondToBooking);
 router.post('/:id/accept', authenticate, isVendor, acceptBooking);
+router.post('/:id/accept-self', authenticate, isVendor, acceptBooking);
+router.post('/:id/choose-worker', authenticate, isVendor, chooseWorkerAssignment);
 router.post('/:id/reject', authenticate, isVendor, rejectBookingValidation, rejectBooking);
 router.post('/:id/assign-worker', authenticate, isVendor, assignWorkerValidation, assignWorker);
 router.put('/:id/status', authenticate, isVendor, updateStatusValidation, updateBookingStatus);

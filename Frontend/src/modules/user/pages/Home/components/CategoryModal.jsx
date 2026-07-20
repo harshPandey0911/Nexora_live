@@ -110,13 +110,15 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
       };
 
       const response = await addToCart(cartItemData);
-      if (response.success) {
+      if (response && response.success) {
         setIsRedirecting(true);
         setTimeout(() => {
           navigate('/user/cart');
         }, 1200);
-      } else {
-        toast.error(response.message || 'Failed to add to cart');
+      } else if (response && response.cancelled) {
+        // User cancelled category replacement dialog
+      } else if (response && response.message && response.message !== 'Quantity limit reached') {
+        toast.error(response.message);
       }
     } catch (error) {
       toast.error('Failed to add to cart');
