@@ -68,9 +68,10 @@ const Login = () => {
       const errMsgs = {};
       validationResult.error.issues.forEach(err => {
         errMsgs[err.path[0]] = err.message;
-        toast.error(err.message);
       });
       setErrors(errMsgs);
+      toast.dismiss();
+      toast.error(validationResult.error.issues[0].message);
       return;
     }
     setErrors({});

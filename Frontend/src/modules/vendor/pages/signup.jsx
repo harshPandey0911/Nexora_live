@@ -176,7 +176,8 @@ const VendorSignup = () => {
     });
 
     if (!validationResult.success) {
-      validationResult.error.issues.forEach(err => toast.error(err.message));
+      toast.dismiss();
+      toast.error(validationResult.error.issues[0].message);
       return;
     }
 

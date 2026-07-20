@@ -43,6 +43,7 @@ const WorkerLogin = () => {
     // Zod Validation
     const validationResult = loginSchema.safeParse({ phone: phoneNumber, password });
     if (!validationResult.success) {
+      toast.dismiss();
       toast.error(validationResult.error.issues[0].message);
       return;
     }
