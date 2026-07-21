@@ -619,6 +619,30 @@ const rejectBooking = async (req, res) => {
       ? req.user.businessName
       : (req.user?.name || req.user?.phone || 'Vendor');
 
+    // Capture original vendorId before nullifying it
+    const originalVendorId = (booking.vendorId?._id || booking.vendorId)?.toString();
+    const wasAssignedToThisVendor = originalVendorId && originalVendorId === vendorId.toString();
+
+    // Update BookingRequest record for this vendor (if exists)
+    const BookingRequest = require('../../models/BookingRequest');
+    await BookingRequest.findOneAndUpdate(
+      { bookingId: id, vendorId },
+      {
+        status: 'REJECTED',
+        respondedAt: now,
+        rejectReason: reason || 'Rejected by vendor'
+      }
+    );
+
+    // Remove vendor from notifiedVendors and potentialVendors
+    booking.notifiedVendors = (booking.notifiedVendors || []).filter(
+      v => v.toString() !== vendorId.toString()
+    );
+    booking.potentialVendors = (booking.potentialVendors || []).filter(
+      v => v.vendorId?.toString() !== vendorId.toString()
+    );
+
+    // Escalate to admin in all cases
     booking.rejectedAt = now;
     booking.status = BOOKING_STATUS.ESCALATED;
     booking.isEscalatedToAdmin = true;
@@ -637,7 +661,19 @@ const rejectBooking = async (req, res) => {
       }
     });
 
-    // Send notification to Admin(s)
+    await booking.save();
+
+    // Notify user that their booking is being escalated
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        message: 'Our admin team is manually assigning a professional for your service.'
+      });
+    }
+
+    // Create persistent DB notification for all active admins
     try {
       const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
       if (activeAdmins.length > 0) {
@@ -647,7 +683,7 @@ const rejectBooking = async (req, res) => {
               adminId: admin._id,
               type: 'general',
               title: 'Vendor Rejected Booking',
-              message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}.`,
+              message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}. Needs reassignment.`,
               relatedId: booking._id,
               relatedType: 'booking',
               data: {
@@ -661,109 +697,10 @@ const rejectBooking = async (req, res) => {
         );
       }
     } catch (adminNotifErr) {
-      console.error('[RejectBooking] Admin notification error:', adminNotifErr.message);
+      console.error('[RejectBooking] Admin DB notification error:', adminNotifErr.message);
     }
 
-    // Check if this booking was assigned to this vendor or admin-assigned
-    const targetVendorId = (booking.vendorId?._id || booking.vendorId)?.toString();
-    const isAdminAssigned = booking.assignedByAdmin || (targetVendorId && targetVendorId === vendorId.toString());
-    
-    if (isAdminAssigned || targetVendorId === vendorId.toString()) {
-      booking.adminAssignmentStatus = 'DECLINED';
-      booking.vendorId = null;
-      booking.status = BOOKING_STATUS.ESCALATED;
-      await booking.save();
-
-      const io = req.app.get('io');
-      if (io) {
-        console.log(`[RejectBooking] Emitting adminBookingDecline for booking ${booking.bookingNumber} by vendor ${vendorName}`);
-        io.emit('adminBookingDecline', {
-          bookingId: booking._id,
-          bookingNumber: booking.bookingNumber,
-          vendorId: vendorId,
-          vendorName: vendorName,
-          reason: reason || 'Rejected by vendor',
-          message: `Vendor ${vendorName} declined booking assignment: ${booking.bookingNumber}`
-        });
-        io.emit('adminBookingEscalated', {
-          bookingId: booking._id,
-          vendorName: vendorName,
-          reason: reason || 'Rejected by vendor'
-        });
-      }
-
-      return res.status(200).json({
-        success: true,
-        message: 'Booking rejected and admin notified for reassignment'
-      });
-    }
-
-    // Update BookingRequest for this vendor
-    const BookingRequest = require('../../models/BookingRequest');
-    await BookingRequest.findOneAndUpdate(
-      { bookingId: id, vendorId },
-      {
-        status: 'REJECTED',
-        respondedAt: now,
-        rejectReason: reason || 'Rejected by vendor'
-      }
-    );
-
-    // Remove vendor from notifiedVendors (they've responded)
-    booking.notifiedVendors = booking.notifiedVendors.filter(
-      v => v.toString() !== vendorId.toString()
-    );
-
-    // Remove from potentialVendors too
-    booking.potentialVendors = booking.potentialVendors.filter(
-      v => v.vendorId?.toString() !== vendorId.toString()
-    );
-
-    // Check if ALL vendors have rejected
-    const pendingRequests = await BookingRequest.countDocuments({
-      bookingId: id,
-      status: { $in: ['PENDING', 'VIEWED'] }
-    });
-
-    const remainingPotential = booking.potentialVendors.length;
-
-    if (pendingRequests === 0 && remainingPotential === 0) {
-      if (booking.assignedByAdmin) {
-        booking.adminAssignmentStatus = 'DECLINED';
-        booking.status = BOOKING_STATUS.ESCALATED; // remains escalated so admin can reassign
-
-        // Notify admin about the decline
-        const io = req.app.get('io');
-        if (io) {
-          io.emit('adminBookingDecline', {
-            bookingId: booking._id,
-            bookingNumber: booking.bookingNumber,
-            vendorId: vendorId,
-            vendorName: vendorName,
-            reason: reason || 'Rejected by vendor',
-            message: `Vendor ${vendorName} declined manual booking assignment: ${booking.bookingNumber}`
-          });
-        }
-      } else {
-        // Escalate to admin
-        booking.status = BOOKING_STATUS.ESCALATED;
-        booking.isEscalatedToAdmin = true;
-
-        // Notify user and admin
-        const io = req.app.get('io');
-        if (io) {
-          io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
-            bookingId: booking._id,
-            bookingNumber: booking.bookingNumber,
-            message: 'Our admin team is manually assigning a professional for your service.'
-          });
-          io.emit('adminBookingEscalated', { bookingId: booking._id });
-        }
-      }
-    }
-
-    // Emit real-time vendor decline/rejection to admin
-    const io = req.app.get('io');
+    // Emit real-time socket alerts to admin
     if (io) {
       const rejectPayload = {
         bookingId: booking._id,
@@ -774,15 +711,15 @@ const rejectBooking = async (req, res) => {
         status: booking.status,
         message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}`
       };
+      console.log(`[RejectBooking] Emitting vendor_rejected_booking & adminBookingDecline for #${booking.bookingNumber} by ${vendorName}`);
       io.emit('adminBookingDecline', rejectPayload);
+      io.emit('adminBookingEscalated', rejectPayload);
       io.to('admin_room').emit('vendor_rejected_booking', rejectPayload);
     }
 
-    await booking.save();
-
     res.status(200).json({
       success: true,
-      message: 'Booking rejected successfully',
+      message: 'Booking rejected successfully. Admin has been notified for reassignment.',
       data: { bookingId: id }
     });
   } catch (error) {
