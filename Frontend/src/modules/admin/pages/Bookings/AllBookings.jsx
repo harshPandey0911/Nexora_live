@@ -161,24 +161,42 @@ const AllBookings = () => {
     fetchData();
   }, [page, debouncedSearch, statusFilter, startDate, endDate]);
 
-  // Real-time Escalation Sockets
+  // Real-time Escalation Sockets & Custom Window Events
   useEffect(() => {
+    const handleCustomChange = () => fetchData();
+    window.addEventListener('adminBookingStatusChanged', handleCustomChange);
+    window.addEventListener('adminBookingAssigned', handleCustomChange);
+
     const socketUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
+    const adminToken = localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
     const socket = io(socketUrl, {
-      auth: { token: localStorage.getItem('accessToken') }
+      auth: { token: adminToken }
+    });
+
+    socket.on('connect', () => {
+      socket.emit('join_admin_room');
     });
 
     socket.on('adminBookingEscalated', () => {
-      toast.error('A booking has escalated for manual assignment!', { icon: '🚨' });
       fetchData();
     });
 
     socket.on('adminBookingDecline', (data) => {
-      toast.error(data.message || 'Vendor declined a manually assigned booking!', { icon: '❌' });
+      toast.error(data.message || 'Vendor declined booking!', { icon: '❌' });
+      fetchData();
+    });
+
+    socket.on('vendor_cancelled_booking', () => {
+      fetchData();
+    });
+
+    socket.on('vendor_rejected_booking', () => {
       fetchData();
     });
 
     return () => {
+      window.removeEventListener('adminBookingStatusChanged', handleCustomChange);
+      window.removeEventListener('adminBookingAssigned', handleCustomChange);
       socket.disconnect();
     };
   }, []);
@@ -343,18 +361,29 @@ const AllBookings = () => {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1 items-start">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider
-                              ${booking.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            booking.status === 'escalated' ? 'bg-orange-100 text-orange-700 border border-orange-200 animate-pulse' :
+                              ${['completed', 'delivered'].includes(booking.status?.toLowerCase()) ? 'bg-green-100 text-green-700' :
+                            ['cancelled'].includes(booking.status?.toLowerCase()) ? 'bg-red-100 text-red-700' :
+                            ['escalated', 'vendor_rejected', 'vendor rejected'].includes(booking.status?.toLowerCase()) || (booking.activityLog?.some(a => a.action === 'Vendor Rejected') && !booking.assignedTo && !booking.vendorId) ? 'bg-rose-100 text-rose-700 border border-rose-200 animate-pulse' :
                               booking.status === 'in_progress' ? 'bg-purple-100 text-purple-700' :
                                 'bg-yellow-100 text-yellow-700'}`}>
-                          {booking.status?.replace('_', ' ')}
+                          {['escalated', 'vendor_rejected', 'vendor rejected'].includes(booking.status?.toLowerCase()) || (booking.activityLog?.some(a => a.action === 'Vendor Rejected') && !booking.assignedTo && !booking.vendorId)
+                            ? 'REJECTED BY VENDOR'
+                            : booking.status?.replace(/_/g, ' ')}
                         </span>
-                        {booking.assignedByAdmin && booking.adminAssignmentStatus === 'DECLINED' && (
-                          <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">
-                            Declined by Vendor
-                          </span>
-                        )}
+                        {booking.activityLog?.filter(a => a.action === 'Vendor Rejected').slice(-1).map((act, idx) => {
+                          const rawName = act.details?.vendorName || act.actorId?.businessName || act.actorId?.name || '';
+                          const cleanName = (rawName && rawName.toLowerCase() !== 'business')
+                            ? rawName
+                            : (act.actorId?.name && act.actorId.name.toLowerCase() !== 'business' ? act.actorId.name : (act.actorId?.phone || 'Vendor'));
+
+                          return (
+                            <div key={idx} className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded mt-1">
+                              <span className="font-bold">Declined by: {cleanName}</span>
+                              {act.note && <span className="block italic text-[9px]">"{act.note}"</span>}
+                              <span className="block text-[8px] text-red-400">{new Date(act.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -611,6 +640,28 @@ const AllBookings = () => {
               </div>
             </div>
           </div>
+
+          {/* Vendor Rejection History */}
+          {(selectedBooking.activityLog?.some(a => a.action === 'Vendor Rejected') || (selectedBooking.bookingRequests && selectedBooking.bookingRequests.some(br => br.status === 'REJECTED'))) && (
+            <div className="border-t border-gray-100 pt-4">
+              <h4 className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                🚫 Vendor Rejection History
+              </h4>
+              <div className="bg-rose-50/50 rounded-xl p-3 space-y-2 border border-rose-100">
+                {selectedBooking.activityLog?.filter(a => a.action === 'Vendor Rejected').map((log, i) => (
+                  <div key={i} className="flex justify-between items-start text-xs border-b border-rose-100/60 last:border-0 pb-1.5 last:pb-0">
+                    <div>
+                      <p className="font-bold text-rose-900">{log.details?.vendorName || log.actorId?.businessName || log.actorId?.name || 'Vendor'}</p>
+                      <p className="text-rose-700/90 italic text-[11px]">"{log.note || 'No reason specified'}"</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-rose-400">
+                      {new Date(log.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Financial Summary */}
           <div className="border-t border-gray-100 pt-4">

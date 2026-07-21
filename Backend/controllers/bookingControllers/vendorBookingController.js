@@ -113,12 +113,13 @@ const getVendorBookings = async (req, res) => {
                 finalAmount: 1,
                 scheduledDate: 1,
                 scheduledTime: 1,
+                timeSlot: 1,
                 serviceName: 1,
                 serviceCategory: 1,
                 categoryIcon: 1,
                 createdAt: 1,
-                'address.addressLine1': 1,
-                'address.city': 1,
+                address: 1,
+                potentialVendors: 1,
                 userId: 1,
                 workerId: 1,
                 rejectedWorkerId: 1,
@@ -154,9 +155,21 @@ const getVendorBookings = async (req, res) => {
       }
     ]);
 
+    const formattedBookings = bookings.map(b => {
+      let dist = null;
+      if (Array.isArray(b.potentialVendors)) {
+        const match = b.potentialVendors.find(pv => String(pv.vendorId) === String(vId));
+        if (match && match.distance) dist = match.distance;
+      }
+      return {
+        ...b,
+        distance: dist ? (typeof dist === 'number' ? `${dist.toFixed(1)} km` : String(dist)) : null
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: bookings,
+      data: formattedBookings,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -440,29 +453,26 @@ const rejectBooking = async (req, res) => {
     const { reason } = req.body;
 
     // Find booking
-    const booking = await Booking.findOne({
-      _id: id,
-      $or: [
-        { notifiedVendors: vendorId },
-        { vendorId: null, status: { $in: [BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.PENDING] } },
-        // Allow admin-assigned vendor to reject
-        { vendorId: new mongoose.Types.ObjectId(vendorId), assignedByAdmin: true, status: BOOKING_STATUS.REQUESTED },
-        // Allow assigned product vendor to reject
-        { vendorId: new mongoose.Types.ObjectId(vendorId), offeringType: 'PRODUCT', status: BOOKING_STATUS.CONFIRMED }
-      ]
-    });
+    const booking = await Booking.findById(id);
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found or not available for rejection'
+        message: 'Booking not found'
       });
     }
 
     const isProduct = booking.offeringType === 'PRODUCT';
-    const validStatuses = isProduct
-      ? [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.CONFIRMED]
-      : [BOOKING_STATUS.PENDING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.SEARCHING];
+    const validStatuses = [
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.REQUESTED,
+      BOOKING_STATUS.SEARCHING,
+      BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE,
+      'Waiting for Vendor Response',
+      'waiting_for_vendor_response',
+      BOOKING_STATUS.CONFIRMED,
+      'confirmed'
+    ];
 
     if (!validStatuses.includes(booking.status)) {
       return res.status(400).json({
@@ -605,17 +615,27 @@ const rejectBooking = async (req, res) => {
     }
 
     const now = new Date();
+    const vendorName = (req.user?.businessName && req.user.businessName.toLowerCase() !== 'business')
+      ? req.user.businessName
+      : (req.user?.name || req.user?.phone || 'Vendor');
+
     booking.rejectedAt = now;
-    booking.status = BOOKING_STATUS.VENDOR_REJECTED;
+    booking.status = BOOKING_STATUS.ESCALATED;
+    booking.isEscalatedToAdmin = true;
+    booking.adminAssignmentStatus = 'DECLINED';
+    booking.vendorId = null;
+
     booking.activityLog.push({
       action: 'Vendor Rejected',
       actorId: vendorId,
       actorModel: 'Vendor',
       timestamp: now,
-      note: reason || 'Rejected by vendor'
+      note: reason || 'Rejected by vendor',
+      details: {
+        vendorName: vendorName,
+        reason: reason || 'Rejected by vendor'
+      }
     });
-
-    const vendorName = req.user.businessName || req.user.name || 'Vendor';
 
     // Send notification to Admin(s)
     try {
@@ -644,9 +664,11 @@ const rejectBooking = async (req, res) => {
       console.error('[RejectBooking] Admin notification error:', adminNotifErr.message);
     }
 
-    // Check if this booking was admin-assigned directly to this vendor, handle immediately
-    const isAdminAssigned = booking.assignedByAdmin && booking.vendorId?.toString() === vendorId.toString();
-    if (isAdminAssigned) {
+    // Check if this booking was assigned to this vendor or admin-assigned
+    const targetVendorId = (booking.vendorId?._id || booking.vendorId)?.toString();
+    const isAdminAssigned = booking.assignedByAdmin || (targetVendorId && targetVendorId === vendorId.toString());
+    
+    if (isAdminAssigned || targetVendorId === vendorId.toString()) {
       booking.adminAssignmentStatus = 'DECLINED';
       booking.vendorId = null;
       booking.status = BOOKING_STATUS.ESCALATED;
@@ -654,11 +676,19 @@ const rejectBooking = async (req, res) => {
 
       const io = req.app.get('io');
       if (io) {
+        console.log(`[RejectBooking] Emitting adminBookingDecline for booking ${booking.bookingNumber} by vendor ${vendorName}`);
         io.emit('adminBookingDecline', {
           bookingId: booking._id,
           bookingNumber: booking.bookingNumber,
           vendorId: vendorId,
-          message: `Vendor declined manual booking assignment: ${booking.bookingNumber}`
+          vendorName: vendorName,
+          reason: reason || 'Rejected by vendor',
+          message: `Vendor ${vendorName} declined booking assignment: ${booking.bookingNumber}`
+        });
+        io.emit('adminBookingEscalated', {
+          bookingId: booking._id,
+          vendorName: vendorName,
+          reason: reason || 'Rejected by vendor'
         });
       }
 
@@ -709,7 +739,9 @@ const rejectBooking = async (req, res) => {
             bookingId: booking._id,
             bookingNumber: booking.bookingNumber,
             vendorId: vendorId,
-            message: `Vendor declined manual booking assignment: ${booking.bookingNumber}`
+            vendorName: vendorName,
+            reason: reason || 'Rejected by vendor',
+            message: `Vendor ${vendorName} declined manual booking assignment: ${booking.bookingNumber}`
           });
         }
       } else {
@@ -728,6 +760,22 @@ const rejectBooking = async (req, res) => {
           io.emit('adminBookingEscalated', { bookingId: booking._id });
         }
       }
+    }
+
+    // Emit real-time vendor decline/rejection to admin
+    const io = req.app.get('io');
+    if (io) {
+      const rejectPayload = {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        vendorId: vendorId,
+        vendorName: vendorName,
+        reason: reason || 'Rejected by vendor',
+        status: booking.status,
+        message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}`
+      };
+      io.emit('adminBookingDecline', rejectPayload);
+      io.to('admin_room').emit('vendor_rejected_booking', rejectPayload);
     }
 
     await booking.save();
@@ -1167,6 +1215,55 @@ const updateBookingStatus = async (req, res) => {
         status: booking.status,
         message: `Booking status updated to ${booking.status}`
       });
+
+      if (status === BOOKING_STATUS.CANCELLED) {
+        const vendorName = req.user?.businessName || req.user?.name || 'Vendor';
+        const cancelPayload = {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          vendorId: vendorId,
+          vendorName: vendorName,
+          reason: req.body.reason || req.body.cancellationReason || 'Cancelled by vendor',
+          status: BOOKING_STATUS.CANCELLED,
+          message: `Vendor ${vendorName} cancelled booking #${booking.bookingNumber}`
+        };
+
+        console.log(`[UpdateStatus] Emitting vendor cancellation to admin for booking #${booking.bookingNumber}`);
+        io.emit('adminBookingDecline', cancelPayload);
+        io.emit('adminBookingEscalated', cancelPayload);
+        io.to('admin_room').emit('vendor_cancelled_booking', cancelPayload);
+        io.emit('vendor_cancelled_booking', cancelPayload);
+        io.emit('booking_cancelled_by_vendor', cancelPayload);
+      }
+    }
+
+    if (status === BOOKING_STATUS.CANCELLED) {
+      try {
+        const vendorName = req.user?.businessName || req.user?.name || 'Vendor';
+        const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
+        if (activeAdmins.length > 0) {
+          await Promise.all(
+            activeAdmins.map(admin =>
+              createNotification({
+                adminId: admin._id,
+                type: 'general',
+                title: 'Vendor Cancelled Booking',
+                message: `Vendor ${vendorName} cancelled booking #${booking.bookingNumber}.`,
+                relatedId: booking._id,
+                relatedType: 'booking',
+                data: {
+                  bookingId: booking._id.toString(),
+                  bookingNumber: booking.bookingNumber,
+                  vendorId: vendorId.toString(),
+                  reason: req.body.reason || req.body.cancellationReason || 'Cancelled by vendor'
+                }
+              })
+            )
+          );
+        }
+      } catch (adminNotifErr) {
+        console.error('[UpdateStatus] Admin cancellation notification error:', adminNotifErr.message);
+      }
     }
 
     // ── Update Vendor Performance Stats ──

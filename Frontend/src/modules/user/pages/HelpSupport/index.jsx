@@ -154,7 +154,9 @@ const HelpSupport = () => {
     },
   ];
 
-  const handleContactSubmit = (e) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleContactSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name || !formData.email || !formData.subject || !formData.message) {
@@ -181,10 +183,29 @@ const HelpSupport = () => {
       return;
     }
 
-    // TODO: Send to backend
-    toast.success('Your message has been sent! We\'ll get back to you soon.');
-    setShowContactForm(false);
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    try {
+      setSubmitting(true);
+      const res = await api.post('/public/support/ticket', {
+        name: trimmedName,
+        email: trimmedEmail,
+        subject: formData.subject.trim(),
+        message: formData.message.trim(),
+        category: 'general'
+      });
+
+      if (res.data?.success) {
+        toast.success('Your request has been sent to Admin! Ticket #' + (res.data.ticket?.ticketNumber || 'created'));
+        setShowContactForm(false);
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        toast.error(res.data?.message || 'Failed to submit request');
+      }
+    } catch (err) {
+      console.error('Support ticket submission error:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit request');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filteredQuestions = categories.flatMap(cat =>

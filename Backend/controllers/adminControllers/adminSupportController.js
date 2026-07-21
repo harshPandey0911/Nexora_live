@@ -26,11 +26,11 @@ const getAllTickets = async (req, res) => {
     // Populate creator details manually since we use dynamic refPath
     for (let ticket of tickets) {
       if (ticket.creatorRole === 'vendor') {
-        const vendor = await Vendor.findById(ticket.creatorId).select('name businessName phone').lean();
-        ticket.creator = vendor || { name: 'Unknown Vendor' };
+        const vendor = ticket.creatorId ? await Vendor.findById(ticket.creatorId).select('name businessName phone email').lean() : null;
+        ticket.creator = vendor || { name: ticket.guestName || 'Vendor Request', email: ticket.guestEmail || '', phone: ticket.guestPhone || '' };
       } else if (ticket.creatorRole === 'user') {
-        const user = await User.findById(ticket.creatorId).select('name phone').lean();
-        ticket.creator = user || { name: 'Unknown User' };
+        const user = ticket.creatorId ? await User.findById(ticket.creatorId).select('name phone email').lean() : null;
+        ticket.creator = user || { name: ticket.guestName || 'User Request', email: ticket.guestEmail || '', phone: ticket.guestPhone || '' };
       }
     }
 
@@ -66,11 +66,11 @@ const getTicketDetails = async (req, res) => {
 
     // Populate creator
     if (ticket.creatorRole === 'vendor') {
-      const vendor = await Vendor.findById(ticket.creatorId).select('name businessName phone email').lean();
-      ticket.creator = vendor || { name: 'Unknown Vendor' };
+      const vendor = ticket.creatorId ? await Vendor.findById(ticket.creatorId).select('name businessName phone email').lean() : null;
+      ticket.creator = vendor || { name: ticket.guestName || 'Vendor Request', email: ticket.guestEmail || '', phone: ticket.guestPhone || '' };
     } else if (ticket.creatorRole === 'user') {
-      const user = await User.findById(ticket.creatorId).select('name phone email').lean();
-      ticket.creator = user || { name: 'Unknown User' };
+      const user = ticket.creatorId ? await User.findById(ticket.creatorId).select('name phone email').lean() : null;
+      ticket.creator = user || { name: ticket.guestName || 'User Request', email: ticket.guestEmail || '', phone: ticket.guestPhone || '' };
     }
 
     res.status(200).json({

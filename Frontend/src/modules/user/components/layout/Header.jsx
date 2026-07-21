@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { HiLocationMarker, HiOutlineShoppingCart, HiOutlineUser, HiOutlineMenu, HiX } from 'react-icons/hi';
 import { gsap } from 'gsap';
@@ -8,7 +9,7 @@ import Logo from '../../../../components/common/Logo';
 import { themeColors, getColorWithOpacity } from '../../../../theme';
 import { useCart } from '../../../../context/CartContext';
 import { useAuth } from '../../../../context/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import AddressSelectionModal from '../../pages/Checkout/components/AddressSelectionModal';
 import { testPushNotification } from '../../../../services/pushNotificationService';
@@ -29,26 +30,24 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [houseNumber, setHouseNumber] = useState('');
-  const [isTestPushSending, setIsTestPushSending] = useState(false);
-  const [testPushSent, setTestPushSent] = useState(false);
 
-  const handleTestPushClick = async () => {
-    if (testPushSent) {
-      toast.error('Test notification already sent once.');
-      return;
+  // Lock body scroll & touch action when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
     }
-    setIsTestPushSending(true);
-    const loadingToast = toast.loading('Initializing test push...');
-    try {
-      await testPushNotification();
-      toast.success('Test notification sent successfully!', { id: loadingToast });
-      setTestPushSent(true);
-    } catch (err) {
-      toast.error(err.message || 'Failed to send test push', { id: loadingToast });
-    } finally {
-      setIsTestPushSending(false);
-    }
-  };
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
 
   const brandName = siteIdentity?.brandName || 'NEXORA GO';
   const slogan = siteIdentity?.slogan || 'Everything you need, one place';
@@ -107,7 +106,6 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
       ? dynamicNavLinks.map(link => ({ name: link.label, path: link.path }))
       : [];
 
-    // Automatically add active sections if not already present
     if (homeContent?.isAboutUsVisible !== false && homeContent?.aboutUs && !links.some(l => l.path.includes('about'))) {
       links.push({ name: 'About Us', path: '/user/about' });
     }
@@ -138,213 +136,218 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
   return (
     <>
       <header className="w-full bg-white border-b border-gray-100 fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-        {/* Top Blue Bar */}
         <div className="h-1.5 w-full" style={{ backgroundColor: themeColors.primary }}></div>
 
-      <div className="max-w-screen-2xl mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between h-20">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-8">
+          <div className="flex items-center justify-between h-20">
 
-          {/* Left: Logo & Brand Name */}
-          <Link to="/user" className="flex items-center gap-3 shrink-0 group">
-            <div ref={logoRef} className="relative">
-              <Logo className="h-10 w-10 sm:h-12 sm:w-12" src={siteIdentity?.logoUrl} />
-              <div className="absolute inset-0 bg-brand/10 rounded-full scale-0 group-hover:scale-110 transition-transform duration-300"></div>
-            </div>
-            {siteIdentity?.brandLogoUrl ? (
-              <img
-                src={siteIdentity.brandLogoUrl.startsWith('http') || siteIdentity.brandLogoUrl.startsWith('data:') ? siteIdentity.brandLogoUrl : `${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '')}${siteIdentity.brandLogoUrl.startsWith('/') ? '' : '/'}${siteIdentity.brandLogoUrl}`}
-                alt={brandName}
-                className="h-8 sm:h-10 w-auto object-contain"
-              />
-            ) : (
+            {/* Left: Logo & Brand Name */}
+            <Link to="/user" className="flex items-center gap-3 shrink-0 group">
+              <div ref={logoRef} className="relative">
+                <Logo className="h-10 w-10 sm:h-12 sm:w-12" src={siteIdentity?.logoUrl} />
+              </div>
               <div className="flex flex-col">
-                <span className="text-xl sm:text-2xl font-black tracking-tighter leading-none" style={{ color: themeColors.primary }}>
+                <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
                   {brandName}
                 </span>
-                <span className="text-[7px] sm:text-[9px] font-bold uppercase tracking-[0.1em] sm:tracking-[0.15em] text-gray-400 mt-0.5">
+                <span className="text-[10px] font-semibold text-gray-400 -mt-1 hidden sm:inline">
                   {slogan}
-                </span>
-              </div>
-            )}
-          </Link>
-
-          {/* Center: Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-10">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className="relative py-2 text-[15px] font-bold transition-colors duration-200"
-                style={{ color: isActive(link.path) ? themeColors.primary : '#4B5563' }}
-              >
-                {link.name}
-                {isActive(link.path) && (
-                  <motion.div
-                    layoutId="nav-underline"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                    style={{ backgroundColor: themeColors.primary }}
-                  />
-                )}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Right: Actions (Search, Cart, Account, Location) */}
-          <div className="flex items-center gap-1 sm:gap-5">
-            {/* Test Push Button */}
-            <button
-              onClick={handleTestPushClick}
-              disabled={isTestPushSending || testPushSent}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all duration-300 border ${
-                testPushSent
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                  : isTestPushSending
-                  ? 'bg-blue-50 text-blue-400 border-blue-100 cursor-wait'
-                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-transparent hover:shadow-md hover:scale-105 active:scale-95 shadow-sm'
-              }`}
-            >
-              <span>🔔</span>
-              <span>{testPushSent ? 'Push Sent' : isTestPushSending ? 'Sending...' : 'Test Push'}</span>
-            </button>
-
-            {/* Location (Subtle integration) */}
-            <div
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
-              onClick={handleLocationClick}
-            >
-              <HiLocationMarker className="w-4 h-4 text-gray-400" />
-              <span className="text-[11px] font-bold text-gray-600 truncate max-w-[200px]">
-                {address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Location')}
-              </span>
-            </div>
-
-            {/* Icons Group */}
-            <div className="flex items-center gap-0.5 sm:gap-3">
-              <Link to="/user/cart" className="relative p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
-                <HiOutlineShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
-                {cartCount > 0 && (
-                  <span
-                    className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] flex items-center justify-center text-[8px] sm:text-[10px] font-black text-white rounded-full shadow-sm ring-2 ring-white"
-                    style={{ backgroundColor: themeColors.primary }}
-                  >
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
-            </div>
-
-            {/* Profile / Account Link (Desktop only) */}
-            <Link to="/user/account" className="hidden lg:flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-black/[0.03]">
-              <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all duration-300 shadow-sm overflow-hidden border border-black/[0.03]">
-                {user?.profilePhoto || user?.photo ? (
-                  <img src={toAssetUrl(user.profilePhoto || user.photo)} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <HiOutlineUser className="w-5 h-5" />
-                )}
-              </div>
-              <div className="flex flex-col items-start leading-none">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Account</span>
-                <span className="text-[13px] font-black text-gray-900">
-                  {user ? (user.name ? user.name.split(' ')[0] : 'Profile') : 'Sign In'}
                 </span>
               </div>
             </Link>
 
-            {/* Menu Button (Mobile only) */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors border border-black/[0.03]"
-            >
-              {isMobileMenuOpen ? <HiX className="w-6 h-6" /> : <HiOutlineMenu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-gray-100 bg-white shadow-lg">
-          <div className="flex flex-col p-4 gap-4">
-            {/* Mobile Test Push Button */}
-            <button
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                handleTestPushClick();
-              }}
-              disabled={isTestPushSending || testPushSent}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-extrabold transition-all duration-300 border ${
-                testPushSent
-                  ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                  : isTestPushSending
-                  ? 'bg-blue-50 text-blue-400 border-blue-100 cursor-wait'
-                  : 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-transparent shadow-sm'
-              }`}
-            >
-              <span>🔔</span>
-              <span>{testPushSent ? 'Push Sent' : isTestPushSending ? 'Sending...' : 'Test Push Notification'}</span>
-            </button>
-
-            {/* Mobile Location Selector (Visible under md) */}
-            <div
-              className="flex md:hidden items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
-              onClick={() => {
-                setIsMobileMenuOpen(false);
-                handleLocationClick();
-              }}
-            >
-              <HiLocationMarker className="w-5 h-5 text-gray-500" />
-              <span className="text-sm font-bold text-gray-700 truncate">
-                {address && address !== '...' ? address : 'Select Location'}
-              </span>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="flex flex-col gap-1">
+            {/* Desktop Nav Links */}
+            <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="px-4 py-2.5 text-sm font-bold rounded-lg transition-colors"
+                  className="relative py-2 text-sm font-bold transition-colors duration-200"
                   style={{
-                    color: isActive(link.path) ? themeColors.primary : '#4B5563',
-                    backgroundColor: isActive(link.path) ? `${themeColors.primary}10` : 'transparent'
+                    color: isActive(link.path) ? themeColors.primary : '#4B5563'
                   }}
                 >
                   {link.name}
+                  {isActive(link.path) && (
+                    <motion.div
+                      layoutId="nav-underline"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                      style={{ backgroundColor: themeColors.primary }}
+                    />
+                  )}
                 </Link>
               ))}
-            </div>
+            </nav>
 
-            <hr className="border-gray-100 my-1" />
+            {/* Right: Actions (Search, Cart, Account, Location) */}
+            <div className="flex items-center gap-1 sm:gap-5">
 
-            {/* Profile Link in Mobile Menu */}
-            <Link
-              to="/user/account"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center gap-3 px-4 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-black/[0.03]"
-            >
-              <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm overflow-hidden border border-black/[0.03]">
-                {user?.profilePhoto || user?.photo ? (
-                  <img src={toAssetUrl(user.profilePhoto || user.photo)} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <HiOutlineUser className="w-4 h-4" />
-                )}
-              </div>
-              <div className="flex flex-col leading-none">
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Account</span>
-                <span className="text-sm font-black text-gray-900">
-                  {user ? (user.name ? user.name : 'Profile') : 'Sign In / Register'}
+              <div
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-black/[0.03]"
+                onClick={handleLocationClick}
+              >
+                <HiLocationMarker className="w-4 h-4 text-gray-400" />
+                <span className="text-[11px] font-bold text-gray-600 truncate max-w-[200px]">
+                  {address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Location')}
                 </span>
               </div>
-            </Link>
+
+              <div className="flex items-center gap-0.5 sm:gap-3">
+                <Link to="/user/cart" className="relative p-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                  <HiOutlineShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+                  {cartCount > 0 && (
+                    <span
+                      className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] flex items-center justify-center text-[8px] sm:text-[10px] font-black text-white rounded-full shadow-sm ring-2 ring-white"
+                      style={{ backgroundColor: themeColors.primary }}
+                    >
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
+
+              <Link to="/user/account" className="hidden lg:flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded-xl transition-all duration-200 group border border-transparent hover:border-black/[0.03]">
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 transition-all duration-300 shadow-sm overflow-hidden border border-black/[0.03]">
+                  {user?.profilePhoto || user?.photo ? (
+                    <img src={toAssetUrl(user.profilePhoto || user.photo)} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <HiOutlineUser className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Account</span>
+                  <span className="text-[13px] font-black text-gray-900">
+                    {user ? (user.name ? user.name.split(' ')[0] : 'Profile') : 'Sign In'}
+                  </span>
+                </div>
+              </Link>
+
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors border border-black/[0.03]"
+              >
+                <HiOutlineMenu className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
-      )}
-    </header>
+
+        {/* Mobile Menu Fullscreen Overlay & Drawer (Portaled to document.body) */}
+        {createPortal(
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <div className="fixed inset-0 z-[99999] lg:hidden flex justify-end">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  onTouchMove={(e) => e.preventDefault()}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+
+                {/* Right Slide Drawer */}
+                <motion.div
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="relative w-full max-w-xs bg-white h-full shadow-2xl flex flex-col z-10 overflow-hidden"
+                >
+                  {/* Drawer Top Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <Logo className="h-8 w-8" src={siteIdentity?.logoUrl} />
+                      <span className="font-black text-base tracking-tight text-gray-900">
+                        {brandName}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors border border-gray-100"
+                    >
+                      <HiX className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Scrollable Content with pb-28 clearance for BottomNav */}
+                  <div className="p-4 space-y-4 overflow-y-auto flex-1 pb-28">
+                    {/* User Profile Card (Prominent at top) */}
+                    <Link
+                      to="/user/account"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-3.5 p-3.5 bg-gradient-to-r from-gray-50 to-blue-50/50 hover:from-gray-100 hover:to-blue-100/50 rounded-2xl transition-all border border-blue-100/80 shadow-sm group"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-base shadow-md overflow-hidden shrink-0 border-2 border-white">
+                        {user?.profilePhoto || user?.photo ? (
+                          <img src={toAssetUrl(user.profilePhoto || user.photo)} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          user?.name ? user.name.charAt(0).toUpperCase() : <HiOutlineUser className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[10px] font-extrabold text-blue-600 uppercase tracking-widest">Account</span>
+                        <span className="text-base font-black text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                          {user ? (user.name ? user.name : 'My Profile') : 'Sign In / Register'}
+                        </span>
+                        {user?.email || user?.phone ? (
+                          <span className="text-[11px] font-medium text-gray-500 truncate">
+                            {user.email || user.phone}
+                          </span>
+                        ) : null}
+                      </div>
+                    </Link>
+
+                    {/* Location Selector */}
+                    <div
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        handleLocationClick();
+                      }}
+                    >
+                      <div className="p-2 rounded-xl bg-white text-blue-600 shadow-sm border border-gray-100">
+                        <HiLocationMarker className="w-5 h-5" />
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider">Your Location</span>
+                        <span className="text-xs font-bold text-gray-800 truncate">
+                          {address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Select Location')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Navigation Links */}
+                    <div className="space-y-1 pt-1">
+                      <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest px-3 mb-2 block">Menu Navigation</span>
+                      {navLinks.map((link) => (
+                        <Link
+                          key={link.path}
+                          to={link.path}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-bold transition-all"
+                          style={{
+                            color: isActive(link.path) ? themeColors.primary : '#374151',
+                            backgroundColor: isActive(link.path) ? `${themeColors.primary}12` : 'transparent'
+                          }}
+                        >
+                          <span>{link.name}</span>
+                          <span className="text-xs font-extrabold opacity-60">→</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+      </header>
       {/* Spacer to push down page content under fixed navbar */}
       <div className="h-[86px] w-full shrink-0"></div>
-      
+
       {/* Location Selector Modal */}
       <AddressSelectionModal
         isOpen={isAddressModalOpen}

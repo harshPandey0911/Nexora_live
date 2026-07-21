@@ -4,7 +4,7 @@ import { FiBriefcase, FiMapPin, FiClock, FiUser, FiSearch, FiChevronRight } from
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { getBookings, assignWorker as assignWorkerApi, acceptBooking, rejectBooking } from '../../services/bookingService';
-import { ConfirmDialog } from '../../components/common';
+import { ConfirmDialog, RejectionReasonModal } from '../../components/common';
 
 const ActiveJobs = memo(() => {
   const navigate = useNavigate();
@@ -13,8 +13,9 @@ const ActiveJobs = memo(() => {
     return cached ? JSON.parse(cached) : [];
   });
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('in_progress');
+  const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [rejectingJobId, setRejectingJobId] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: '',
@@ -51,8 +52,14 @@ const ActiveJobs = memo(() => {
         rejectedWorker: job.rejectedWorkerId ? { name: job.rejectedWorkerId.name } : null,
         offeringType: job.offeringType || 'SERVICE',
         timeSlot: {
-          date: job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Date',
-          time: job.scheduledTime || 'Time'
+          date: job.timeSlot?.date || (job.scheduledDate && !isNaN(new Date(job.scheduledDate).getTime()) 
+            ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) 
+            : (job.createdAt && !isNaN(new Date(job.createdAt).getTime())
+                ? new Date(job.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                : 'Today')),
+          time: job.timeSlot?.time || (job.timeSlot?.start && job.timeSlot?.end 
+            ? `${job.timeSlot.start} - ${job.timeSlot.end}` 
+            : (job.scheduledTime && job.scheduledTime !== 'N/A' ? job.scheduledTime : 'ASAP'))
         }
       }));
       setJobs(mappedJobs);
@@ -118,9 +125,14 @@ const ActiveJobs = memo(() => {
     }
   };
 
-  const handleRejectJob = async (jobId) => {
+  const handleRejectJob = (jobId) => {
+    setRejectingJobId(jobId);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    if (!rejectingJobId) return;
     try {
-      const response = await rejectBooking(jobId, 'Rejected from Service Bookings list');
+      const response = await rejectBooking(rejectingJobId, reason);
       if (response && response.success) {
         toast.success("Job skipped");
         loadJobs(filter, searchQuery);
@@ -129,6 +141,8 @@ const ActiveJobs = memo(() => {
     } catch (error) {
       console.error("Error rejecting job:", error);
       toast.error("Failed to skip job");
+    } finally {
+      setRejectingJobId(null);
     }
   };
 
@@ -313,6 +327,12 @@ const ActiveJobs = memo(() => {
         message={confirmDialog.message}
         onConfirm={confirmDialog.onConfirm}
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <RejectionReasonModal
+        isOpen={!!rejectingJobId}
+        onClose={() => setRejectingJobId(null)}
+        onConfirm={handleConfirmReject}
       />
     </div>
   );

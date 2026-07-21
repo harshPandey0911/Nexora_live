@@ -96,6 +96,7 @@ const getAllBookings = async (req, res) => {
       .populate('serviceId', 'title iconUrl')
       .populate('categoryId', 'title slug')
       .populate('workerId', 'name phone')
+      .populate({ path: 'activityLog.actorId', select: 'name businessName phone' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -129,24 +130,33 @@ const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const booking = await Booking.findById(id)
+    const bookingDoc = await Booking.findById(id)
       .populate('userId', 'name phone email addresses')
       .populate('vendorId', 'name businessName phone email address')
       .populate('serviceId', 'title description iconUrl images')
       .populate('categoryId', 'title slug')
       .populate('workerId', 'name phone rating totalJobs completedJobs')
-      .populate('vendorBillId');
+      .populate('vendorBillId')
+      .populate({ path: 'activityLog.actorId', select: 'name businessName phone' })
+      .lean();
 
-    if (!booking) {
+    if (!bookingDoc) {
       return res.status(404).json({
         success: false,
         message: 'Booking not found'
       });
     }
 
+    const BookingRequest = require('../../models/BookingRequest');
+    const bookingRequests = await BookingRequest.find({ bookingId: id })
+      .populate('vendorId', 'name businessName phone')
+      .lean();
+
+    bookingDoc.bookingRequests = bookingRequests;
+
     res.status(200).json({
       success: true,
-      data: booking
+      data: bookingDoc
     });
   } catch (error) {
     console.error('Get booking error:', error);
@@ -381,6 +391,20 @@ const assignVendor = async (req, res) => {
 
     await booking.save();
 
+    // Calculate distance between assigned vendor and booking location
+    let calculatedDist = 1.8;
+    try {
+      const Vendor = require('../../models/Vendor');
+      const assignedVendor = await Vendor.findById(vendorId).select('location address').lean();
+      if (assignedVendor?.location?.lat && assignedVendor?.location?.lng && booking.address?.lat && booking.address?.lng) {
+        const { calculateDistance } = require('../../services/locationService');
+        const d = calculateDistance(assignedVendor.location, booking.address);
+        if (d && !isNaN(d)) calculatedDist = Math.round(d * 10) / 10;
+      }
+    } catch (dErr) {
+      console.warn('Distance calc warning in assignVendor:', dErr.message);
+    }
+
     // Notify Vendor via sockets
     const io = req.app.get('io');
     if (io) {
@@ -391,6 +415,7 @@ const assignVendor = async (req, res) => {
         customerName: booking.customerName || 'Authorized Client',
         customerPhone: booking.customerPhone || '',
         address: booking.address || { addressLine1: booking.location?.address || 'Location shared' },
+        distance: `${calculatedDist} km`,
         price: booking.finalAmount,
         vendorEarnings: booking.finalAmount * 0.9,
         serviceCategory: booking.serviceCategory || 'Nexora Service',

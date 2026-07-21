@@ -183,3 +183,94 @@ exports.getPublicSettings = async (req, res, next) => {
     });
   }
 };
+
+// Submit Public/User Support Request (Creates Ticket + Notifies Admin)
+exports.submitPublicSupportTicket = async (req, res) => {
+  try {
+    const { name, email, phone, subject, message, category } = req.body;
+
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and message are required'
+      });
+    }
+
+    const Ticket = require('../../models/Ticket');
+    const Admin = require('../../models/Admin');
+    const { createNotification } = require('../notificationControllers/notificationController');
+
+    const ticket = new Ticket({
+      creatorRole: 'user',
+      creatorId: req.user?._id || req.user?.id || null,
+      creatorModel: 'User',
+      guestName: name.trim(),
+      guestEmail: email.trim(),
+      guestPhone: phone ? phone.trim() : null,
+      subject: subject ? subject.trim() : `Support Request from ${name.trim()}`,
+      category: category || 'general',
+      priority: 'medium',
+      status: 'open',
+      messages: [{
+        sender: 'user',
+        senderId: req.user?._id || req.user?.id || null,
+        senderModel: 'User',
+        message: message.trim()
+      }]
+    });
+
+    await ticket.save();
+
+    // Broadcast socket event to admin room if active
+    try {
+      const { getIO } = require('../../sockets');
+      const io = getIO();
+      if (io) {
+        io.to('admin_room').emit('new_support_ticket', {
+          ticketId: ticket._id,
+          ticketNumber: ticket.ticketNumber,
+          name: name.trim(),
+          email: email.trim(),
+          subject: ticket.subject,
+          message: message.trim(),
+          createdAt: ticket.createdAt
+        });
+      }
+    } catch (sErr) {
+      console.warn('Socket emit error on support ticket:', sErr.message);
+    }
+
+    // Create DB notifications for active admins
+    try {
+      const activeAdmins = await Admin.find({ isActive: true }).select('_id');
+      if (activeAdmins.length > 0) {
+        await Promise.all(
+          activeAdmins.map(admin =>
+            createNotification({
+              adminId: admin._id,
+              type: 'general',
+              title: `New Support Request: ${ticket.subject}`,
+              message: `${name.trim()} (${email.trim()}): ${message.trim().slice(0, 80)}...`,
+              relatedId: ticket._id,
+              relatedType: 'ticket'
+            })
+          )
+        );
+      }
+    } catch (nErr) {
+      console.warn('Notification create error on support ticket:', nErr.message);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Support request submitted successfully. Our team will contact you soon.',
+      ticket
+    });
+  } catch (error) {
+    console.error('Error submitting public support ticket:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit support request. Please try again.'
+    });
+  }
+};

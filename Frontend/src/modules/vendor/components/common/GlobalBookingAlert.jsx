@@ -58,10 +58,12 @@ export default function GlobalBookingAlert() {
         }
 
         const validJobs = pendingJobs.filter(job => {
+          const jId = String(job.id || job._id);
+          if (ignoredBookingIds.current.has(jId)) return false;
           if (!job.expiresAt) return true;
           const isValid = new Date(job.expiresAt).getTime() > now;
           if (!isValid) {
-            console.log(`[GlobalAlert] Filtered out expired job ${job.id || job._id}. Expires at: ${job.expiresAt}, Now: ${new Date(now).toISOString()}`);
+            console.log(`[GlobalAlert] Filtered out expired job ${jId}. Expires at: ${job.expiresAt}, Now: ${new Date(now).toISOString()}`);
           }
           return isValid;
         });
@@ -119,11 +121,15 @@ export default function GlobalBookingAlert() {
     const handleShowAlert = (e) => {
       console.log('[GlobalAlert] showDashboardBookingAlert custom event caught:', e.detail);
       if (e.detail) {
+        const bId = String(e.detail.id || e.detail._id);
+        if (e.detail.force) {
+          ignoredBookingIds.current.delete(bId);
+        }
+        if (ignoredBookingIds.current.has(bId)) return;
         setActiveAlertBookings(prev => {
-          const bId = String(e.detail.id || e.detail._id);
-          if (prev.find(b => String(b.id || b._id) === bId)) return prev;
+          const filtered = prev.filter(b => String(b.id || b._id) !== bId);
           console.log('[GlobalAlert] Adding alert booking to active state:', e.detail);
-          return [e.detail, ...prev];
+          return [e.detail, ...filtered];
         });
       }
     };
@@ -165,16 +171,15 @@ export default function GlobalBookingAlert() {
       bookings={activeAlertBookings}
       maxSearchTimeMins={maxSearchTime}
       onAccept={async (id) => {
+        ignoredBookingIds.current.add(String(id));
         try {
           await acceptBooking(id);
 
           // ✅ IMMEDIATELY clear from localStorage and dismiss modal
-          // Do this right after accept, NOT after assignWorker
           const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
           const updated = pendingJobs.filter(b => String(b.id || b._id) !== String(id));
           localStorage.setItem('vendorPendingJobs', JSON.stringify(updated));
 
-          // Dispatch remove event to immediately close this modal card
           window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id } }));
           setActiveAlertBookings(prev => prev.filter(b => String(b.id || b._id) !== String(id)));
 
@@ -182,7 +187,6 @@ export default function GlobalBookingAlert() {
           window.dispatchEvent(new Event('vendorStatsUpdated'));
           toast.success('Job accepted! Assigning to you...');
 
-          // Run assignWorker separately — failure should not bring back the modal
           assignWorker(id, 'SELF').catch(err => {
             console.warn('[GlobalAlert] assignWorker SELF failed (non-critical):', err?.message);
           });
@@ -193,15 +197,14 @@ export default function GlobalBookingAlert() {
         }
       }}
       onAssign={async (id) => {
+        ignoredBookingIds.current.add(String(id));
         try {
           await acceptBooking(id);
 
-          // Remove from local storage
           const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
           const updated = pendingJobs.filter(b => String(b.id || b._id) !== String(id));
           localStorage.setItem('vendorPendingJobs', JSON.stringify(updated));
 
-          // Dispatch remove event
           window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id } }));
           setActiveAlertBookings(prev => prev.filter(b => String(b.id || b._id) !== String(id)));
 
@@ -213,10 +216,10 @@ export default function GlobalBookingAlert() {
           toast.error('Failed to claim job');
         }
       }}
-      onReject={async (id) => {
+      onReject={async (id, reason) => {
+        ignoredBookingIds.current.add(String(id));
         try {
-          // Reject is often silent or via reject api
-          await rejectBooking(id);
+          await rejectBooking(id, reason);
         } catch (error) {
           console.error("Failed to reject job via API, removing locally");
         } finally {
@@ -232,7 +235,11 @@ export default function GlobalBookingAlert() {
         }
       }}
       onMinimize={() => {
-        setActiveAlertBookings([]); // simply minimizes current visible ones. We can fetch them later from pending.
+        activeAlertBookings.forEach(b => {
+          const bId = String(b.id || b._id);
+          ignoredBookingIds.current.add(bId);
+        });
+        setActiveAlertBookings([]);
       }}
     />
   );

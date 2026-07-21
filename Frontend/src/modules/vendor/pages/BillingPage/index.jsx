@@ -82,13 +82,24 @@ const BillingPage = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [id, viewMode, currentStep, loading]);
 
-  // Save draft data
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Save draft data (ONLY when initialized and not loading)
   useEffect(() => {
-    if (id && !loading) {
+    if (id && !loading && isInitialized) {
       const data = { selectedServices, selectedParts, customItems, transportCharges, applyPartsGST };
       localStorage.setItem(`billing_data_${id}`, JSON.stringify(data));
+
+      // Auto-sync draft bill to backend API
+      const timer = setTimeout(() => {
+        vendorBillService.createOrUpdateBill(id, data).catch(err => {
+          console.warn('Auto-save draft bill error:', err?.message);
+        });
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
-  }, [id, selectedServices, selectedParts, customItems, transportCharges, applyPartsGST, loading]);
+  }, [id, selectedServices, selectedParts, customItems, transportCharges, applyPartsGST, loading, isInitialized]);
 
   const fetchData = async () => {
     try {
@@ -143,70 +154,82 @@ const BillingPage = () => {
         setPartCategories(pCats.filter(Boolean));
       }
 
-      // 1. Try to load from Local Storage (Draft)
+      // 1. Load from Backend
+      let backendBill = null;
+      try {
+        const billRes = await vendorBillService.getBill(id);
+        if (billRes.success && billRes.bill) {
+          backendBill = billRes.bill;
+        }
+      } catch (bErr) {
+        console.warn('Get bill error:', bErr.message);
+      }
+
+      // 2. Try to load from Local Storage (Draft)
+      let draftData = null;
       const savedDraft = localStorage.getItem(`billing_data_${id}`);
-      let hasDraft = false;
       if (savedDraft) {
         try {
-          const parsed = JSON.parse(savedDraft);
-          setSelectedServices(parsed.selectedServices || []);
-          setSelectedParts(parsed.selectedParts || []);
-          setCustomItems(parsed.customItems || []);
-          setTransportCharges(parsed.transportCharges || 0);
-          setApplyPartsGST(parsed.applyPartsGST !== undefined ? parsed.applyPartsGST : true);
-          hasDraft = true;
+          draftData = JSON.parse(savedDraft);
         } catch (e) {
           console.error('Error parsing draft:', e);
         }
       }
 
-      // 2. Load from Backend (if no draft or to get config)
-      const billRes = await vendorBillService.getBill(id);
+      const hasDraftItems = draftData && (
+        (Array.isArray(draftData.selectedServices) && draftData.selectedServices.length > 0) ||
+        (Array.isArray(draftData.selectedParts) && draftData.selectedParts.length > 0) ||
+        (Array.isArray(draftData.customItems) && draftData.customItems.length > 0) ||
+        draftData.transportCharges > 0
+      );
 
-      // If we used draft, we still might want payout settings from backend bill
-      // If NO draft, we use backend bill data
-      if (billRes.success && billRes.bill) {
-        if (!hasDraft) {
-          setSelectedServices((billRes.bill.services || []).filter(s => !s.isOriginal));
-          setSelectedParts(billRes.bill.parts || []);
-          setCustomItems(billRes.bill.customItems || []);
-          setTransportCharges(billRes.bill.transportCharges || 0);
-          setApplyPartsGST(billRes.bill.applyPartsGST !== undefined ? billRes.bill.applyPartsGST : true);
-        }
+      const backendServices = (backendBill?.services || []).filter(s => !s.isOriginal);
+      const backendParts = backendBill?.parts || [];
+      const backendCustom = backendBill?.customItems || [];
+      const backendTransport = backendBill?.transportCharges || 0;
+      const backendApplyGST = backendBill?.applyPartsGST !== undefined ? backendBill.applyPartsGST : true;
 
-        if (billRes.bill.payoutConfig) {
-          const pc = billRes.bill.payoutConfig;
-          setPayoutSettings({
-            serviceGstPct: pc.serviceGstPercentage ?? 18,
-            partsGstPct: pc.partsGstPercentage ?? 18,
-            servicePayoutPct: pc.serviceSplitPercentage ?? 70,
-            partsPayoutPct: pc.partsSplitPercentage ?? 10
-          });
-        }
-
-        // Update max step based on data (merged)
-        const currentData = hasDraft ? JSON.parse(savedDraft) : {
-          selectedServices: (billRes.bill.services || []).filter(s => !s.isOriginal),
-          selectedParts: billRes.bill.parts || [],
-          customItems: billRes.bill.customItems || []
-        };
-
-        let reachedStep = 1;
-        if (currentData.transportCharges > 0) reachedStep = 4;
-        else if (currentData.customItems?.length > 0) reachedStep = 3;
-        else if (currentData.selectedParts?.length > 0) reachedStep = 2;
-        else if (currentData.selectedServices?.length > 0) reachedStep = 1;
-
-        setMaxStep(prev => Math.max(prev, reachedStep));
-      } else if (!hasDraft) {
-        // Fallback settings if no bill and no draft
-        // ... (existing settings fetch)
+      if (hasDraftItems) {
+        setSelectedServices(draftData.selectedServices || []);
+        setSelectedParts(draftData.selectedParts || []);
+        setCustomItems(draftData.customItems || []);
+        setTransportCharges(draftData.transportCharges || 0);
+        setApplyPartsGST(draftData.applyPartsGST !== undefined ? draftData.applyPartsGST : true);
       } else {
-        // Has draft but no backend bill - ok
+        setSelectedServices(backendServices);
+        setSelectedParts(backendParts);
+        setCustomItems(backendCustom);
+        setTransportCharges(backendTransport);
+        setApplyPartsGST(backendApplyGST);
       }
 
-      // Fallback settings logic (existing)
-      if (!billRes.success || !billRes.bill?.payoutConfig) {
+      if (backendBill?.payoutConfig) {
+        const pc = backendBill.payoutConfig;
+        setPayoutSettings({
+          serviceGstPct: pc.serviceGstPercentage ?? 18,
+          partsGstPct: pc.partsGstPercentage ?? 18,
+          servicePayoutPct: pc.serviceSplitPercentage ?? 70,
+          partsPayoutPct: pc.partsSplitPercentage ?? 10
+        });
+      }
+
+      const activeData = hasDraftItems ? draftData : {
+        selectedServices: backendServices,
+        selectedParts: backendParts,
+        customItems: backendCustom,
+        transportCharges: backendTransport
+      };
+
+      let reachedStep = 1;
+      if (activeData.transportCharges > 0) reachedStep = 4;
+      else if (activeData.customItems?.length > 0) reachedStep = 3;
+      else if (activeData.selectedParts?.length > 0) reachedStep = 2;
+      else if (activeData.selectedServices?.length > 0) reachedStep = 1;
+
+      setMaxStep(prev => Math.max(prev, reachedStep));
+
+      // Fallback settings logic if no backend payout config
+      if (!backendBill?.payoutConfig) {
         try {
           const token = localStorage.getItem('vendorToken');
           const res = await fetch('/api/vendors/settings', { headers: { Authorization: `Bearer ${token}` } });
@@ -228,6 +251,7 @@ const BillingPage = () => {
       toast.error('Failed to load data');
     } finally {
       setLoading(false);
+      setIsInitialized(true);
     }
   };
 

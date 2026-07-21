@@ -9,12 +9,12 @@ const messageSchema = new mongoose.Schema({
   senderId: {
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'senderModel',
-    required: true
+    required: false
   },
   senderModel: {
     type: String,
     enum: ['Vendor', 'Admin', 'User', 'Worker'],
-    required: true
+    required: false
   },
   message: {
     type: String,
@@ -43,13 +43,16 @@ const ticketSchema = new mongoose.Schema({
   creatorId: {
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'creatorModel',
-    required: true
+    required: false
   },
   creatorModel: {
     type: String,
     enum: ['Vendor', 'User', 'Worker'],
-    required: true
+    required: false
   },
+  guestName: { type: String, default: null },
+  guestEmail: { type: String, default: null },
+  guestPhone: { type: String, default: null },
   subject: {
     type: String,
     required: true,

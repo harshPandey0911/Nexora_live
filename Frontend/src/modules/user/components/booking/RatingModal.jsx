@@ -9,6 +9,18 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
   const [review, setReview] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Lock body scroll when modal is open
+  React.useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   const handleSubmit = async () => {
     if (rating === 0) return;
     setIsSubmitting(true);

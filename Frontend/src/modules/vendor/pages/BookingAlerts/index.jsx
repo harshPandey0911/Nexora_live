@@ -11,6 +11,8 @@ import { useSocket } from '../../../../context/SocketContext';
 
 import PendingJobCard from '../../components/bookings/PendingJobCard';
 
+import RejectionReasonModal from '../../components/common/RejectionReasonModal';
+
 const BookingAlerts = () => {
   const navigate = useNavigate();
   const socket = useSocket();
@@ -18,13 +20,13 @@ const BookingAlerts = () => {
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState({ id: null, type: null });
   const [globalConfig, setGlobalConfig] = useState({ maxSearchTime: 5 });
+  const [declineTargetBooking, setDeclineTargetBooking] = useState(null);
 
   // Fetch pending alerts
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
         setLoading(true);
-        // Fetch stats to get global config (maxSearchTime)
         const statsRes = await vendorDashboardService.getDashboardStats();
         let localConfig = { maxSearchTime: 5 };
         if (statsRes.success && statsRes.data?.config) {
@@ -47,10 +49,8 @@ const BookingAlerts = () => {
             return isRelevantStatus && isAssignedToMe;
           });
 
-          // Merge logic: Keep if in API OR if added recently (last 2 mins)
           const mergedPending = [];
 
-          // Add active bookings from API, skipping expired ones
           bookings.forEach(b => {
             const bId = b._id || b.id;
             const expiresAt = b.expiresAt || (b.createdAt && localConfig ? new Date(new Date(b.createdAt).getTime() + (localConfig.maxSearchTime || 5) * 60000).toISOString() : null);
@@ -76,7 +76,6 @@ const BookingAlerts = () => {
             }
           });
 
-          // Deduplicate by string ID to guarantee no duplicate requests are displayed
           const seenIds = new Set();
           const finalPending = [];
           mergedPending.forEach(job => {
@@ -89,7 +88,6 @@ const BookingAlerts = () => {
 
           localStorage.setItem('vendorPendingJobs', JSON.stringify(finalPending));
 
-          // Map for PendingJobCard parity (now using already calculated/filtered results)
           const mappedAlerts = finalPending.map(b => ({
             ...b,
             serviceName: b.serviceName || b.serviceId?.title || 'New Booking Request',
@@ -117,26 +115,18 @@ const BookingAlerts = () => {
     };
   }, []);
 
-  // Socket listener for booking_taken (using shared socket from context)
+  // Socket listener for booking_taken
   useEffect(() => {
-    if (!socket) {
-      console.log('[BookingAlerts] Socket not available yet');
-      return;
-    }
-
-    console.log('[BookingAlerts] Setting up booking_taken listener on socket:', socket.id);
+    if (!socket) return;
 
     const handleBookingTaken = (data) => {
-      console.log('[BookingAlerts] booking_taken event received:', data);
       const takenBookingId = String(data.bookingId);
 
-      // Remove from state immediately
       setAlerts(prev => prev.filter(a => {
         const alertId = String(a._id || a.id);
         return alertId !== takenBookingId;
       }));
 
-      // Remove from localStorage
       const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
       const updatedPending = pendingJobs.filter(job => {
         const jobId = String(job.id || job._id);
@@ -144,10 +134,8 @@ const BookingAlerts = () => {
       });
       localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
 
-      // Show toast
       toast.error(data.message || 'This job was accepted by another vendor.', { icon: '⚡' });
 
-      // Trigger global update
       window.dispatchEvent(new Event('vendorStatsUpdated'));
       window.dispatchEvent(new Event('vendorJobsUpdated'));
     };
@@ -159,7 +147,7 @@ const BookingAlerts = () => {
     };
   }, [socket]);
 
-  // Listen for local remove events (like timer expiration)
+  // Listen for local remove events
   useEffect(() => {
     const handleRemove = (e) => {
       const idToRemove = String(e.detail?.id);
@@ -167,7 +155,6 @@ const BookingAlerts = () => {
 
       setAlerts(prev => prev.filter(a => String(a._id || a.id) !== idToRemove));
 
-      // Also clean up localStorage
       const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
       const updatedPending = pendingJobs.filter(job => String(job.id || job._id) !== idToRemove);
       localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
@@ -185,15 +172,12 @@ const BookingAlerts = () => {
     try {
       await acceptBooking(bookingId);
       toast.success('Booking accepted!');
-      // Remove from list
       setAlerts(prev => prev.filter(a => (a._id || a.id) !== bookingId));
 
-      // Remove from localStorage
       const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
       const updatedPending = pendingJobs.filter(job => (job.id || job._id) !== bookingId);
       localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
 
-      // Trigger global update
       window.dispatchEvent(new Event('vendorStatsUpdated'));
       window.dispatchEvent(new Event('vendorJobsUpdated'));
     } catch (error) {
@@ -204,17 +188,22 @@ const BookingAlerts = () => {
     }
   };
 
-  const handleReject = async (e, booking) => {
+  const handleOpenRejectModal = (e, booking) => {
     e?.stopPropagation();
-    const bookingId = booking._id || booking.id;
-    if (loadingAction.id) return;
+    setDeclineTargetBooking(booking);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    if (!declineTargetBooking) return;
+    const bookingId = declineTargetBooking._id || declineTargetBooking.id;
+    setDeclineTargetBooking(null);
+
     setLoadingAction({ id: bookingId, type: 'reject' });
     try {
-      await rejectBooking(bookingId);
+      await rejectBooking(bookingId, reason);
       toast.success('Booking rejected');
       setAlerts(prev => prev.filter(a => (a._id || a.id) !== bookingId));
 
-      // Remove from localStorage
       const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
       const updatedPending = pendingJobs.filter(job => (job.id || job._id) !== bookingId);
       localStorage.setItem('vendorPendingJobs', JSON.stringify(updatedPending));
@@ -259,7 +248,7 @@ const BookingAlerts = () => {
               key={alert._id || alert.id}
               booking={alert}
               onAccept={handleAccept}
-              onReject={handleReject}
+              onReject={handleOpenRejectModal}
               onClick={() => navigate('/vendor/dashboard', { state: { openBookingId: alert._id || alert.id } })}
               loadingAction={loadingAction.id === (alert._id || alert.id) ? loadingAction.type : null}
               showTimer={true}
@@ -268,6 +257,12 @@ const BookingAlerts = () => {
           ))
         )}
       </main>
+
+      <RejectionReasonModal
+        isOpen={!!declineTargetBooking}
+        onClose={() => setDeclineTargetBooking(null)}
+        onConfirm={handleConfirmReject}
+      />
     </div>
   );
 };

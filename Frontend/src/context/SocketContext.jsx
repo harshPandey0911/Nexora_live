@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { playNotificationSound, isSoundEnabled, playAlertRing } from '../utils/notificationSound';
 import { registerFCMToken } from '../services/pushNotificationService';
 import { acceptBooking, rejectBooking, assignWorker } from '../modules/vendor/services/bookingService';
+import { FiX } from 'react-icons/fi';
 
 const SwipeableNotification = ({ t, data, onClick, onReassign, onSelfAssignSuccess }) => {
   const x = useMotionValue(0);
@@ -70,10 +71,22 @@ const SwipeableNotification = ({ t, data, onClick, onReassign, onSelfAssignSucce
       }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       whileTap={{ scale: 0.98 }}
-      className="w-full min-w-[340px] sm:min-w-[500px] md:min-w-[560px] max-w-2xl bg-[#1A1D21] border border-white/10 shadow-2xl rounded-2xl sm:rounded-3xl pointer-events-auto flex flex-col ring-1 ring-white/5 cursor-pointer overflow-hidden"
+      className="w-full min-w-[340px] sm:min-w-[500px] md:min-w-[560px] max-w-2xl bg-[#1A1D21] border border-white/10 shadow-2xl rounded-2xl sm:rounded-3xl pointer-events-auto flex flex-col ring-1 ring-white/5 cursor-pointer overflow-hidden relative"
       onClick={onClick}
     >
-      <div className="w-full p-4 sm:p-5">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          toast.dismiss(t.id);
+        }}
+        className="absolute top-2.5 right-2.5 z-20 text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+        title="Dismiss Notification"
+      >
+        <FiX className="w-4 h-4" />
+      </button>
+
+      <div className="w-full p-4 sm:p-5 pr-9">
         <div className="flex items-center gap-3.5">
           <div className="flex-shrink-0">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg border border-white/10 shrink-0">
@@ -363,22 +376,25 @@ export const SocketProvider = ({ children }) => {
           status: 'requested',
           createdAt: data.createdAt || new Date().toISOString(),
           expiresAt: data.expiresAt,
-          assignedByAdmin: data.assignedByAdmin
+          assignedByAdmin: data.assignedByAdmin,
+          force: true
         };
 
         const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
-        if (!pendingJobs.find(job => job.id === newJob.id)) {
-          pendingJobs.unshift(newJob);
-          localStorage.setItem('vendorPendingJobs', JSON.stringify(pendingJobs));
-
-          // Update stats
-          const stats = JSON.parse(localStorage.getItem('vendorStats') || '{}');
-          stats.pendingAlerts = (stats.pendingAlerts || 0) + 1;
-          localStorage.setItem('vendorStats', JSON.stringify(stats));
-
-          // Instantly trigger global booking alert modal
-          window.dispatchEvent(new CustomEvent('showDashboardBookingAlert', { detail: newJob }));
+        const existingIndex = pendingJobs.findIndex(job => String(job.id || job._id) === String(newJob.id));
+        if (existingIndex !== -1) {
+          pendingJobs.splice(existingIndex, 1);
         }
+        pendingJobs.unshift(newJob);
+        localStorage.setItem('vendorPendingJobs', JSON.stringify(pendingJobs));
+
+        // Update stats
+        const stats = JSON.parse(localStorage.getItem('vendorStats') || '{}');
+        stats.pendingAlerts = (stats.pendingAlerts || 0) + 1;
+        localStorage.setItem('vendorStats', JSON.stringify(stats));
+
+        // Instantly trigger global booking alert modal
+        window.dispatchEvent(new CustomEvent('showDashboardBookingAlert', { detail: newJob }));
 
         // Show interactive toast notification with buttons
         toast.custom((t) => (

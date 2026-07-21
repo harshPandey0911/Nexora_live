@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiCamera, FiX, FiArrowRight, FiChevronLeft, FiCheckCircle } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiCamera, FiX, FiArrowRight, FiChevronLeft, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { themeColors } from '../../../theme';
 import { workerAuthService } from '../../../services/authService';
@@ -20,20 +20,105 @@ const WorkerSignup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState('details'); // 'details' or 'otp'
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    aadhar: '',
-    aadharDocument: null,
-    aadharBackDocument: null
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('worker_signup_form');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          name: parsed.name || '',
+          email: parsed.email || '',
+          phoneNumber: parsed.phoneNumber || '',
+          aadhar: parsed.aadhar || '',
+          aadharDocument: null,
+          aadharBackDocument: null
+        };
+      }
+    } catch (e) {}
+    return {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      aadhar: '',
+      aadharDocument: null,
+      aadharBackDocument: null
+    };
   });
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpToken, setOtpToken] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [documentPreview, setDocumentPreview] = useState({});
   const [resendTimer, setResendTimer] = useState(0);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(() => {
+    return sessionStorage.getItem('worker_signup_agreeToTerms') === 'true';
+  });
+
+  // Field-level error & touched tracking
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
+  const validateField = (fieldName, value, currentData = formData) => {
+    let err = '';
+    const val = value !== undefined ? value : currentData[fieldName];
+
+    if (fieldName === 'name') {
+      if (!val || !val.trim()) {
+        err = 'Full Name is required';
+      } else if (val.trim().length < 2) {
+        err = 'Name must be at least 2 characters';
+      } else if (!/^[a-zA-Z\s]+$/.test(val)) {
+        err = 'Name can only contain letters';
+      }
+    }
+
+    if (fieldName === 'email') {
+      if (!val || !val.trim()) {
+        err = 'Email address is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        err = 'Please enter a valid email address';
+      }
+    }
+
+    if (fieldName === 'phoneNumber' && !verificationToken) {
+      if (!val) {
+        err = 'Phone number is required';
+      } else if (!/^[6-9]\d{9}$/.test(val)) {
+        err = 'Enter valid 10-digit phone number (starts with 6-9)';
+      }
+    }
+
+    if (fieldName === 'aadhar') {
+      if (!val) {
+        err = 'Aadhar number is required';
+      } else if (!/^\d{12}$/.test(val)) {
+        err = 'Aadhar number must be exactly 12 digits';
+      }
+    }
+
+    return err;
+  };
+
+  const handleBlur = (fieldName) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+    const err = validateField(fieldName, formData[fieldName]);
+    setErrors(prev => ({ ...prev, [fieldName]: err }));
+  };
+
+  // Sync signup data to sessionStorage so navigating to Terms/Privacy never clears it
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('worker_signup_form', JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        aadhar: formData.aadhar
+      }));
+    } catch (e) {}
+  }, [formData]);
+
+  useEffect(() => {
+    sessionStorage.setItem('worker_signup_agreeToTerms', String(agreeToTerms));
+  }, [agreeToTerms]);
 
   // Timer countdown effect
   useEffect(() => {
@@ -82,10 +167,13 @@ const WorkerSignup = () => {
     } else if (name === 'email') {
       filteredValue = value.toLowerCase();
     }
-    setFormData(prev => ({
-      ...prev,
-      [name]: filteredValue
-    }));
+    const updatedData = { ...formData, [name]: filteredValue };
+    setFormData(updatedData);
+
+    if (touched[name]) {
+      const err = validateField(name, filteredValue, updatedData);
+      setErrors(prev => ({ ...prev, [name]: err }));
+    }
   };
 
   const handleDocumentUpload = (e, type) => {
@@ -114,6 +202,8 @@ const WorkerSignup = () => {
         ...prev,
         [type]: reader.result
       }));
+      const errKey = type === 'aadhar' ? 'aadharFront' : 'aadharBack';
+      setErrors(prev => ({ ...prev, [errKey]: '' }));
     };
     reader.readAsDataURL(file);
   };
@@ -135,32 +225,40 @@ const WorkerSignup = () => {
   const handleDetailsSubmit = async (e) => {
     e.preventDefault();
 
-    if (!agreeToTerms) {
-      toast.error('You must agree to the Terms & Conditions and Privacy Policy');
-      return;
-    }
+    const nameErr = validateField('name', formData.name);
+    const emailErr = validateField('email', formData.email);
+    const phoneErr = !verificationToken ? validateField('phoneNumber', formData.phoneNumber) : '';
+    const aadharErr = validateField('aadhar', formData.aadhar);
+    const termsErr = !agreeToTerms ? 'You must agree to the Terms & Conditions and Privacy Policy' : '';
+    const aadharFrontErr = (!formData.aadharDocument && !documentPreview.aadhar) ? 'Please upload Aadhar Front document' : '';
+    const aadharBackErr = (!formData.aadharBackDocument && !documentPreview.aadharBack) ? 'Please upload Aadhar Back document' : '';
 
-    // Zod Validation
-    const validationResult = workerSignupSchema.safeParse({
-      name: formData.name,
-      email: formData.email,
-      phoneNumber: formData.phoneNumber,
-      aadhar: formData.aadhar
+    const newErrors = {
+      name: nameErr,
+      email: emailErr,
+      phoneNumber: phoneErr,
+      aadhar: aadharErr,
+      agreeToTerms: termsErr,
+      aadharFront: aadharFrontErr,
+      aadharBack: aadharBackErr
+    };
+
+    setErrors(newErrors);
+    setTouched({
+      name: true,
+      email: true,
+      phoneNumber: true,
+      aadhar: true,
+      agreeToTerms: true,
+      aadharFront: true,
+      aadharBack: true
     });
 
-    if (!validationResult.success) {
+    const hasError = Object.values(newErrors).some(err => !!err);
+    if (hasError) {
       toast.dismiss();
-      toast.error(validationResult.error.issues[0].message);
-      return;
-    }
-
-    // Manual Document Check
-    if (!formData.aadharDocument && !documentPreview.aadhar) {
-      toast.error('Please upload Aadhar Front document');
-      return;
-    }
-    if (!formData.aadharBackDocument && !documentPreview.aadharBack) {
-      toast.error('Please upload Aadhar Back document');
+      const firstErrMsg = Object.values(newErrors).find(err => !!err);
+      toast.error(firstErrMsg || 'Please fix the highlighted errors before proceeding.');
       return;
     }
     e.preventDefault();
@@ -326,14 +424,20 @@ const WorkerSignup = () => {
                     ref={nameInputRef}
                     type="text"
                     name="name"
-                    required
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 hover:border-gray-400"
-                    style={{ '--tw-ring-color': brandColor }}
+                    onBlur={() => handleBlur('name')}
+                    className={`block w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 ${errors.name ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 hover:border-gray-400'}`}
+                    style={{ '--tw-ring-color': errors.name ? '#EF4444' : brandColor }}
                     placeholder="Enter your name"
                   />
                 </div>
+                {errors.name && (
+                  <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.name}
+                  </p>
+                )}
               </div>
 
               <div className="animate-stagger-2 animate-fade-in">
@@ -345,14 +449,20 @@ const WorkerSignup = () => {
                   <input
                     type="email"
                     name="email"
-                    required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 hover:border-gray-400"
-                    style={{ '--tw-ring-color': brandColor }}
+                    onBlur={() => handleBlur('email')}
+                    className={`block w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 ${errors.email ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 hover:border-gray-400'}`}
+                    style={{ '--tw-ring-color': errors.email ? '#EF4444' : brandColor }}
                     placeholder="name@example.com"
                   />
                 </div>
+                {errors.email && (
+                  <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               {!verificationToken && (
@@ -364,14 +474,27 @@ const WorkerSignup = () => {
                     </div>
                     <input
                       type="tel"
-                      required
                       value={formData.phoneNumber}
-                      onChange={(e) => setFormData(p => ({ ...p, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                      className="block w-full pl-14 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 hover:border-gray-400"
-                      style={{ '--tw-ring-color': brandColor }}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        const updated = { ...formData, phoneNumber: val };
+                        setFormData(updated);
+                        if (touched.phoneNumber) {
+                          setErrors(prev => ({ ...prev, phoneNumber: validateField('phoneNumber', val, updated) }));
+                        }
+                      }}
+                      onBlur={() => handleBlur('phoneNumber')}
+                      className={`block w-full pl-14 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 ${errors.phoneNumber ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 hover:border-gray-400'}`}
+                      style={{ '--tw-ring-color': errors.phoneNumber ? '#EF4444' : brandColor }}
                       placeholder="9876543210"
                     />
                   </div>
+                  {errors.phoneNumber && (
+                    <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                      <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {errors.phoneNumber}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -383,14 +506,27 @@ const WorkerSignup = () => {
                   </div>
                   <input
                     type="text"
-                    required
                     value={formData.aadhar}
-                    onChange={(e) => setFormData(p => ({ ...p, aadhar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
-                    className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 hover:border-gray-400"
-                    style={{ '--tw-ring-color': brandColor }}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                      const updated = { ...formData, aadhar: val };
+                      setFormData(updated);
+                      if (touched.aadhar) {
+                        setErrors(prev => ({ ...prev, aadhar: validateField('aadhar', val, updated) }));
+                      }
+                    }}
+                    onBlur={() => handleBlur('aadhar')}
+                    className={`block w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-offset-2 outline-none transition-all duration-300 ${errors.aadhar ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 hover:border-gray-400'}`}
+                    style={{ '--tw-ring-color': errors.aadhar ? '#EF4444' : brandColor }}
                     placeholder="12-digit Aadhar"
                   />
                 </div>
+                {errors.aadhar && (
+                  <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.aadhar}
+                  </p>
+                )}
               </div>
 
               {/* Aadhar Upload */}
@@ -407,7 +543,7 @@ const WorkerSignup = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-300 hover:border-[#347989] group bg-white">
+                  <div className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl hover:bg-gray-50 transition-all duration-300 group bg-white ${errors.aadharFront ? 'border-red-400 bg-red-50/20' : 'border-gray-200 hover:border-[#347989]'}`}>
                     <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
                       <div className="p-3 bg-blue-50 text-blue-600 rounded-full mb-2 hover:bg-blue-100 transition-colors">
                         <FiUpload className="w-6 h-6" />
@@ -416,6 +552,12 @@ const WorkerSignup = () => {
                       <input type="file" className="hidden" accept="image/*,application/pdf" onChange={(e) => handleDocumentUpload(e, 'aadhar')} />
                     </label>
                   </div>
+                )}
+                {errors.aadharFront && (
+                  <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.aadharFront}
+                  </p>
                 )}
               </div>
 
@@ -432,7 +574,7 @@ const WorkerSignup = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl hover:bg-gray-50 transition-all duration-300 hover:border-[#347989] group bg-white">
+                  <div className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl hover:bg-gray-50 transition-all duration-300 group bg-white ${errors.aadharBack ? 'border-red-400 bg-red-50/20' : 'border-gray-200 hover:border-[#347989]'}`}>
                     <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
                       <div className="p-3 bg-blue-50 text-blue-600 rounded-full mb-2 hover:bg-blue-100 transition-colors">
                         <FiUpload className="w-6 h-6" />
@@ -442,33 +584,50 @@ const WorkerSignup = () => {
                     </label>
                   </div>
                 )}
+                {errors.aadharBack && (
+                  <p className="mt-1 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.aadharBack}
+                  </p>
+                )}
               </div>
 
               {/* Terms and conditions */}
-              <div className="flex items-start mt-6 mb-6">
-                <div className="flex items-center h-5">
-                  <input
-                    id="agreeToTerms"
-                    name="agreeToTerms"
-                    type="checkbox"
-                    checked={agreeToTerms}
-                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                    className="h-4 w-4 rounded cursor-pointer"
-                    style={{ accentColor: brandColor }}
-                  />
+              <div className="flex flex-col mt-6 mb-6">
+                <div className="flex items-start">
+                  <div className="flex items-center h-5">
+                    <input
+                      id="agreeToTerms"
+                      name="agreeToTerms"
+                      type="checkbox"
+                      checked={agreeToTerms}
+                      onChange={(e) => {
+                        setAgreeToTerms(e.target.checked);
+                        if (e.target.checked) setErrors(prev => ({ ...prev, agreeToTerms: '' }));
+                      }}
+                      className="h-4 w-4 rounded cursor-pointer"
+                      style={{ accentColor: brandColor }}
+                    />
+                  </div>
+                  <div className="ml-3 text-xs">
+                    <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
+                      I agree to the{' '}
+                      <Link to="/worker/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                        Terms & Conditions
+                      </Link>{' '}
+                      and{' '}
+                      <Link to="/worker/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
+                        Privacy Policy
+                      </Link>
+                    </label>
+                  </div>
                 </div>
-                <div className="ml-3 text-xs">
-                  <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
-                    I agree to the{' '}
-                    <Link to="/worker/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
-                      Terms & Conditions
-                    </Link>{' '}
-                    and{' '}
-                    <Link to="/worker/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
-                      Privacy Policy
-                    </Link>
-                  </label>
-                </div>
+                {errors.agreeToTerms && (
+                  <p className="mt-1.5 text-xs text-red-500 font-medium flex items-center gap-1">
+                    <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {errors.agreeToTerms}
+                  </p>
+                )}
               </div>
 
               <div className="animate-stagger-[6] animate-fade-in">

@@ -127,7 +127,7 @@ const settingsSchema = new mongoose.Schema({
   // Billing & Invoice Configuration
   companyName: {
     type: String,
-    default: 'TodayMyDream'
+    default: 'Nexora Go'
   },
   companyGSTIN: {
     type: String,
@@ -331,9 +331,29 @@ const settingsSchema = new mongoose.Schema({
       ],
       default: [
         {
-          title: "1. Agency Responsibilities",
-          content: "Agencies are responsible for the vetting, management, and performance of the workers operating under their vendor account.",
+          title: "1. Vendor Registration & Service Catalog",
+          content: "Vendors must provide valid business documentation, GST/PAN details, and maintain an accurate catalog of services, pricing, and available inventory.",
+          iconType: "user"
+        },
+        {
+          title: "2. Worker Management & Job Allocation",
+          content: "Vendors are responsible for allocating verified workers to customer bookings in a timely manner. Service quality and customer satisfaction are the primary responsibility of the vendor partner.",
           iconType: "shield"
+        },
+        {
+          title: "3. Settlements, Billings & Commission",
+          content: "Platform billing fees and commissions are automatically calculated per order. Settlement payouts are disbursed to your registered business wallet based on settlement schedules.",
+          iconType: "payment"
+        },
+        {
+          title: "4. Order Fulfillment & Dispute Resolution",
+          content: "Vendors must ensure services and product deliveries adhere to specified timelines. Disputes regarding work quality or billing will be mediated by Nexora Admin team.",
+          iconType: "alert"
+        },
+        {
+          title: "5. Account Compliance & Renewal",
+          content: "Non-compliance with service SLAs, fraudulent pricing, or customer complaints may lead to account suspension or level downgrade. Terms are updated periodically.",
+          iconType: "file"
         }
       ]
     }
@@ -352,9 +372,29 @@ const settingsSchema = new mongoose.Schema({
       ],
       default: [
         {
-          title: "1. Business Data Processing",
-          content: "We process business registration details and payout information to facilitate secure transactions and compliance.",
-          iconType: "payment"
+          title: "1. Business Data Collection",
+          content: "We collect business name, tax identification details (GST/PAN), contact information, and banking details required for vendor account operations and settlements.",
+          iconType: "eye"
+        },
+        {
+          title: "2. Customer & Job Data Usage",
+          content: "Customer contact details and job locations provided during booking assignments must be used strictly for order fulfillment and service delivery purposes.",
+          iconType: "map"
+        },
+        {
+          title: "3. Secure Financial Records",
+          content: "All transaction logs, settlement histories, and billing records are stored securely using industry-standard encryption standards.",
+          iconType: "lock"
+        },
+        {
+          title: "4. Information Sharing & Third Parties",
+          content: "We do not sell or lease vendor business intelligence to third parties. Data is shared with payment gateways and verification providers strictly for operational fulfillment.",
+          iconType: "share"
+        },
+        {
+          title: "5. System Notifications",
+          content: "Vendors receive alerts for new booking requests, worker status updates, settlement receipts, and administrative policy updates.",
+          iconType: "bell"
         }
       ]
     }

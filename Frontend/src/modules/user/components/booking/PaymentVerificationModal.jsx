@@ -33,6 +33,18 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
     }
   }, [isOpen]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   // Auto-close modal after 2.5 seconds if payment is complete
   useEffect(() => {
     if (isOpen && isPaymentComplete) {

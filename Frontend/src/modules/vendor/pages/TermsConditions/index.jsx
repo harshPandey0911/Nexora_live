@@ -44,11 +44,12 @@ const TermsConditions = () => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.vendorTermsAndConditions && Array.isArray(res.settings.vendorTermsAndConditions.sections) && res.settings.vendorTermsAndConditions.sections.length > 0) {
-          setData(res.settings.vendorTermsAndConditions);
+        const vTerms = res.settings?.vendorTermsAndConditions;
+        if (res.success && vTerms && Array.isArray(vTerms.sections) && vTerms.sections.length >= 3 && vTerms.title?.toLowerCase().includes('vendor')) {
+          setData(vTerms);
         }
       } catch (error) {
-        console.error('Failed to fetch terms settings:', error);
+        console.error('Failed to fetch vendor terms settings:', error);
       }
     };
     fetchTerms();

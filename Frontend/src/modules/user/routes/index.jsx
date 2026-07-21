@@ -198,13 +198,13 @@ const UserRoutes = () => {
 
               </Routes>
             </PageTransition>
+            {(['/user', '/user/', '/user/about', '/user/contact', '/user/services', '/user/products', '/user/service', '/user/product'].some(path => location.pathname.startsWith(path))) && <Footer hasBottomNav={shouldShowBottomNav} />}
           </Suspense>
         </div>
 
         {/* These components are OUTSIDE Suspense so they persist during page loads */}
         {!isBookingDetailsPage && !isBookingConfirmationPage && !isPublicPage && <LiveBookingCard hasBottomNav={shouldShowBottomNav} />}
         {shouldShowBottomNav && <BottomNav />}
-        {(['/user', '/user/', '/user/about', '/user/contact', '/user/services', '/user/products', '/user/service', '/user/product'].some(path => location.pathname.startsWith(path))) && <Footer hasBottomNav={shouldShowBottomNav} />}
       </ErrorBoundary>
     </ThemeManager>
   );

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiMail, FiPhone, FiMapPin, FiClock } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
+import api from '../../../../services/api';
 
 const ContactUs = ({ data }) => {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
       toast.error('Please enter your name');
@@ -26,8 +28,28 @@ const ContactUs = ({ data }) => {
       return;
     }
 
-    toast.success('Your message has been sent successfully!');
-    setForm({ name: '', email: '', message: '' });
+    try {
+      setSubmitting(true);
+      const res = await api.post('/public/support/ticket', {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        subject: `Website Contact Form Message from ${form.name.trim()}`,
+        message: form.message.trim(),
+        category: 'general'
+      });
+
+      if (res.data?.success) {
+        toast.success('Your message has been sent to Admin! Ticket #' + (res.data.ticket?.ticketNumber || 'created'));
+        setForm({ name: '', email: '', message: '' });
+      } else {
+        toast.error(res.data?.message || 'Failed to send message');
+      }
+    } catch (err) {
+      console.error('Contact form submission error:', err);
+      toast.error(err.response?.data?.message || 'Failed to send message');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const defaultData = {

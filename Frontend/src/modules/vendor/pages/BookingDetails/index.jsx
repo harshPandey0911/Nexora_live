@@ -106,12 +106,14 @@ export default function BookingDetails() {
         price: (apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0)).toFixed(2),
 
         timeSlot: {
-          date: apiData.scheduledDate ? new Date(apiData.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Today',
-          time: apiData.scheduledTime 
-            ? apiData.scheduledTime 
-            : (apiData.timeSlot?.start 
-                ? `${apiData.timeSlot.start} - ${apiData.timeSlot.end}` 
-                : 'Flexible')
+          date: apiData.timeSlot?.date || (apiData.scheduledDate && !isNaN(new Date(apiData.scheduledDate).getTime())
+            ? new Date(apiData.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : (apiData.createdAt && !isNaN(new Date(apiData.createdAt).getTime())
+                ? new Date(apiData.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                : 'Today')),
+          time: apiData.timeSlot?.time || (apiData.timeSlot?.start && apiData.timeSlot?.end 
+            ? `${apiData.timeSlot.start} - ${apiData.timeSlot.end}` 
+            : (apiData.scheduledTime && apiData.scheduledTime !== 'N/A' ? apiData.scheduledTime : 'ASAP / Flexible'))
         },
         status: apiData.status,
         assignedTo: apiData.workerId ? { name: apiData.workerId.name || 'Worker' } : (apiData.assignedAt || !apiData.workerId ? { name: 'You (Self)' } : null),
@@ -217,11 +219,6 @@ export default function BookingDetails() {
         }
       }
     });
-  };
-
-  const handleVerifySuccess = () => {
-    loadBooking();
-    window.dispatchEvent(new Event('vendorJobsUpdated'));
   };
   const handleCancelJob = () => {
     setConfirmDialog({
@@ -491,7 +488,7 @@ export default function BookingDetails() {
 
   const handleStartJourney = async () => {
     // If self-job, call the start API first
-    if (booking.assignedTo?.name === 'You (Self)') {
+    if (booking.assignedTo?.name === 'You (Self)' || booking.isSelfAssigned) {
       try {
         setLoading(true);
         await startSelfJob(id);
@@ -510,6 +507,32 @@ export default function BookingDetails() {
     }
 
     navigate(`/vendor/booking/${booking.id || id}/map`);
+  };
+
+  const handleVendorReached = async () => {
+    try {
+      setLoading(true);
+      const res = await vendorReached(id);
+      if (res.success || res.status) {
+        toast.success('Reached location! Visit OTP sent to customer.');
+        setIsVisitModalOpen(true);
+        loadBooking();
+      } else {
+        toast.error(res.message || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating reached status:', error);
+      toast.error('Failed to update status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifySuccess = () => {
+    setIsVisitModalOpen(false);
+    toast.success('Visit Verified! You can now start work.');
+    window.dispatchEvent(new Event('vendorJobsUpdated'));
+    loadBooking();
   };
 
   const handleCompleteWork = async (photos) => {
@@ -1119,6 +1142,52 @@ export default function BookingDetails() {
                         <FiUser className="w-4 h-4 md:w-5 md:h-5" />
                         Do It Myself
                       </motion.button>
+                    </div>
+                  ) : (booking.assignedTo?.name === 'You (Self)' || booking.isSelfAssigned) ? (
+                    <div className="flex flex-col gap-3 w-full max-w-sm">
+                      {['confirmed', 'accepted'].includes(booking.status?.toLowerCase()) && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleStartJourney}
+                          className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <FiNavigation className="w-4 h-4 md:w-5 md:h-5" />
+                          Start Journey (On The Way)
+                        </motion.button>
+                      )}
+
+                      {['on_the_way', 'in_transit'].includes(booking.status?.toLowerCase()) && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleVendorReached}
+                          className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-amber-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-amber-500/20 hover:bg-amber-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <FiMapPin className="w-4 h-4 md:w-5 md:h-5" />
+                          Reached Location
+                        </motion.button>
+                      )}
+
+                      {['reached_location', 'reached'].includes(booking.status?.toLowerCase()) && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setIsVisitModalOpen(true)}
+                          className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-emerald-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <FiCheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                          Verify Visit OTP & Start Work
+                        </motion.button>
+                      )}
+
+                      {['start_work', 'in_progress'].includes(booking.status?.toLowerCase()) && (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => navigate(`/vendor/billing/${booking.id}`)}
+                          className="w-full py-3.5 md:py-5 rounded-xl md:rounded-2xl bg-blue-600 text-white font-medium text-[9px] md:text-[10px] capitalize tracking-widest shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                        >
+                          <FiDollarSign className="w-4 h-4 md:w-5 md:h-5" />
+                          Generate Bill / Complete Work
+                        </motion.button>
+                      )}
                     </div>
                   ) : (
                     <motion.button

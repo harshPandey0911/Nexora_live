@@ -7,6 +7,8 @@ import {
 import { toast } from 'react-hot-toast';
 import { adminBookingService } from '../../../../services/adminBookingService';
 import adminVendorService from '../../../../services/adminVendorService';
+import useScrollLock from '../../../../hooks/useScrollLock';
+import AdminVendorProfileModal from '../../components/common/AdminVendorProfileModal';
 
 // ─────────────────────────────────────────────
 // Status config for full lifecycle display
@@ -128,6 +130,74 @@ const getStatusConfig = (booking) => {
 // Priority order for sorting (urgent first)
 const PRIORITY_ORDER = { urgent: 0, waiting: 1, active: 2, ok: 3, done: 4, unknown: 5 };
 
+const DeclineHistoryDropdown = ({ activityLog, title = "Previously Declined By", onSelectVendor }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const declines = activityLog?.filter(a => a.action === 'Vendor Rejected') || [];
+
+  if (declines.length === 0) return null;
+
+  const latest = declines[declines.length - 1];
+
+  const renderVendorName = (act) => {
+    const vId = act.actorId?._id || act.actorId || act.details?.vendorId;
+    const vName = act.details?.vendorName || act.actorId?.businessName || act.actorId?.name || 'Vendor';
+    if (vId && onSelectVendor) {
+      return (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onSelectVendor(vId); }}
+          className="font-bold underline text-rose-900 hover:text-blue-700 cursor-pointer"
+        >
+          {vName} ↗
+        </button>
+      );
+    }
+    return <span className="font-bold text-rose-900">{vName}</span>;
+  };
+
+  return (
+    <div className="bg-rose-50/70 border border-rose-100 rounded-xl overflow-hidden text-xs transition-all mt-2">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        className="w-full p-2.5 flex items-center justify-between font-bold text-rose-700 hover:bg-rose-100/50 transition-colors text-[10px] uppercase tracking-wider cursor-pointer"
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+          {title} ({declines.length})
+        </span>
+        <span className="flex items-center gap-1 text-[9px] text-rose-500 font-semibold bg-rose-100/80 px-2 py-0.5 rounded-full">
+          {isOpen ? 'Hide ▲' : 'View All ▼'}
+        </span>
+      </button>
+
+      {!isOpen ? (
+        <div className="px-2.5 pb-2 text-[11px] text-rose-900 flex items-center justify-between gap-2 border-t border-rose-100/40 pt-1.5">
+          <span className="truncate">
+            • {renderVendorName(latest)}: <span className="italic text-rose-700/80">"{latest.note}"</span>
+          </span>
+          <span className="text-[9px] text-rose-400 shrink-0 font-semibold">
+            {new Date(latest.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
+      ) : (
+        <div className="px-2.5 pb-2.5 space-y-1.5 border-t border-rose-100/40 pt-1.5 max-h-36 overflow-y-auto">
+          {declines.map((act, i) => (
+            <div key={i} className="text-[11px] text-rose-900 flex items-center justify-between gap-2 border-b border-rose-100/30 last:border-0 pb-1 last:pb-0">
+              <span className="truncate">
+                • {renderVendorName(act)}: <span className="italic text-rose-700/80">"{act.note}"</span>
+              </span>
+              <span className="text-[9px] text-rose-400 shrink-0 font-semibold">
+                {new Date(act.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ManualAssignment = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -141,6 +211,10 @@ const ManualAssignment = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [viewingVendorId, setViewingVendorId] = useState(null);
+
+  // Lock background scroll when assign or vendor profile modal is active
+  useScrollLock(showAssignModal || !!viewingVendorId);
 
   const fetchEscalatedBookings = useCallback(async (silent = false) => {
     try {
@@ -371,6 +445,12 @@ const ManualAssignment = () => {
                         {booking.items?.[0]?.categoryId?.title || booking.serviceCategory || 'General'}
                       </p>
 
+                      {/* Declined Vendor Info Dropdown */}
+                      <DeclineHistoryDropdown
+                        activityLog={booking.activityLog}
+                        onSelectVendor={(vId) => setViewingVendorId(vId)}
+                      />
+
                       {/* Vendor Tag */}
                       {booking.vendorId && (
                         <div className={`text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1.5 mt-2 border
@@ -379,7 +459,13 @@ const ManualAssignment = () => {
                             : 'text-blue-600 bg-blue-50/50 border-blue-100/50'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${config.priority === 'ok' || config.priority === 'done' ? 'bg-emerald-500' : 'bg-blue-500 animate-ping'}`} />
                           {booking.adminAssignmentStatus === 'ACCEPTED' ? '✓ Accepted by: ' : 'Assigned to: '}
-                          {booking.vendorId?.businessName || booking.vendorId?.name || 'Vendor'}
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setViewingVendorId(booking.vendorId?._id || booking.vendorId); }}
+                            className="underline hover:text-blue-800 cursor-pointer"
+                          >
+                            {booking.vendorId?.businessName || booking.vendorId?.name || 'Vendor'} ↗
+                          </button>
                         </div>
                       )}
 
@@ -413,6 +499,14 @@ const ManualAssignment = () => {
                           Deployment: <strong className="text-gray-800">{booking.timeSlot?.time || 'ASAP'}</strong>
                         </span>
                       </div>
+                      {booking.createdAt && (
+                        <div className="text-[10px] text-gray-400 pt-1 border-t border-gray-100/80 mt-1 font-medium flex items-center justify-between">
+                          <span>Requested At:</span>
+                          <span className="font-semibold text-gray-700">
+                            {new Date(booking.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -509,6 +603,16 @@ const ManualAssignment = () => {
                 <FiXCircle className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Declined history inside assign modal */}
+            {selectedBooking?.activityLog?.some(a => a.action === 'Vendor Rejected') && (
+              <div className="px-4 py-2 bg-rose-50/50 border-b border-rose-100">
+                <DeclineHistoryDropdown
+                  activityLog={selectedBooking.activityLog}
+                  onSelectVendor={(vId) => setViewingVendorId(vId)}
+                />
+              </div>
+            )}
             <div className="p-4 overflow-y-auto flex-1 space-y-2">
               {vendorsLoading ? (
                 <div className="py-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
@@ -516,33 +620,77 @@ const ManualAssignment = () => {
                 </div>
               ) : vendors.length === 0 ? (
                 <div className="py-8 text-center text-xs text-gray-500">No approved vendors found</div>
-              ) : (
-                vendors.map(vendor => (
-                  <div
-                    key={vendor._id}
-                    className="p-3 border border-gray-100 rounded-xl flex items-center justify-between hover:bg-gray-50 transition-colors group"
-                  >
-                    <div>
-                      <h4 className="font-bold text-gray-900 text-xs">{vendor.businessName || vendor.name}</h4>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{vendor.email} • {vendor.phone}</p>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span className="text-[10px] text-gray-400">{vendor.isOnline ? 'Online' : 'Offline'} • {vendor.availability || 'N/A'}</span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleAssignVendor(vendor._id)}
-                      className="px-3 py-1.5 bg-blue-600 group-hover:bg-blue-700 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1"
+              ) : (() => {
+                const declinedVendorIds = new Set(
+                  (selectedBooking?.activityLog || [])
+                    .filter(a => a.action === 'Vendor Rejected')
+                    .map(a => String(a.actorId?._id || a.actorId))
+                );
+
+                const sortedVendors = [...vendors].sort((a, b) => {
+                  const aDeclined = declinedVendorIds.has(String(a._id));
+                  const bDeclined = declinedVendorIds.has(String(b._id));
+                  if (aDeclined && !bDeclined) return 1;
+                  if (!aDeclined && bDeclined) return -1;
+                  return 0;
+                });
+
+                return sortedVendors.map(vendor => {
+                  const hasDeclined = declinedVendorIds.has(String(vendor._id));
+
+                  return (
+                    <div
+                      key={vendor._id}
+                      className={`p-3 border rounded-xl flex items-center justify-between transition-colors group ${
+                        hasDeclined ? 'bg-rose-50/40 border-rose-200' : 'border-gray-100 hover:bg-gray-50'
+                      }`}
                     >
-                      <FiUserCheck className="w-3 h-3" /> Assign
-                    </button>
-                  </div>
-                ))
-              )}
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setViewingVendorId(vendor._id)}
+                            className="font-bold text-gray-900 text-xs hover:text-blue-600 hover:underline text-left cursor-pointer"
+                          >
+                            {vendor.businessName || vendor.name} ↗
+                          </button>
+                          {hasDeclined && (
+                            <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-rose-100 text-rose-700 border border-rose-200">
+                              Declined
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{vendor.email} • {vendor.phone}</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          <span className="text-[10px] text-gray-400">{vendor.isOnline ? 'Online' : 'Offline'} • {vendor.availability || 'N/A'}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAssignVendor(vendor._id)}
+                        className={`px-3 py-1.5 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
+                          hasDeclined 
+                            ? 'bg-rose-600 hover:bg-rose-700' 
+                            : 'bg-blue-600 group-hover:bg-blue-700'
+                        }`}
+                      >
+                        <FiUserCheck className="w-3 h-3" /> {hasDeclined ? 'Re-Assign' : 'Assign'}
+                      </button>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* Vendor Profile Modal */}
+      <AdminVendorProfileModal
+        vendorId={viewingVendorId}
+        isOpen={!!viewingVendorId}
+        onClose={() => setViewingVendorId(null)}
+      />
     </div>
   );
 };

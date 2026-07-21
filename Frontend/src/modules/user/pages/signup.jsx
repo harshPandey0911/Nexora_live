@@ -12,24 +12,45 @@ import { z } from "zod";
 // Zod schema
 const signupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").regex(/^[a-zA-Z\s]+$/, "Name can only contain letters"),
-  email: z.string().optional().refine(val => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), "Invalid email address"),
   phoneNumber: z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit Indian phone number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().min(1, "Email address is required").email("Please enter a valid email address"),
 });
 
 const Signup = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    password: ''
+
+  const [formData, setFormData] = useState(() => {
+    const saved = sessionStorage.getItem('user_signup_form_data');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      password: ''
+    };
   });
+
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(() => {
+    return sessionStorage.getItem('user_signup_agree_terms') === 'true';
+  });
   const [errors, setErrors] = useState({});
+
+  // Sync form data to sessionStorage so navigating to Terms/Privacy retains inputs
+  useEffect(() => {
+    sessionStorage.setItem('user_signup_form_data', JSON.stringify(formData));
+  }, [formData]);
+
+  useEffect(() => {
+    sessionStorage.setItem('user_signup_agree_terms', String(agreeToTerms));
+  }, [agreeToTerms]);
 
   // Refs for auto-focus
   const nameInputRef = useRef(null);
@@ -94,12 +115,15 @@ const Signup = () => {
     try {
       const response = await userAuthService.register({
         name: formData.name,
-        email: formData.email || null,
+        email: formData.email,
         phone: formData.phoneNumber,
         password: formData.password
       });
 
       if (response.success) {
+        sessionStorage.removeItem('user_signup_form_data');
+        sessionStorage.removeItem('user_signup_agree_terms');
+
         try {
           const { registerFCMToken } = await import('../../../services/pushNotificationService');
           await registerFCMToken('user', true);
@@ -109,7 +133,7 @@ const Signup = () => {
 
         toast.success(
           <div className="flex flex-col">
-            <span className="font-bold">Welcome to Homestr!</span>
+            <span className="font-bold">Welcome to Nexora Go!</span>
             <span className="text-xs">Your account has been created successfully.</span>
           </div>,
           { icon: <FiCheckCircle className="text-green-500" /> }
@@ -139,7 +163,7 @@ const Signup = () => {
           Create Account
         </h2>
         <p className="mt-2 text-sm text-gray-600">
-          Join Homestr to start booking services
+          Join Nexora Go to start booking services
         </p>
       </div>
 
@@ -240,7 +264,7 @@ const Signup = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email <span className="text-gray-400 text-xs font-normal ml-1">(Optional)</span>
+                Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
@@ -250,6 +274,7 @@ const Signup = () => {
                   id="email"
                   name="email"
                   type="email"
+                  required
                   value={formData.email}
                   onChange={handleInputChange}
                   className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
@@ -257,6 +282,9 @@ const Signup = () => {
                   style={{ '--tw-ring-color': brandColor }}
                 />
               </div>
+              {errors.email && (
+                <p className="text-red-500 text-xs mt-1 ml-1">{errors.email}</p>
+              )}
             </div>
 
             <div className="flex items-start">

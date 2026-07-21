@@ -44,11 +44,12 @@ const PrivacyPolicy = () => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.workerPrivacyPolicy && Array.isArray(res.settings.workerPrivacyPolicy.sections) && res.settings.workerPrivacyPolicy.sections.length > 0) {
-          setData(res.settings.workerPrivacyPolicy);
+        const wPrivacy = res.settings?.workerPrivacyPolicy;
+        if (res.success && wPrivacy && Array.isArray(wPrivacy.sections) && wPrivacy.sections.length >= 3 && wPrivacy.title?.toLowerCase().includes('worker')) {
+          setData(wPrivacy);
         }
       } catch (error) {
-        console.error('Failed to fetch privacy settings:', error);
+        console.error('Failed to fetch worker privacy settings:', error);
       }
     };
     fetchTerms();

@@ -392,7 +392,7 @@ const bookingSchema = new mongoose.Schema({
       enum: ['Vendor Accepted', 'Vendor Rejected', 'Vendor Chose Worker Assignment', 'Booking Created', 'Worker Assigned', 'Status Updated'],
       required: true
     },
-    actorId: { type: mongoose.Schema.Types.ObjectId, default: null },
+    actorId: { type: mongoose.Schema.Types.ObjectId, refPath: 'activityLog.actorModel', default: null },
     actorModel: { type: String, enum: ['User', 'Vendor', 'Worker', 'Admin'], default: null },
     timestamp: { type: Date, default: Date.now },
     note: { type: String, default: '' },

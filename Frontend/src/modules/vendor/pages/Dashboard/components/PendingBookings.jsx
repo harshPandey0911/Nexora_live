@@ -1,13 +1,15 @@
-import React, { memo } from 'react';
+import React, { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { vendorTheme as themeColors } from '../../../../../theme';
 import { toast } from 'react-hot-toast';
 import { acceptBooking, rejectBooking } from '../../../services/bookingService';
 import PendingJobCard from '../../../components/bookings/PendingJobCard';
+import { RejectionReasonModal } from '../../../components/common';
 
 const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBooking, maxSearchTimeMins = 5 }) => {
   const navigate = useNavigate();
-  const [loadingAction, setLoadingAction] = React.useState({ id: null, type: null });
+  const [loadingAction, setLoadingAction] = useState({ id: null, type: null });
+  const [declineTargetBooking, setDeclineTargetBooking] = useState(null);
 
   if (bookings.length === 0) {
     return null;
@@ -40,13 +42,19 @@ const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBook
     }
   };
 
-  const handleRejectBooking = async (e, booking) => {
+  const handleOpenRejectModal = (e, booking) => {
     e.stopPropagation();
-    const bId = booking.id || booking._id;
-    if (loadingAction.id) return;
+    setDeclineTargetBooking(booking);
+  };
+
+  const handleConfirmReject = async (reason) => {
+    if (!declineTargetBooking) return;
+    const bId = declineTargetBooking.id || declineTargetBooking._id;
+    setDeclineTargetBooking(null);
+
     setLoadingAction({ id: bId, type: 'reject' });
     try {
-      const response = await rejectBooking(bId, 'Vendor Dashboard Reject');
+      const response = await rejectBooking(bId, reason);
 
       if (response.success) {
         setPendingBookings(prev => prev.filter(b => String(b.id || b._id) !== String(bId)));
@@ -83,7 +91,7 @@ const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBook
             key={booking.id || booking._id}
             booking={booking}
             onAccept={handleAcceptBooking}
-            onReject={handleRejectBooking}
+            onReject={handleOpenRejectModal}
             onClick={() => setActiveAlertBooking(booking)}
             loadingAction={loadingAction.id === (booking.id || booking._id) ? loadingAction.type : null}
             showTimer={true}
@@ -91,6 +99,12 @@ const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBook
           />
         ))}
       </div>
+
+      <RejectionReasonModal
+        isOpen={!!declineTargetBooking}
+        onClose={() => setDeclineTargetBooking(null)}
+        onConfirm={handleConfirmReject}
+      />
     </div>
   );
 });

@@ -141,12 +141,11 @@ const Footer = ({ hasBottomNav }) => {
         {/* Bottom Row */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-gray-400 text-sm">
-            © {currentYear} {settings?.companyName || 'Nexora Go'}. All rights reserved.
+            © {currentYear} {(settings?.companyName && settings.companyName !== 'TodayMyDream') ? settings.companyName : 'Nexora Go'}. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link to="/user/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Privacy</Link>
             <Link to="/user/terms" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Terms</Link>
-            <Link to="/user/privacy" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Cookies</Link>
           </div>
         </div>
       </div>

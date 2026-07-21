@@ -44,11 +44,12 @@ const PrivacyPolicy = () => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.vendorPrivacyPolicy && Array.isArray(res.settings.vendorPrivacyPolicy.sections) && res.settings.vendorPrivacyPolicy.sections.length > 0) {
-          setData(res.settings.vendorPrivacyPolicy);
+        const vPrivacy = res.settings?.vendorPrivacyPolicy;
+        if (res.success && vPrivacy && Array.isArray(vPrivacy.sections) && vPrivacy.sections.length >= 3 && vPrivacy.title?.toLowerCase().includes('vendor')) {
+          setData(vPrivacy);
         }
       } catch (error) {
-        console.error('Failed to fetch privacy settings:', error);
+        console.error('Failed to fetch vendor privacy settings:', error);
       }
     };
     fetchTerms();

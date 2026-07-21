@@ -92,6 +92,18 @@ const BookingDetails = () => {
     fetchSettings();
   }, []);
 
+  // Lock background scrolling when payment, rating, or confirmation modal is open
+  useEffect(() => {
+    if (showPaymentModal || showRatingModal || confirmDialog.isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showPaymentModal, showRatingModal, confirmDialog.isOpen]);
+
   // Function to load booking
   const loadBooking = async () => {
     try {
@@ -1258,12 +1270,17 @@ const BookingDetails = () => {
                               {booking.paymentMethod === 'cash collected' ? <FiDollarSign className="text-emerald-500" /> : <MdQrCode className="text-blue-500" />}
                               Payment Method
                             </span>
-                            <span className={`${booking.paymentMethod === 'cash collected' ? 'text-emerald-600' : 'text-blue-600'} uppercase`}>
+                            <span className={`${['cash collected', 'cash'].includes(booking.paymentMethod?.toLowerCase()) ? 'text-emerald-600' : 'text-blue-600'} uppercase`}>
                               {booking.paymentMethod === 'cash collected' ? 'Cash Collected' :
-                                booking.paymentMethod === 'Qr online' ? 'QR Online' :
-                                  booking.paymentMethod === 'online' ? 'Online Paid' :
-                                    booking.paymentMethod === 'plan_benefit' ? 'Plan Benefit' :
-                                      booking.paymentMethod || 'Online'}
+                                booking.paymentMethod === 'cash' ? 'Cash' :
+                                  booking.paymentMethod === 'Qr online' ? 'QR Online' :
+                                    booking.paymentMethod === 'online' ? (
+                                      ['success', 'collected_by_vendor', 'paid', 'paid_online', 'completed'].includes(booking.paymentStatus?.toLowerCase()) 
+                                        ? 'Online (Paid)' 
+                                        : 'Online'
+                                    ) :
+                                      booking.paymentMethod === 'plan_benefit' ? 'Plan Benefit' :
+                                        booking.paymentMethod || 'Online'}
                             </span>
                           </div>
                         </div>

@@ -44,11 +44,12 @@ const TermsConditions = () => {
     const fetchTerms = async () => {
       try {
         const res = await configService.getSettings();
-        if (res.success && res.settings && res.settings.workerTermsAndConditions && Array.isArray(res.settings.workerTermsAndConditions.sections) && res.settings.workerTermsAndConditions.sections.length > 0) {
-          setData(res.settings.workerTermsAndConditions);
+        const wTerms = res.settings?.workerTermsAndConditions;
+        if (res.success && wTerms && Array.isArray(wTerms.sections) && wTerms.sections.length >= 3 && wTerms.title?.toLowerCase().includes('worker')) {
+          setData(wTerms);
         }
       } catch (error) {
-        console.error('Failed to fetch terms settings:', error);
+        console.error('Failed to fetch worker terms settings:', error);
       }
     };
     fetchTerms();

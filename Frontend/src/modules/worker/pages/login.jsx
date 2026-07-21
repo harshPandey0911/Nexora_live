@@ -17,10 +17,19 @@ const loginSchema = z.object({
 
 const WorkerLogin = () => {
   const navigate = useNavigate();
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(() => {
+    return sessionStorage.getItem('worker_login_phone') || '';
+  });
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Sync phoneNumber to sessionStorage so navigating to Terms/Privacy never clears it
+  useEffect(() => {
+    if (phoneNumber) {
+      sessionStorage.setItem('worker_login_phone', phoneNumber);
+    }
+  }, [phoneNumber]);
 
   const phoneInputRef = useRef(null);
 

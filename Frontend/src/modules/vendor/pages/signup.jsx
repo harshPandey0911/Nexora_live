@@ -23,21 +23,60 @@ const vendorSignupSchema = z.object({
 const VendorSignup = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    password: '',
-    aadhar: '',
-    pan: '',
-    service: '',
-    documents: []
+  const [formData, setFormData] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('vendor_signup_form');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          name: parsed.name || '',
+          email: parsed.email || '',
+          phoneNumber: parsed.phoneNumber || '',
+          password: parsed.password || '',
+          aadhar: parsed.aadhar || '',
+          pan: parsed.pan || '',
+          service: parsed.service || '',
+          documents: []
+        };
+      }
+    } catch (e) {}
+    return {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      password: '',
+      aadhar: '',
+      pan: '',
+      service: '',
+      documents: []
+    };
   });
   const [isLoading, setIsLoading] = useState(false);
   const [documentPreview, setDocumentPreview] = useState({});
   const [uploadingDocs, setUploadingDocs] = useState({});
   const [showPassword, setShowPassword] = useState(false);
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(() => {
+    return sessionStorage.getItem('vendor_signup_agreeToTerms') === 'true';
+  });
+
+  // Sync signup data to sessionStorage so navigating to Terms/Privacy never clears it
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('vendor_signup_form', JSON.stringify({
+        name: formData.name,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        password: formData.password,
+        aadhar: formData.aadhar,
+        pan: formData.pan,
+        service: formData.service
+      }));
+    } catch (e) {}
+  }, [formData]);
+
+  useEffect(() => {
+    sessionStorage.setItem('vendor_signup_agreeToTerms', String(agreeToTerms));
+  }, [agreeToTerms]);
 
   // Refs for auto-focus
   const nameInputRef = useRef(null);

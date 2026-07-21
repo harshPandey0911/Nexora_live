@@ -10,6 +10,8 @@ import AdminBottomNav from './AdminBottomNav';
 import useAdminHeaderHeight from '../../hooks/useAdminHeaderHeight';
 import adminVendorService from '../../../../services/adminVendorService';
 import { adminBookingService } from '../../../../services/adminBookingService';
+import useScrollLock from '../../../../hooks/useScrollLock';
+import AdminVendorProfileModal from '../common/AdminVendorProfileModal';
 
 const playBuzzerSound = () => {
   try {
@@ -60,6 +62,10 @@ const AdminLayout = () => {
   const [showVendorsModal, setShowVendorsModal] = useState(false);
   const [vendors, setVendors] = useState([]);
   const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [viewingVendorId, setViewingVendorId] = useState(null);
+
+  // Prevent background scroll when alerts or modals are open
+  useScrollLock(!!activeAlert || showVendorsModal || !!viewingVendorId);
 
   const alarmIntervalRef = useRef(null);
 
@@ -78,21 +84,43 @@ const AdminLayout = () => {
 
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
+    const adminToken = localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
     const socket = io(socketUrl, {
-      auth: { token: localStorage.getItem('accessToken') }
+      auth: { token: adminToken },
+      extraHeaders: { Authorization: `Bearer ${adminToken}` }
+    });
+
+    socket.on('connect', () => {
+      console.log('✅ Admin socket connected:', socket.id);
+      socket.emit('join_admin_room');
     });
 
     const handleEscalation = async (data) => {
+      console.log('🚨 [AdminLayout] Received vendor cancellation/decline socket event:', data);
       const bId = data.bookingId || data.id;
+      const vName = data.vendorName || data.vendorId?.businessName || data.vendorId?.name || 'Vendor';
+      
+      toast.error(`Vendor ${vName} ${data.status === 'CANCELLED' ? 'cancelled' : 'declined'} booking #${data.bookingNumber || ''}`, {
+        duration: 6000
+      });
+
+      // Dispatch event to reload active booking lists across admin UI
+      window.dispatchEvent(new CustomEvent('adminBookingStatusChanged', { detail: { bookingId: bId, status: data.status || 'CANCELLED' } }));
+      window.dispatchEvent(new Event('adminBookingAssigned'));
+
       if (bId) {
         try {
           const res = await adminBookingService.getBookingById(bId);
           if (res.success && res.data) {
-            setActiveAlert(res.data);
+            setActiveAlert({
+              ...res.data,
+              declinedVendorName: vName,
+              declineReason: data.reason || data.rejectReason || null
+            });
             startAlarm();
           }
         } catch (err) {
-          console.error(err);
+          console.error('[AdminLayout] Failed to fetch booking details for alert:', err);
         }
       }
     };
@@ -108,10 +136,14 @@ const AdminLayout = () => {
       });
       // Trigger a window event to reload lists if needed
       window.dispatchEvent(new CustomEvent('adminBookingStatusChanged', { detail: { bookingId: bId, status: 'ACCEPTED' } }));
+      window.dispatchEvent(new Event('adminBookingAssigned'));
     };
 
     socket.on('adminBookingEscalated', handleEscalation);
     socket.on('adminBookingDecline', handleEscalation);
+    socket.on('vendor_cancelled_booking', handleEscalation);
+    socket.on('vendor_rejected_booking', handleEscalation);
+    socket.on('booking_cancelled_by_vendor', handleEscalation);
     socket.on('adminBookingAccept', handleAcceptance);
 
     return () => {
@@ -214,6 +246,27 @@ const AdminLayout = () => {
                 <h3 className="font-black text-gray-900 text-base">#{activeAlert.bookingNumber}</h3>
               </div>
 
+              {/* Show Declined Vendor Info if available */}
+              {(activeAlert.declinedVendorName || activeAlert.declineReason || activeAlert.activityLog?.slice(-1)[0]?.action?.includes('Rejected')) && (
+                <div className="p-3 bg-rose-50 rounded-xl border border-rose-100 space-y-1">
+                  <span className="text-[9px] text-rose-500 font-bold uppercase tracking-wide">Declined By Vendor</span>
+                  <p className="text-xs text-rose-800 font-bold">
+                    <button
+                      type="button"
+                      onClick={() => setViewingVendorId(activeAlert.declinedVendorId || activeAlert.vendorId?._id || activeAlert.vendorId)}
+                      className="hover:underline text-rose-900 cursor-pointer text-left"
+                    >
+                      {activeAlert.declinedVendorName || 'Vendor'} ↗
+                    </button>
+                  </p>
+                  {(activeAlert.declineReason || activeAlert.activityLog?.slice(-1)[0]?.note) && (
+                    <p className="text-[11px] text-rose-600 font-medium italic">
+                      "{activeAlert.declineReason || activeAlert.activityLog?.slice(-1)[0]?.note}"
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
                 <span className="text-[9px] text-gray-400 font-bold uppercase">Requested Service</span>
                 <h4 className="font-bold text-gray-800 text-sm">
@@ -282,7 +335,13 @@ const AdminLayout = () => {
                     className="p-3 border border-gray-100 rounded-xl flex items-center justify-between hover:bg-gray-50 transition-colors"
                   >
                     <div>
-                      <h4 className="font-bold text-gray-900 text-xs">{vendor.businessName || vendor.name}</h4>
+                      <button
+                        type="button"
+                        onClick={() => setViewingVendorId(vendor._id)}
+                        className="font-bold text-gray-900 text-xs hover:text-blue-600 hover:underline text-left"
+                      >
+                        {vendor.businessName || vendor.name} ↗
+                      </button>
                       <p className="text-[10px] text-gray-400 mt-0.5">{vendor.phone}</p>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
@@ -291,7 +350,7 @@ const AdminLayout = () => {
                     </div>
                     <button
                       onClick={() => handleAssignVendor(vendor._id)}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded-lg transition-colors"
+                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
                     >
                       Assign
                     </button>
@@ -302,6 +361,13 @@ const AdminLayout = () => {
           </div>
         </div>
       )}
+
+      {/* Vendor Profile Modal */}
+      <AdminVendorProfileModal
+        vendorId={viewingVendorId}
+        isOpen={!!viewingVendorId}
+        onClose={() => setViewingVendorId(null)}
+      />
     </div>
   );
 };

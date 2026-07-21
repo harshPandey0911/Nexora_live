@@ -38,7 +38,7 @@ const AdminSettings = () => {
 
   // Billing Configuration State
   const [billingSettings, setBillingSettings] = useState({
-    companyName: 'TodayMyDream',
+    companyName: 'Nexora Go',
     companyGSTIN: '',
     companyPAN: '',
     companyAddress: '',
