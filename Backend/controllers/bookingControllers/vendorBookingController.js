@@ -873,7 +873,15 @@ const assignWorker = async (req, res) => {
       booking.workerId = null; // null means vendor itself
       booking.assignedAt = new Date();
 
-      if (booking.status === BOOKING_STATUS.CONFIRMED || booking.status === BOOKING_STATUS.ACCEPTED || booking.status === BOOKING_STATUS.REQUESTED || booking.status === BOOKING_STATUS.SEARCHING || !booking.status) {
+      if (
+        booking.status === BOOKING_STATUS.CONFIRMED ||
+        booking.status === BOOKING_STATUS.ACCEPTED ||
+        booking.status === BOOKING_STATUS.REQUESTED ||
+        booking.status === BOOKING_STATUS.SEARCHING ||
+        booking.status === BOOKING_STATUS.VENDOR_ACCEPTED ||
+        booking.status === BOOKING_STATUS.AWAITING_PAYMENT ||
+        !booking.status
+      ) {
         booking.status = BOOKING_STATUS.ASSIGNED;
       }
 
@@ -1067,6 +1075,8 @@ const updateBookingStatus = async (req, res) => {
           [BOOKING_STATUS.PENDING]: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.REJECTED, BOOKING_STATUS.CANCELLED],
           [BOOKING_STATUS.AWAITING_PAYMENT]: [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.REJECTED],
           [BOOKING_STATUS.CONFIRMED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED],
+          [BOOKING_STATUS.VENDOR_ACCEPTED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED],
+          [BOOKING_STATUS.ACCEPTED]: [BOOKING_STATUS.ASSIGNED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED],
           [BOOKING_STATUS.ASSIGNED]: [BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
           [BOOKING_STATUS.VISITED]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.CANCELLED],
           [BOOKING_STATUS.IN_PROGRESS]: [BOOKING_STATUS.WORK_DONE, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED],
@@ -1669,6 +1679,7 @@ const completeSelfJob = async (req, res) => {
     // Reuse existing Payment OTP for cash collection or generate new one
     const payOtp = booking.paymentOtp || Math.floor(1000 + Math.random() * 9000).toString();
     booking.paymentOtp = payOtp;
+    booking.customerConfirmationOTP = payOtp;
 
     if (workPhotos) booking.workPhotos = workPhotos;
 

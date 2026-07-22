@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiMail, FiPhone, FiMapPin, FiClock } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import api from '../../../../services/api';
+import api from '../../../../../services/api';
 
 const ContactUs = ({ data }) => {
   const [form, setForm] = useState({ name: '', email: '', message: '' });

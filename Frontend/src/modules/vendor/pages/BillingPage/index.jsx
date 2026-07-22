@@ -1269,7 +1269,7 @@ const BillingPage = () => {
 
               <div className="flex-[3] grid grid-cols-2 gap-2.5 md:gap-4">
                 <button
-                  onClick={() => handleVerifyOTP('')}
+                  onClick={handleSendOTP}
                   disabled={otpLoading || qrLoading}
                   className="py-3.5 md:py-6 bg-emerald-600 text-white font-medium text-[9px] md:text-xs capitalize tracking-[0.1em] md:tracking-[0.2em] rounded-xl md:rounded-[28px] shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-1.5 md:gap-4 active:scale-95 transition-all disabled:opacity-50"
                 >
