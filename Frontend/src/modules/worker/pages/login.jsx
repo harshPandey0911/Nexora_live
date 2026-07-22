@@ -207,9 +207,9 @@ const WorkerLogin = () => {
 
           <p className="mt-8 text-center text-sm text-gray-500 animate-fade-in animate-stagger-5">
             Want to join the fleet?{' '}
-            <Link to="/worker/signup" className="font-semibold text-[#347989] hover:text-[#D68F35] transition-colors duration-300">
-              Register as Xpert
-            </Link>
+            <span className="font-semibold text-gray-700">
+              Please contact your vendor to be registered.
+            </span>
           </p>
 
           <div className="mt-4 text-center text-xs text-gray-400 animate-fade-in">

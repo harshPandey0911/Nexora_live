@@ -22,6 +22,15 @@ const sendOTP = async (req, res) => {
 
     const { phone, email } = req.body;
 
+    // Check if worker exists first (workers can only be added by vendors)
+    const worker = await Worker.findOne({ phone });
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        message: 'This phone number is not registered. Please contact your vendor to add you as a worker.'
+      });
+    }
+
     // 1. Rate limit check
     const allowed = await checkRateLimit(phone);
     if (!allowed) {
@@ -126,14 +135,10 @@ const verifyLogin = async (req, res) => {
       });
 
     } else {
-      // NEW WORKER
-      const verificationToken = generateVerificationToken(phone);
-
-      return res.status(200).json({
-        success: true,
-        isNewUser: true,
-        message: 'OTP verified. Please complete registration.',
-        verificationToken
+      // NEW WORKER - Blocked as worker can only be added by vendor
+      return res.status(403).json({
+        success: false,
+        message: 'Your phone number is not registered. Please contact your vendor to add you as a worker.'
       });
     }
 
@@ -150,95 +155,10 @@ const verifyLogin = async (req, res) => {
  * Register worker with Verification Token
  */
 const register = async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors.array()
-      });
-    }
-
-    // verificationToken handling
-    const { name, email, verificationToken, aadharNumber, aadharDocument, aadharBackDocument } = req.body;
-    let phone = req.body.phone;
-
-    if (verificationToken) {
-      const verifiedPhone = verifyVerificationToken(verificationToken);
-      if (!verifiedPhone) return res.status(400).json({ success: false, message: 'Invalid verification session.' });
-      phone = verifiedPhone;
-    } else {
-      // Fallback OTP
-      if (!req.body.otp) return res.status(400).json({ success: false, message: 'Verification required.' });
-      const ver = await verifyOTP(phone, req.body.otp);
-      if (!ver.success) return res.status(400).json({ success: false, message: ver.message });
-    }
-
-    // Check existing
-    const existingWorker = await Worker.findOne({ $or: [{ phone }, { email }] });
-    if (existingWorker) {
-      return res.status(400).json({
-        success: false,
-        message: 'Worker already exists. Please login.'
-      });
-    }
-
-    // Upload Aadhar
-    let aadharUrl = aadharDocument || null;
-    let aadharBackUrl = aadharBackDocument || null;
-
-    if (aadharUrl && aadharUrl.startsWith('data:')) {
-      const uploadRes = await cloudinaryService.uploadFile(aadharUrl, { folder: 'workers/documents' });
-      if (uploadRes.success) aadharUrl = uploadRes.url;
-    }
-
-    if (aadharBackUrl && aadharBackUrl.startsWith('data:')) {
-      const uploadRes = await cloudinaryService.uploadFile(aadharBackUrl, { folder: 'workers/documents' });
-      if (uploadRes.success) aadharBackUrl = uploadRes.url;
-    }
-
-    // Create worker
-    const worker = await Worker.create({
-      name, email, phone,
-      isPhoneVerified: true,
-      aadhar: {
-        number: req.body.aadhar || aadharNumber,
-        document: aadharUrl,
-        backDocument: aadharBackUrl
-      },
-      status: WORKER_STATUS.OFFLINE
-    });
-
-    // Generate JWT tokens with initial session
-    const loginSessionId = Date.now().toString();
-    await Worker.findByIdAndUpdate(worker._id, { loginSessionId });
-
-    const tokens = generateTokenPair({
-      userId: worker._id,
-      role: USER_ROLES.WORKER,
-      loginSessionId
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Registration successful',
-      worker: {
-        id: worker._id,
-        name: worker.name,
-        email: worker.email,
-        phone: worker.phone,
-        status: worker.status
-      },
-      ...tokens
-    });
-  } catch (error) {
-    console.error('Worker registration error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Registration failed. Please try again.'
-    });
-  }
+  return res.status(403).json({
+    success: false,
+    message: 'Worker self-registration is disabled. Workers can only be added by a vendor.'
+  });
 };
 
 const login = async (req, res) => {

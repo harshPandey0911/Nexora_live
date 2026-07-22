@@ -55,7 +55,6 @@ const lazyLoad = (importFunc) => {
 
 // Lazy load worker pages for code splitting
 const Login = lazyLoad(() => import('../pages/login'));
-const Signup = lazyLoad(() => import('../pages/signup'));
 const Dashboard = lazyLoad(() => import('../pages/Dashboard'));
 const AssignedJobs = lazyLoad(() => import('../pages/AssignedJobs'));
 const JobDetails = lazyLoad(() => import('../pages/JobDetails'));
@@ -90,7 +89,6 @@ const WorkerRoutes = () => {
   // Check if current route should hide bottom nav
   const shouldHideBottomNav =
     location.pathname === '/worker/login' ||
-    location.pathname === '/worker/signup' ||
     location.pathname === '/worker/terms' ||
     location.pathname === '/worker/privacy' ||
     location.pathname.endsWith('/map') ||
@@ -107,7 +105,7 @@ const WorkerRoutes = () => {
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<PublicRoute userType="worker"><Login /></PublicRoute>} />
-              <Route path="/signup" element={<PublicRoute userType="worker"><Signup /></PublicRoute>} />
+              <Route path="/signup" element={<Navigate to="/worker/login" replace />} />
               <Route path="/terms" element={<TermsConditions />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />
 
