@@ -41,6 +41,9 @@ const Header = ({
   // Fetch unread count
   useEffect(() => {
     const fetchUnreadCount = async () => {
+      if (!localStorage.getItem('workerAccessToken')) {
+        return;
+      }
       try {
         const res = await api.get('/notifications/worker');
         if (res.data.success && typeof res.data.unreadCount === 'number') {
