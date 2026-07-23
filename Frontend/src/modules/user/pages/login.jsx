@@ -91,7 +91,14 @@ const Login = () => {
         toast.error(response.message || 'Login failed');
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed. Please try again.');
+      const errMsg = error.response?.data?.message || 'Login failed. Please try again.';
+      if (error.response?.status === 404 || errMsg.toLowerCase().includes('not registered') || errMsg.toLowerCase().includes('not found')) {
+        setErrors(prev => ({
+          ...prev,
+          phone: 'Phone number is not registered. Please create an account.'
+        }));
+      }
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }

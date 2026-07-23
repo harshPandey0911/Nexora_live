@@ -505,13 +505,26 @@ const CategoriesPage = () => {
                   <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4 text-sm font-semibold text-gray-600">{idx + 1}</td>
                     <td className="py-4 px-4">
-                      {c.homeIconUrl ? (
-                        <img src={toAssetUrl(c.homeIconUrl)} alt={c.title} className="h-10 w-10 object-contain rounded bg-gray-50 border border-gray-100" />
-                      ) : (
-                        <div className="h-12 w-12 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
-                          <span className="text-xs text-gray-400">No icon</span>
+                      <div className="flex items-center gap-2">
+                        {c.homeIconUrl ? (
+                          <img
+                            src={toAssetUrl(c.homeIconUrl)}
+                            alt={c.title}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                            }}
+                            className="h-10 w-10 object-contain rounded-lg bg-gray-50 border border-gray-100 p-0.5"
+                          />
+                        ) : null}
+                        <div
+                          className={`h-10 w-10 bg-teal-50 border border-teal-100 rounded-lg flex items-center justify-center text-teal-600 shadow-xs ${c.homeIconUrl ? 'hidden' : ''}`}
+                          title="Default Category Icon"
+                        >
+                          <FiGrid className="w-5 h-5 text-teal-600" />
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <div className="font-bold text-gray-900">{c.title || "Untitled"}</div>
@@ -777,17 +790,25 @@ const CategoriesPage = () => {
                   {index + 1}
                 </div>
 
-                {category.homeIconUrl ? (
-                  <img
-                    src={toAssetUrl(category.homeIconUrl)}
-                    alt={category.title}
-                    className="w-8 h-8 object-contain rounded"
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
-                    <span className="text-xs text-gray-500">?</span>
+                <div className="flex items-center gap-2">
+                  {category.homeIconUrl ? (
+                    <img
+                      src={toAssetUrl(category.homeIconUrl)}
+                      alt={category.title}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                      }}
+                      className="w-8 h-8 object-contain rounded bg-gray-50 border border-gray-100 p-0.5"
+                    />
+                  ) : null}
+                  <div
+                    className={`w-8 h-8 bg-teal-50 border border-teal-100 rounded flex items-center justify-center text-teal-600 ${category.homeIconUrl ? 'hidden' : ''}`}
+                  >
+                    <FiGrid className="w-4 h-4 text-teal-600" />
                   </div>
-                )}
+                </div>
 
                 <div className="flex-1">
                   <div className="font-medium text-gray-900">{category.title}</div>

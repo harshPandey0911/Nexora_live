@@ -240,7 +240,7 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found. Please sign up first.'
+        message: 'Phone number is not registered. Please create an account.'
       });
     }
 

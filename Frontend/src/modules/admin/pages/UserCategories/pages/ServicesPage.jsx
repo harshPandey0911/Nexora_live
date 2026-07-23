@@ -14,7 +14,7 @@ const serviceSchema = z.object({
   gstPercentage: z.number().min(0).max(100).default(18),
   discountPrice: z.number().optional(),
   categoryId: z.string().min(1, "Category is required"),
-  iconUrl: z.string().nullable().optional(),
+  iconUrl: z.string().min(1, "Service image is required"),
   description: z.string().optional()
 });
 

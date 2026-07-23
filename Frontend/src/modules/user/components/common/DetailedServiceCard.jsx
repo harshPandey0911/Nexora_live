@@ -82,19 +82,17 @@ const DetailedServiceCard = memo(({ image, title, rating, reviews, price, origin
             {discount.toString().toUpperCase().includes('OFF') ? discount : `${discount}% OFF`}
           </div>
         )}
-        {image ? (
-          <img
-            src={optimizeCloudinaryUrl(image, { width: 400, quality: 'auto' })}
-            alt={title}
-            className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <div className="w-full h-36 flex items-center justify-center" style={{ backgroundColor: `${themeColors.brand.teal}10` }}>
-            <span style={{ color: themeColors.brand.teal }} className="font-medium">No Image</span>
-          </div>
-        )}
+        <img
+          src={image ? optimizeCloudinaryUrl(image, { width: 400, quality: 'auto' }) : `https://ui-avatars.com/api/?name=${encodeURIComponent(title || 'Service')}&background=f0f9ff&color=2563eb&bold=true&size=512`}
+          alt={title}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(title || 'Service')}&background=f0f9ff&color=2563eb&bold=true&size=512`;
+          }}
+          className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
+        />
       </div>
       <div className="p-3 flex flex-col flex-1">
         <h3 className="text-[13px] font-semibold text-gray-900 leading-snug mb-1 line-clamp-2 min-h-[40px]">{title}</h3>
