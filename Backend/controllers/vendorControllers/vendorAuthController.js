@@ -179,6 +179,45 @@ const verifyLogin = async (req, res) => {
 };
 
 /**
+ * Check if phone or email is already registered for a vendor
+ */
+const checkExisting = async (req, res) => {
+  try {
+    const { email, phone } = req.body;
+    const cleanPhone = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+
+    const query = [];
+    if (cleanPhone) query.push({ phone: cleanPhone });
+    if (email) query.push({ email: email.toLowerCase() });
+
+    if (query.length === 0) {
+      return res.status(400).json({ success: false, message: 'Email or phone number is required.' });
+    }
+
+    const existing = await Vendor.findOne({ $or: query });
+    if (existing) {
+      const isPhoneConflict = cleanPhone && existing.phone === cleanPhone;
+      return res.status(400).json({
+        success: false,
+        message: isPhoneConflict ? 'Phone number is already registered.' : 'Email address is already registered.',
+        isPhoneConflict
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Phone number and email are available.'
+    });
+  } catch (error) {
+    console.error('Check existing error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify availability. Please try again.'
+    });
+  }
+};
+
+/**
  * Register vendor with Verification Token (Service/Category Removed)
  */
 const register = async (req, res) => {
@@ -196,7 +235,7 @@ const register = async (req, res) => {
       });
     }
 
-    const { name, email, phone: rawPhone, aadhar, pan, password } = req.body;
+    const { name, businessName, email, phone: rawPhone, aadhar, pan, password } = req.body;
     if (!rawPhone) {
       return res.status(400).json({ success: false, message: 'Phone number is required.' });
     }
@@ -301,6 +340,7 @@ const register = async (req, res) => {
     // Step 3: Create Vendor Record
     const vendor = await Vendor.create({
       name,
+      businessName: businessName || name,
       email,
       phone,
       password,
@@ -772,6 +812,7 @@ const resetPassword = async (req, res) => {
 module.exports = {
   sendOTP,
   verifyLogin,
+  checkExisting,
   register,
   login,
   logout,

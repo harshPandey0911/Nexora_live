@@ -15,6 +15,7 @@ const AllVendors = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
   const [updatingPermissions, setUpdatingPermissions] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const AVAILABLE_PERMISSIONS = [
     { id: 'dashboard', label: 'Dashboard Overview', description: 'Main analytics and quick stats' },
@@ -30,6 +31,40 @@ const AllVendors = () => {
     { id: 'profile-settings', label: 'Profile Settings', description: 'Personal account details' },
     { id: 'support', label: 'Support Center', description: 'Help desk and ticket management' },
   ];
+
+  const handleDownloadDocument = async (url, defaultFilename) => {
+    if (!url) return;
+    try {
+      if (url.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = defaultFilename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
+      toast.loading('Preparing download...', { id: 'doc-download' });
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch file');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = defaultFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+      toast.success('Download started!', { id: 'doc-download' });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.dismiss('doc-download');
+      window.open(url, '_blank');
+    }
+  };
 
   // Load vendors from backend
   useEffect(() => {
@@ -487,6 +522,14 @@ const AllVendors = () => {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Aadhar Number</label>
+                <div className="text-gray-900 font-medium">{selectedVendor.aadhar || 'N/A'}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">PAN Card Number</label>
+                <div className="text-gray-900 font-medium">{selectedVendor.pan || 'N/A'}</div>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Status</label>
                 <div>{getStatusBadge(selectedVendor.approvalStatus)}</div>
               </div>
@@ -583,57 +626,105 @@ const AllVendors = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-3">Verification Documents</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {selectedVendor.documents.aadhar && (
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-2">Aadhar Front</label>
-                    <img
-                      src={selectedVendor.documents.aadhar}
-                      alt="Aadhar Front"
-                      className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                    />
-                    <a
-                      href={selectedVendor.documents.aadhar}
-                      download
-                      className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Aadhar Front</label>
+                    <div 
+                      onClick={() => setPreviewDoc({ url: selectedVendor.documents.aadhar, title: `Aadhar Front - ${selectedVendor.name}`, filename: `aadhar_front_${selectedVendor.name || 'vendor'}.png` })}
+                      className="relative group cursor-pointer overflow-hidden rounded-lg border border-gray-200"
                     >
-                      <FiDownload className="w-4 h-4" />
-                      Download
-                    </a>
+                      <img
+                        src={selectedVendor.documents.aadhar}
+                        alt="Aadhar Front"
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium text-xs gap-1.5">
+                        <FiEye className="w-4 h-4" /> Click to Enlarge
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc({ url: selectedVendor.documents.aadhar, title: `Aadhar Front - ${selectedVendor.name}`, filename: `aadhar_front_${selectedVendor.name || 'vendor'}.png` })}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiEye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDocument(selectedVendor.documents.aadhar, `aadhar_front_${selectedVendor.name || 'vendor'}.png`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiDownload className="w-3.5 h-3.5" /> Download
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedVendor.documents.aadharBack && (
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-2">Aadhar Back</label>
-                    <img
-                      src={selectedVendor.documents.aadharBack}
-                      alt="Aadhar Back"
-                      className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                    />
-                    <a
-                      href={selectedVendor.documents.aadharBack}
-                      download
-                      className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Aadhar Back</label>
+                    <div 
+                      onClick={() => setPreviewDoc({ url: selectedVendor.documents.aadharBack, title: `Aadhar Back - ${selectedVendor.name}`, filename: `aadhar_back_${selectedVendor.name || 'vendor'}.png` })}
+                      className="relative group cursor-pointer overflow-hidden rounded-lg border border-gray-200"
                     >
-                      <FiDownload className="w-4 h-4" />
-                      Download
-                    </a>
+                      <img
+                        src={selectedVendor.documents.aadharBack}
+                        alt="Aadhar Back"
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium text-xs gap-1.5">
+                        <FiEye className="w-4 h-4" /> Click to Enlarge
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc({ url: selectedVendor.documents.aadharBack, title: `Aadhar Back - ${selectedVendor.name}`, filename: `aadhar_back_${selectedVendor.name || 'vendor'}.png` })}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiEye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDocument(selectedVendor.documents.aadharBack, `aadhar_back_${selectedVendor.name || 'vendor'}.png`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiDownload className="w-3.5 h-3.5" /> Download
+                      </button>
+                    </div>
                   </div>
                 )}
                 {selectedVendor.documents.pan && (
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-2">PAN Card</label>
-                    <img
-                      src={selectedVendor.documents.pan}
-                      alt="PAN"
-                      className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                    />
-                    <a
-                      href={selectedVendor.documents.pan}
-                      download
-                      className="mt-2 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">PAN Card</label>
+                    <div 
+                      onClick={() => setPreviewDoc({ url: selectedVendor.documents.pan, title: `PAN Card - ${selectedVendor.name}`, filename: `pan_${selectedVendor.name || 'vendor'}.png` })}
+                      className="relative group cursor-pointer overflow-hidden rounded-lg border border-gray-200"
                     >
-                      <FiDownload className="w-4 h-4" />
-                      Download
-                    </a>
+                      <img
+                        src={selectedVendor.documents.pan}
+                        alt="PAN"
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-medium text-xs gap-1.5">
+                        <FiEye className="w-4 h-4" /> Click to Enlarge
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewDoc({ url: selectedVendor.documents.pan, title: `PAN Card - ${selectedVendor.name}`, filename: `pan_${selectedVendor.name || 'vendor'}.png` })}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 hover:text-teal-800 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiEye className="w-3.5 h-3.5" /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDocument(selectedVendor.documents.pan, `pan_${selectedVendor.name || 'vendor'}.png`)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <FiDownload className="w-3.5 h-3.5" /> Download
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -752,7 +843,43 @@ const AllVendors = () => {
           </div>
         )}
       </Modal>
-    </div >
+
+      {/* Document Lightbox Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in" onClick={() => setPreviewDoc(null)}>
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col border border-gray-100" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <FiEye className="text-teal-600" /> {previewDoc.title}
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDocument(previewDoc.url, previewDoc.filename)}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <FiDownload className="w-3.5 h-3.5" /> Download
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  <FiX className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6 flex items-center justify-center bg-gray-50 overflow-auto max-h-[calc(90vh-70px)]">
+              <img
+                src={previewDoc.url}
+                alt={previewDoc.title}
+                className="max-h-[75vh] max-w-full object-contain rounded-xl shadow-lg border border-gray-200"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

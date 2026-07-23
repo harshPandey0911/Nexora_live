@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { FiUser, FiMail, FiPhone, FiFileText, FiUpload, FiX, FiArrowRight, FiChevronLeft, FiCheckCircle, FiCamera, FiUserPlus, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../theme';
-import { register, sendOTP as sendVendorOTP, verifyLogin } from '../services/authService';
+import { register, sendOTP as sendVendorOTP, verifyLogin, checkExistingVendor } from '../services/authService';
 import LogoLoader from '../../../components/common/LogoLoader';
 import Logo from '../../../components/common/Logo';
 import { compressImage } from '../../../utils/imageCompression';
@@ -13,6 +13,7 @@ import { z } from "zod";
 // Zod schema for Vendor Signup
 const vendorSignupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").regex(/^[a-zA-Z\s]+$/, "Name can only contain letters"),
+  businessName: z.string().min(2, "Business name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   phoneNumber: z.string().regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit Indian phone number"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -30,6 +31,7 @@ const VendorSignup = () => {
         const parsed = JSON.parse(saved);
         return {
           name: parsed.name || '',
+          businessName: parsed.businessName || '',
           email: parsed.email || '',
           phoneNumber: parsed.phoneNumber || '',
           password: parsed.password || '',
@@ -42,6 +44,7 @@ const VendorSignup = () => {
     } catch (e) {}
     return {
       name: '',
+      businessName: '',
       email: '',
       phoneNumber: '',
       password: '',
@@ -64,6 +67,7 @@ const VendorSignup = () => {
     try {
       sessionStorage.setItem('vendor_signup_form', JSON.stringify({
         name: formData.name,
+        businessName: formData.businessName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         password: formData.password,
@@ -207,6 +211,7 @@ const VendorSignup = () => {
     // Zod Validation
     const validationResult = vendorSignupSchema.safeParse({
       name: formData.name,
+      businessName: formData.businessName,
       email: formData.email,
       phoneNumber: formData.phoneNumber,
       password: formData.password,
@@ -230,6 +235,12 @@ const VendorSignup = () => {
     setIsLoading(true);
 
     try {
+      // Check if phone or email is already registered before proceeding to next step
+      await checkExistingVendor({
+        email: formData.email,
+        phone: formData.phoneNumber
+      });
+
       const aadharDoc = formData.documents.find(d => d.type === 'aadhar')?.url || null;
       const aadharBackDoc = formData.documents.find(d => d.type === 'aadharBack')?.url || null;
       const panDoc = formData.documents.find(d => d.type === 'pan')?.url || null;
@@ -237,6 +248,7 @@ const VendorSignup = () => {
 
       const registerData = {
         name: formData.name,
+        businessName: formData.businessName,
         email: formData.email,
         phone: formData.phoneNumber,
         password: formData.password,
@@ -266,7 +278,8 @@ const VendorSignup = () => {
       navigate('/vendor/training', { state: { registerData } });
     } catch (error) {
       console.error('Details submit error:', error);
-      toast.error(`Failed to configure registration details: ${error.message}`);
+      const errMsg = error.response?.data?.message || error.message || 'Failed to process application';
+      toast.error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -316,6 +329,33 @@ const VendorSignup = () => {
                       value={formData.name}
                       onChange={handleInputChange}
                       placeholder="John Doe"
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium"
+                      onFocus={(e) => {
+                        e.target.style.borderColor = themeColors.button;
+                        e.target.style.boxShadow = `0 0 0 3px rgba(0, 166, 166, 0.1)`;
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#e5e7eb';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Business Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business / Shop Name</label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                      <FiFileText className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      name="businessName"
+                      value={formData.businessName}
+                      onChange={handleInputChange}
+                      placeholder="Apex Services Ltd"
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium"
                       onFocus={(e) => {
                         e.target.style.borderColor = themeColors.button;

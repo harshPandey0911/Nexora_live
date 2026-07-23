@@ -106,18 +106,24 @@ const VendorTraining = () => {
       // Logic for registration AFTER training
       const pendingData = location.state?.registerData || JSON.parse(sessionStorage.getItem('pendingVendorRegistration') || 'null');
       
+      const clearSignupSession = () => {
+        sessionStorage.removeItem('pendingVendorRegistration');
+        sessionStorage.removeItem('vendor_signup_form');
+        sessionStorage.removeItem('vendor_signup_agreeToTerms');
+      };
+
       if (pendingData) {
         try {
           setLoading(true);
           const res = await register({ ...pendingData, trainingScore: score });
           if (res.success) {
             toast.success('Registration Complete! Please wait for admin approval.');
-            sessionStorage.removeItem('pendingVendorRegistration');
+            clearSignupSession();
             navigate('/vendor/login');
           } else {
             // Handle case where backend returns success:false but doesn't throw
             if (res.message?.toLowerCase().includes('already exists')) {
-              sessionStorage.removeItem('pendingVendorRegistration');
+              clearSignupSession();
               navigate('/vendor/login');
             } else {
               toast.error(res.message || 'Registration failed at final step.');
@@ -128,7 +134,7 @@ const VendorTraining = () => {
           const isDuplicate = errMsg.toLowerCase().includes('already exists') || errMsg.toLowerCase().includes('already registered');
           if (isDuplicate) {
             // If already registered, just let them go to login
-            sessionStorage.removeItem('pendingVendorRegistration');
+            clearSignupSession();
             navigate('/vendor/login');
           } else {
             console.error('Registration finish error:', error);

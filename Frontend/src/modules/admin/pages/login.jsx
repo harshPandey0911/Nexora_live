@@ -47,7 +47,7 @@ const AdminLogin = () => {
           localStorage.setItem('adminRememberMe', 'true');
         }
         toast.success('Login successful!');
-        navigate('/admin/dashboard');
+        navigate('/admin/dashboard', { replace: true });
       } else {
         setIsLoading(false);
         toast.error(response.message || 'Login failed'); // Reading file to debug token key mismatch (error)

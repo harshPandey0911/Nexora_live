@@ -114,6 +114,21 @@ export const logout = async () => {
 };
 
 /**
+ * Check if phone or email is already registered
+ * @param {Object} data - { email, phone }
+ * @returns {Promise<Object>} Verification result
+ */
+export const checkExistingVendor = async (data) => {
+  try {
+    const response = await api.post('/vendors/auth/check-exists', data);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking existing vendor:', error);
+    throw error;
+  }
+};
+
+/**
  * Register new vendor
  * @param {Object} vendorData - Vendor registration data
  * @returns {Promise<Object>} Auth response with token and user data

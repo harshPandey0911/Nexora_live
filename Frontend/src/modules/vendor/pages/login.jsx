@@ -33,8 +33,13 @@ const VendorLogin = () => {
   // Refs for auto-focus
   const phoneInputRef = useRef(null);
 
-  // Auto-focus logic
+  // Auto-focus logic & cleanup residual signup data
   useEffect(() => {
+    // Clear residual registration draft data when visiting login page
+    sessionStorage.removeItem('pendingVendorRegistration');
+    sessionStorage.removeItem('vendor_signup_form');
+    sessionStorage.removeItem('vendor_signup_agreeToTerms');
+
     // Redirect if already logged in
     if (localStorage.getItem('vendorAccessToken')) {
       navigate('/vendor', { replace: true });

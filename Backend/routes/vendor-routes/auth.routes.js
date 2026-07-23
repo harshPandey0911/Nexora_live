@@ -3,6 +3,7 @@ const router = express.Router();
 const { body } = require('express-validator');
 const {
   sendOTP,
+  checkExisting,
   register,
   login,
   logout,
@@ -28,6 +29,7 @@ const verifyLoginValidation = [
 
 const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
+  body('businessName').optional({ nullable: true, checkFalsy: true }).trim(),
   body('email').isEmail().withMessage('Please provide a valid email'),
   body('phone').trim().notEmpty().withMessage('Phone number is required').isLength({ min: 10, max: 10 }).withMessage('Phone number must be 10 digits'),
   body('password').trim().notEmpty().withMessage('Password is required').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -57,6 +59,7 @@ const resetPasswordValidation = [
 ];
 
 // Routes
+router.post('/check-exists', checkExisting);
 router.post('/send-otp', sendOTPValidation, sendOTP);
 router.post('/verify-login', verifyLoginValidation, verifyLogin); // New Unified Entry
 router.post('/register', registerValidation, register);

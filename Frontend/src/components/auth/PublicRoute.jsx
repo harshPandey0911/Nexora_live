@@ -41,8 +41,8 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
           break;
       }
 
-      const token = localStorage.getItem(tokenKey);
-      const userData = localStorage.getItem(dataKey);
+      const token = sessionStorage.getItem(tokenKey) || localStorage.getItem(tokenKey);
+      const userData = sessionStorage.getItem(dataKey) || localStorage.getItem(dataKey);
 
       if (token && userData) {
         try {
@@ -58,11 +58,14 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
               localStorage.removeItem(tokenKey);
               localStorage.removeItem(refreshTokenKey);
               localStorage.removeItem(dataKey);
+              sessionStorage.removeItem(tokenKey);
+              sessionStorage.removeItem(refreshTokenKey);
+              sessionStorage.removeItem(dataKey);
               setIsAuthenticated(false);
               return;
             }
 
-            // Check if token role matches expected userType
+            // Check if token role matches expected userType (case-insensitive)
             const roleMap = {
               user: 'user',
               vendor: 'vendor',
@@ -70,7 +73,10 @@ const PublicRoute = ({ children, userType = 'user', redirectTo = null }) => {
               admin: 'admin'
             };
 
-            if (payload.role === roleMap[userType]) {
+            const tokenRole = payload.role ? String(payload.role).toLowerCase() : '';
+            const expectedRole = roleMap[userType] ? roleMap[userType].toLowerCase() : '';
+
+            if (tokenRole === expectedRole) {
               setIsAuthenticated(true);
             } else {
               // Role mismatch

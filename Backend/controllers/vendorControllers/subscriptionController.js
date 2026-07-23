@@ -17,8 +17,8 @@ exports.createSubscriptionOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Plan not found' });
     }
 
-    // Amount in paise
-    const amount = Math.round(plan.price * 100);
+    // Amount in INR (createOrder in razorpayService converts to paise internally)
+    const amount = plan.price;
     const currency = 'INR';
     const receipt = `sub_receipt_${vendorId.substring(0, 5)}_${Date.now()}`;
 

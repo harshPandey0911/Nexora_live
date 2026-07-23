@@ -63,13 +63,20 @@ const AdminDashboard = () => {
 
         const startIso = startDate.toISOString();
 
-        // 2. Fetch Stats & Recent Bookings (Filtered)
-        const statsRes = await getDashboardStats({
-          startDate: startIso,
-          endDate
-        });
+        // 2. Fetch Stats & Revenue Analytics concurrently using Promise.all
+        const [statsRes, revRes] = await Promise.all([
+          getDashboardStats({
+            startDate: startIso,
+            endDate
+          }),
+          getRevenueAnalytics({
+            period: apiPeriod,
+            startDate: startIso,
+            endDate
+          })
+        ]);
         
-        if (statsRes.success) {
+        if (statsRes?.success) {
           const s = statsRes.data.stats;
           setStats({
             totalUsers: s.totalUsers,
@@ -83,14 +90,7 @@ const AdminDashboard = () => {
           setRecentBookingsList(statsRes.data.recentBookings || []);
         }
 
-        // 3. Fetch Revenue Analytics based on Period
-        const revRes = await getRevenueAnalytics({
-          period: apiPeriod,
-          startDate: startIso,
-          endDate
-        });
-
-        if (revRes.success) {
+        if (revRes?.success) {
           const mapped = revRes.data.revenueData.map(item => ({
             date: item._id,
             revenue: item.revenue,
