@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiArrowLeft, 
   FiShoppingCart, 
+  FiShoppingBag,
+  FiArrowRight,
   FiStar, 
   FiCheckCircle, 
   FiInfo, 
@@ -24,7 +26,7 @@ import { toast } from 'react-hot-toast';
 const ServiceDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,12 @@ const ServiceDetailsPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [homeContent, setHomeContent] = useState(null);
+
+  const isInCart = Boolean(
+    cartItems && cartItems.some(item => 
+      String(item.serviceId?._id || item.serviceId?.id || item.serviceId || item.id) === String(service?.id || service?._id)
+    )
+  );
 
   const toAssetUrl = (url) => {
     if (!url) return '';
@@ -230,38 +238,33 @@ const ServiceDetailsPage = () => {
                   )}
                 </div>
 
-                {/* Quantity & Add to Cart */}
-                <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                  <div className="flex items-center bg-gray-50 rounded-xl p-1.5 border border-gray-100 shrink-0">
+                {/* Add to Cart / Go to Cart Action */}
+                <div className="flex gap-4 items-center">
+                  {isInCart ? (
                     <button 
-                      onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                      className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
+                      onClick={() => navigate('/user/cart')}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-xl font-bold uppercase tracking-wider text-xs shadow-xl shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
-                      <FiMinus className="w-3.5 h-3.5" />
+                      <FiCheckCircle className="w-4 h-4" />
+                      Added to Cart
+                      <FiArrowRight className="w-4 h-4 ml-1" />
                     </button>
-                    <span className="w-12 text-center text-base font-bold">{quantity}</span>
+                  ) : (
                     <button 
-                      onClick={() => setQuantity(q => q + 1)}
-                      className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors active:scale-90"
+                      onClick={handleAddToCart}
+                      disabled={addingToCart}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold uppercase tracking-wider text-xs shadow-xl shadow-blue-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                     >
-                      <FiPlus className="w-3.5 h-3.5" />
+                      {addingToCart ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <FiShoppingCart className="w-4 h-4" />
+                          Add to Cart
+                        </>
+                      )}
                     </button>
-                  </div>
-
-                  <button 
-                    onClick={handleAddToCart}
-                    disabled={addingToCart}
-                    className="flex-1 bg-blue-600 text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-xl shadow-blue-900/10 active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    {addingToCart ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <FiShoppingCart className="w-4 h-4" />
-                        Book Now
-                      </>
-                    )}
-                  </button>
+                  )}
                 </div>
               </div>
  

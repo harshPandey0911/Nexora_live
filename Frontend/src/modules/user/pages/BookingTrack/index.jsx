@@ -69,45 +69,6 @@ const BookingTrack = () => {
   const handleOnlinePayment = async () => {
     if (paying) return;
 
-    // If a Razorpay order already exists for this booking, reuse it
-    if (booking.razorpayOrderId) {
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: Math.round((booking.finalAmount || 0) * 100),
-        currency: 'INR',
-        order_id: booking.razorpayOrderId,
-        name: 'Appzeto',
-        description: `Payment for ${booking.serviceName}`,
-        handler: async function (response) {
-          toast.loading('Verifying payment...');
-          const verifyResponse = await paymentService.verifyPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature
-          });
-          toast.dismiss();
-          if (verifyResponse.success) {
-            toast.success('Payment successful!');
-            navigate(`/user/booking/${booking._id || booking.id}`);
-          } else {
-            toast.error('Payment verification failed');
-          }
-          setPaying(false);
-        },
-        modal: {
-          ondismiss: function () {
-            setPaying(false);
-          }
-        },
-        prefill: { name: 'User', contact: '' },
-        theme: { color: "#0F766E" }
-      };
-      setPaying(true);
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-      return;
-    }
-
     try {
       setPaying(true);
       toast.loading('Creating payment order...');
@@ -770,23 +731,51 @@ const BookingTrack = () => {
       <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-sm font-medium text-teal-600 mb-1 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
-              {duration ? `Arriving in ${duration}` : 'Calculating time...'}
-            </p>
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">On the way</h2>
-          </div>
-          {distance && (
-            <div className="text-right">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Distance</p>
-              <p className="text-xl font-bold text-gray-800">
-                {distance}
-              </p>
+        {/* Status Header */}
+        {(() => {
+          const statusLower = booking?.status?.toLowerCase() || '';
+          let title = 'On the way';
+          let subtitle = duration ? `Arriving in ${duration}` : 'Calculating time...';
+          let showEta = true;
+
+          if (statusLower === 'visited') {
+            title = 'Professional Arrived';
+            subtitle = 'Expert has arrived at your location';
+            showEta = false;
+          } else if (statusLower === 'in_progress') {
+            title = 'Work in Progress';
+            subtitle = 'Service is currently being performed';
+            showEta = false;
+          } else if (statusLower === 'work_done') {
+            title = 'Work Completed';
+            subtitle = 'Service work is finished. Please complete payment.';
+            showEta = false;
+          } else if (statusLower === 'completed') {
+            title = 'Booking Completed';
+            subtitle = 'Service completed successfully!';
+            showEta = false;
+          }
+
+          return (
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-sm font-medium text-teal-600 mb-1 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+                  {subtitle}
+                </p>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">{title}</h2>
+              </div>
+              {showEta && distance && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Distance</p>
+                  <p className="text-xl font-bold text-gray-800">
+                    {distance}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Address Info */}
         <div className="bg-gray-50 rounded-2xl p-4 flex items-start gap-4 mb-4 border border-gray-100">

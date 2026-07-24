@@ -436,6 +436,40 @@ const requestWithdrawal = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid amount is required' });
     }
 
+    if (!bankDetails) {
+      return res.status(400).json({ success: false, message: 'Bank details are required for withdrawal' });
+    }
+
+    const { accountHolderName, bankName, accountNumber, ifscCode } = bankDetails;
+
+    if (!accountHolderName || accountHolderName.trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'Account Holder Name must be at least 3 characters long' });
+    }
+
+    if (!bankName || bankName.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Valid Bank Name is required' });
+    }
+
+    const cleanAccNo = String(accountNumber || '').replace(/[^0-9]/g, '');
+    if (!cleanAccNo || cleanAccNo.length < 9 || cleanAccNo.length > 18) {
+      return res.status(400).json({ success: false, message: 'Bank Account Number must be between 9 and 18 numeric digits' });
+    }
+
+    const cleanIfsc = String(ifscCode || '').toUpperCase().trim();
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(cleanIfsc)) {
+      return res.status(400).json({ success: false, message: 'Invalid IFSC Code format (e.g. SBIN0001234)' });
+    }
+
+    // Format sanitized bank details
+    const sanitizedBankDetails = {
+      accountHolderName: accountHolderName.trim(),
+      bankName: bankName.trim(),
+      accountNumber: cleanAccNo,
+      ifscCode: cleanIfsc,
+      upiId: bankDetails.upiId ? bankDetails.upiId.trim() : ''
+    };
+
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
 
@@ -459,7 +493,7 @@ const requestWithdrawal = async (req, res) => {
     const withdrawal = await Withdrawal.create({
       vendorId,
       amount,
-      bankDetails,
+      bankDetails: sanitizedBankDetails,
       adminNotes: notes,
       status: 'pending'
     });

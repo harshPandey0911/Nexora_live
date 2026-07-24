@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiCheckCircle, FiClock, FiTruck, FiArrowRight, FiGrid } from 'react-icons/fi';
 import { toAssetUrl } from '../../../../admin/pages/UserCategories/utils';
@@ -104,12 +105,15 @@ const HeroBanner = ({ banners = [], onSearchClick, heroData }) => {
               </div>
               <span>100% Secure Payments</span>
             </div>
-            <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs lg:text-sm font-semibold text-gray-900 bg-white/85 backdrop-blur-md px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-white/70 shadow-sm whitespace-nowrap">
+            <Link
+              to="/user/help-support"
+              className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs lg:text-sm font-semibold text-gray-900 bg-white/85 backdrop-blur-md px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-white/70 shadow-sm whitespace-nowrap hover:bg-white hover:shadow-md hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
               <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-blue-600 rounded-md sm:rounded-lg flex items-center justify-center text-white shadow-sm shrink-0">
                 <FiClock className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5" />
               </div>
               <span>24/7 Support</span>
-            </div>
+            </Link>
             <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-xs lg:text-sm font-semibold text-gray-900 bg-white/85 backdrop-blur-md px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-white/70 shadow-sm whitespace-nowrap">
               <div className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 bg-blue-600 rounded-md sm:rounded-lg flex items-center justify-center text-white shadow-sm shrink-0">
                 <FiTruck className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-3.5 lg:h-3.5" />

@@ -47,6 +47,10 @@ const workerSchema = new mongoose.Schema({
     ref: 'Vendor',
     default: null
   },
+  previousVendorIds: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor'
+  }],
   approvalStatus: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'suspended'],

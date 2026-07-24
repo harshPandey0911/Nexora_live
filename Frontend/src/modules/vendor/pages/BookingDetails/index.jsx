@@ -88,7 +88,7 @@ export default function BookingDetails() {
         },
         // Price Breakdown
         basePrice: parseFloat(apiData.basePrice || 0),
-        tax: parseFloat(apiData.tax || (apiData.paymentMethod === 'plan_benefit' ? (apiData.basePrice || 0) * 0.18 : 0)),
+        tax: parseFloat(apiData.tax !== undefined && apiData.tax !== null ? apiData.tax : 0),
         visitingCharges: parseFloat(apiData.visitingCharges || apiData.visitationFee || 0),
         discount: parseFloat(apiData.discount || 0),
         platformCommission: parseFloat(apiData.adminCommission || apiData.platformFee || apiData.commission || 0),
@@ -611,7 +611,7 @@ export default function BookingDetails() {
   });
 
   // Tax Logic
-  const originalGST = bill ? (bill.originalGST || 0) : (originalBase * 0.18);
+  const originalGST = bill ? (bill.originalGST || 0) : (parseFloat(booking?.tax) || 0);
   const totalGST = originalGST + extraServiceGST + partsGST;
 
   // Final Total from bill or booking
@@ -666,11 +666,20 @@ export default function BookingDetails() {
           </div>
         </div>
         <motion.button 
-          whileTap={{ scale: 0.9 }}
+          whileTap={{ scale: 0.95 }}
           onClick={handleViewTimeline}
-          className="w-8 h-8 md:w-10 md:h-10 bg-blue-50 rounded-lg md:rounded-xl border border-blue-100 flex items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all border border-blue-500 cursor-pointer group ring-2 ring-blue-500/30"
+          title="Track progress and process next steps in timeline"
         >
-          <FiBriefcase className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+          <div className="relative flex items-center justify-center">
+            <FiBriefcase className="w-4 h-4 md:w-5 md:h-5 text-white" />
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full animate-ping"></span>
+          </div>
+          <div className="text-left hidden sm:block">
+            <p className="text-[9px] font-extrabold uppercase tracking-wider text-blue-100 leading-none">Job Timeline</p>
+            <p className="text-[11px] font-black text-white leading-tight mt-0.5">Process Continues Here →</p>
+          </div>
+          <span className="sm:hidden text-xs font-bold text-white leading-none">Timeline →</span>
         </motion.button>
       </header>
 

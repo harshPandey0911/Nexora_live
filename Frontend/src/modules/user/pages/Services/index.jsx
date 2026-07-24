@@ -8,6 +8,7 @@ import {
   FiArrowLeft, 
   FiTruck, 
   FiShoppingBag, 
+  FiCheckCircle,
   FiHome, 
   FiPackage, 
   FiPlusSquare, 
@@ -32,17 +33,20 @@ import serviceHeroImg from '../../../../assets/service.png';
 
 const ServicesPage = () => {
   const navigate = useNavigate();
-  const { addToCart, cartCount } = useCart();
+  const { addToCart, cartCount, cartItems } = useCart();
   const { currentCity } = useCity();
   const [searchParams] = useSearchParams();
   const categoryIdParam = searchParams.get('categoryId');
   
   const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [services, setServices] = useState([]); 
   const [homeContent, setHomeContent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
+  const [selectedBrandFilter, setSelectedBrandFilter] = useState('all');
   const [addingToCart, setAddingToCart] = useState(null);
 
   const toAssetUrl = (url) => {
@@ -59,10 +63,11 @@ const ServicesPage = () => {
         setLoading(true);
         const cityId = currentCity?._id || currentCity?.id;
         
-        // Fetch Categories and Items (filtered by offeringType=SERVICE)
-        const [catRes, itemRes, homeRes] = await Promise.all([
+        // Fetch Categories, Services, Brands, and Home Data
+        const [catRes, itemRes, brandRes, homeRes] = await Promise.all([
           publicCatalogService.getCategories(cityId, 'SERVICE'),
           publicCatalogService.getServices({ cityId, offeringType: 'SERVICE' }),
+          publicCatalogService.getBrands({ cityId }),
           publicCatalogService.getHomeData(cityId)
         ]);
 
@@ -71,6 +76,9 @@ const ServicesPage = () => {
         }
         if (itemRes.success) {
           setServices(itemRes.services || []);
+        }
+        if (brandRes.success) {
+          setBrands(brandRes.brands || []);
         }
         if (homeRes.success) {
           setHomeContent(homeRes.homeContent);
@@ -123,25 +131,40 @@ const ServicesPage = () => {
 
   const filteredItems = services.filter(svc => {
     const trimmedQuery = searchQuery.trim().toLowerCase();
-    const matchesSearch = svc.title.toLowerCase().includes(trimmedQuery) ||
-                          svc.description?.toLowerCase().includes(trimmedQuery);
+    const matchesSearch = !trimmedQuery ||
+                          svc.title.toLowerCase().includes(trimmedQuery) ||
+                          svc.description?.toLowerCase().includes(trimmedQuery) ||
+                          svc.brandName?.toLowerCase().includes(trimmedQuery) ||
+                          svc.categoryTitle?.toLowerCase().includes(trimmedQuery);
     
-    if (activeTab === 'All') return matchesSearch;
+    if (!matchesSearch) return false;
+
+    if (activeTab === 'All' || activeTab === 'More') {
+      if (selectedCategoryFilter !== 'all') {
+        const svcCatId = String(svc.categoryId?._id || svc.categoryId?.id || svc.categoryId);
+        if (svcCatId !== String(selectedCategoryFilter)) return false;
+      }
+      if (selectedBrandFilter !== 'all') {
+        const svcBrandId = String(svc.brandId?._id || svc.brandId?.id || svc.brandId);
+        if (svcBrandId !== String(selectedBrandFilter)) return false;
+      }
+      return true;
+    }
 
     // Find the category for this item
-    const cat = categories.find(c => c._id === (svc.categoryId?._id || svc.categoryId) || c.id === (svc.categoryId?.id || svc.categoryId));
+    const cat = categories.find(c => String(c._id || c.id) === String(svc.categoryId?._id || svc.categoryId?.id || svc.categoryId));
     
-    if (!cat) return false;
+    if (!cat) return true;
 
     // It matches if:
     // 1. The active tab is the group this category belongs to
     if (cat.group && cat.group !== 'None' && cat.group === activeTab) {
-      return matchesSearch;
+      return true;
     }
 
     // 2. The active tab is the category ID itself
-    const svcCatId = svc.categoryId?._id || svc.categoryId?.id || svc.categoryId;
-    return matchesSearch && svcCatId === activeTab;
+    const svcCatId = String(svc.categoryId?._id || svc.categoryId?.id || svc.categoryId);
+    return svcCatId === String(activeTab);
   });
 
   const handleAddToCart = async (service) => {
@@ -246,7 +269,13 @@ const ServicesPage = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'More') {
+                    setSelectedCategoryFilter('all');
+                    setSelectedBrandFilter('all');
+                  }
+                }}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-[14px] whitespace-nowrap transition-all duration-300 font-bold text-[10px] uppercase tracking-wider ${
                   activeTab === tab.id 
                   ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/30' 
@@ -258,6 +287,110 @@ const ServicesPage = () => {
               </button>
             ))}
           </div>
+
+          {/* Categories & Brands Selector when activeTab === 'More' */}
+          {activeTab === 'More' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8 space-y-6 bg-blue-50/50 p-5 rounded-[24px] border border-blue-100"
+            >
+              {/* Category Filter */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                    <FiGrid className="text-blue-600" /> Explore Categories
+                  </h4>
+                  {(selectedCategoryFilter !== 'all' || selectedBrandFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSelectedCategoryFilter('all');
+                        setSelectedBrandFilter('all');
+                      }}
+                      className="text-[10px] font-bold text-blue-600 hover:underline uppercase"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+                <div className="flex overflow-x-auto no-scrollbar gap-2.5 pb-2">
+                  <button
+                    onClick={() => setSelectedCategoryFilter('all')}
+                    className={`px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${
+                      selectedCategoryFilter === 'all'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 hover:bg-blue-100/50 border border-gray-200'
+                    }`}
+                  >
+                    All Categories
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id || cat._id}
+                      onClick={() => {
+                        setSelectedCategoryFilter(cat.id || cat._id);
+                        setSelectedBrandFilter('all');
+                      }}
+                      className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${
+                        selectedCategoryFilter === String(cat.id || cat._id)
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-blue-100/50 border border-gray-200'
+                      }`}
+                    >
+                      {cat.homeIconUrl ? (
+                        <img src={toAssetUrl(cat.homeIconUrl)} alt={cat.title} className="w-4 h-4 object-contain rounded" />
+                      ) : (
+                        <FiGrid className="w-3.5 h-3.5 text-blue-600" />
+                      )}
+                      <span>{cat.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Brand Filter */}
+              {brands.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <FiAward className="text-purple-600" /> Explore Brands
+                  </h4>
+                  <div className="flex overflow-x-auto no-scrollbar gap-2.5 pb-1">
+                    <button
+                      onClick={() => setSelectedBrandFilter('all')}
+                      className={`px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${
+                        selectedBrandFilter === 'all'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-purple-100/50 border border-gray-200'
+                      }`}
+                    >
+                      All Brands
+                    </button>
+                    {brands.map((brand) => (
+                      <button
+                        key={brand.id || brand._id}
+                        onClick={() => {
+                          setSelectedBrandFilter(brand.id || brand._id);
+                          setSelectedCategoryFilter('all');
+                        }}
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[11px] font-bold transition-all whitespace-nowrap ${
+                          selectedBrandFilter === String(brand.id || brand._id)
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'bg-white text-gray-700 hover:bg-purple-100/50 border border-gray-200'
+                        }`}
+                      >
+                        {brand.icon || brand.logo || brand.imageUrl ? (
+                          <img src={toAssetUrl(brand.icon || brand.logo || brand.imageUrl)} alt={brand.title} className="w-4 h-4 object-contain rounded" />
+                        ) : (
+                          <FiAward className="w-3.5 h-3.5 text-purple-600" />
+                        )}
+                        <span>{brand.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* Grid */}
           <AnimatePresence mode="wait">
@@ -317,18 +450,35 @@ const ServicesPage = () => {
                       <div className="flex items-center justify-between gap-2 mt-auto">
                         <span className="text-sm sm:text-lg font-bold text-blue-600">₹{svc.basePrice}</span>
                         
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddToCart(svc);
-                          }}
-                          disabled={addingToCart === (svc.id || svc._id)}
-                          className="h-7 sm:h-9 px-2 sm:px-4 bg-blue-600 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all flex items-center gap-1"
-                        >
-                          {addingToCart === (svc.id || svc._id) ? '...' : (
-                            <><FiPlusSquare className="w-3 h-3 hidden xs:block" /> Add</>
-                          )}
-                        </button>
+                        {(() => {
+                          const isInCart = Boolean(
+                            cartItems && cartItems.some(item => 
+                              String(item.serviceId?._id || item.serviceId?.id || item.serviceId || item.id) === String(svc.id || svc._id)
+                            )
+                          );
+                          return (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isInCart) {
+                                  navigate('/user/cart');
+                                } else {
+                                  handleAddToCart(svc);
+                                }
+                              }}
+                              disabled={addingToCart === (svc.id || svc._id)}
+                              className={`h-7 sm:h-9 px-2 sm:px-3 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-widest transition-all flex items-center gap-1 ${
+                                isInCart ? 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200'
+                              }`}
+                            >
+                              {addingToCart === (svc.id || svc._id) ? '...' : isInCart ? (
+                                <><FiCheckCircle className="w-3 h-3" /> Added to Cart</>
+                              ) : (
+                                <><FiPlusSquare className="w-3 h-3" /> Add to Cart</>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </motion.div>

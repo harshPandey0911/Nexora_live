@@ -896,100 +896,100 @@ const BillingPage = () => {
 
         {currentStep === 5 && calculations && (
           <div className="animate-in fade-in slide-in-from-right-4 pb-10">
-            <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-100 mb-6">
-              <div className="bg-gray-900 px-6 py-6 text-white text-center">
-                <p className="text-gray-400 text-xs font-medium uppercase tracking-widest mb-1">TOTAL INVOICE AMOUNT</p>
+            <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-gray-200 mb-6">
+              <div className="bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900 px-6 py-6 text-white text-center">
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-widest mb-1">TOTAL INVOICE AMOUNT</p>
                 <h2 className="text-4xl font-black">₹{calculations.finalBillAmount.toFixed(2)}</h2>
               </div>
               <div className="p-6 space-y-6">
                 <div>
-                  <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
+                  <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
                     <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs"><FiTool /></span>
-                    Services
+                    Services & Labor
                   </h4>
                   <div className="space-y-2 text-sm pl-2">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Original Booking : {job.serviceName || 'Service'}</span>
-                      {job.paymentMethod === 'plan_benefit' ? <span className="text-green-600 font-bold">FREE (PLAN)</span> : <span>₹{calculations.originalBase.toFixed(2)}</span>}
+                    <div className="flex justify-between text-gray-700 font-medium">
+                      <span>Original Service: {job.serviceName || 'Service'}</span>
+                      {job.paymentMethod === 'plan_benefit' ? <span className="text-emerald-700 font-bold">FREE (PLAN)</span> : <span className="font-bold text-gray-900">₹{calculations.originalBase.toFixed(2)}</span>}
                     </div>
-                    {selectedServices.map(s => <div key={s.catalogId} className="flex justify-between text-gray-600"><span>{s.name} x {s.quantity}</span><span>₹{(s.price * s.quantity).toFixed(2)}</span></div>)}
-                    <div className="flex justify-between text-xs text-gray-500 border-t border-dashed border-gray-100 pt-1 mt-1">
+                    {selectedServices.map(s => <div key={s.catalogId} className="flex justify-between text-gray-700 font-medium"><span>{s.name} x {s.quantity}</span><span className="font-bold text-gray-900">₹{(s.price * s.quantity).toFixed(2)}</span></div>)}
+                    <div className="flex justify-between text-xs font-bold text-gray-600 border-t border-dashed border-gray-200 pt-1 mt-1">
                       <span>Service GST ({calculations.serviceGstPct}%)</span>
-                      <span>₹{calculations.totalServiceGST.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">₹{calculations.totalServiceGST.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between font-bold text-gray-800 pt-1">
-                      <span>Total Service</span>
-                      <span>₹{(calculations.originalBase + calculations.extraServiceBase + calculations.totalServiceGST).toFixed(2)}</span>
+                    <div className="flex justify-between font-bold text-gray-900 pt-1">
+                      <span>Services Subtotal</span>
+                      <span className="font-black text-gray-900">₹{(calculations.originalBase + calculations.extraServiceBase + calculations.totalServiceGST).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
                 {(selectedParts.length > 0 || customItems.length > 0) && (
                   <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                      <span className="w-6 h-6 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center text-xs"><FiPackage /></span>
-                      Parts
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+                      <span className="w-6 h-6 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-xs"><FiPackage /></span>
+                      Spare Parts & Materials
                     </h4>
-                    <label className="flex items-center gap-2.5 cursor-pointer mb-3 p-2.5 rounded-xl border border-dashed border-orange-200 bg-orange-50/50 hover:bg-orange-50 transition-colors">
+                    <label className="flex items-center gap-2.5 cursor-pointer mb-3 p-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-white transition-colors">
                       <div className="relative">
                         <input type="checkbox" checked={applyPartsGST} onChange={e => setApplyPartsGST(e.target.checked)} className="sr-only" />
-                        <div className={`w-10 h-5 rounded-full transition-colors duration-200 ${applyPartsGST ? 'bg-orange-500' : 'bg-gray-300'}`}>
-                          <div className={`w-4 h-4 bg-white rounded-full shadow-sm absolute top-0.5 transition-all duration-200 ${applyPartsGST ? 'left-5' : 'left-0.5'}`} />
+                        <div className={`w-10 h-5 rounded-full transition-colors duration-200 ${applyPartsGST ? 'bg-amber-600' : 'bg-gray-300'}`}>
+                          <div className={`w-4 h-4 bg-white rounded-full shadow-sm absolute top-0.5 transition-all duration-200 ${applyPartsGST ? 'left-5.5' : 'left-0.5'}`} />
                         </div>
                       </div>
                       <div className="text-left">
-                        <p className="text-xs font-bold text-gray-800">Apply Parts GST ({calculations.partsGstPct}%)</p>
-                        <p className="text-[10px] text-gray-400">{applyPartsGST ? `GST included: ₹${calculations.totalPartsGST.toFixed(2)}` : 'GST not charged on parts'}</p>
+                        <p className="text-xs font-bold text-gray-900">Apply GST on Parts ({calculations.partsGstPct}%)</p>
+                        <p className="text-[10px] text-gray-500 font-semibold">{applyPartsGST ? `GST included: ₹${calculations.totalPartsGST.toFixed(2)}` : 'Exempt / No GST'}</p>
                       </div>
                     </label>
                     <div className="space-y-2 text-sm pl-2">
-                      {selectedParts.map(p => <div key={p.catalogId} className="flex justify-between text-gray-600"><span>{p.name} x {p.quantity}</span><span>₹{(p.price * p.quantity).toFixed(2)}</span></div>)}
+                      {selectedParts.map(p => <div key={p.catalogId} className="flex justify-between text-gray-700 font-medium"><span>{p.name} x {p.quantity}</span><span className="font-bold text-gray-900">₹{(p.price * p.quantity).toFixed(2)}</span></div>)}
                       {customItems.map((c, i) => (
-                        <div key={i} className="flex justify-between text-gray-600">
+                        <div key={i} className="flex justify-between text-gray-700 font-medium">
                           <div>
                             <span>{c.name || 'Custom Item'} x {c.quantity}</span>
-                            {c.hsnCode && <p className="text-[9px] text-gray-400">HSN: {c.hsnCode}</p>}
+                            {c.hsnCode && <p className="text-[9px] text-gray-500 font-semibold">HSN: {c.hsnCode}</p>}
                           </div>
-                          <span>₹{(c.price * c.quantity).toFixed(2)}</span>
+                          <span className="font-bold text-gray-900">₹{(c.price * c.quantity).toFixed(2)}</span>
                         </div>
                       ))}
-                      <div className="flex justify-between text-xs text-gray-500 border-t border-dashed border-gray-100 pt-1 mt-1">
+                      <div className="flex justify-between text-xs font-bold text-gray-600 border-t border-dashed border-gray-200 pt-1 mt-1">
                         <span>Parts GST ({calculations.partsGstPct}%)</span>
-                        <span>₹{calculations.totalPartsGST.toFixed(2)}</span>
+                        <span className="font-bold text-gray-900">₹{calculations.totalPartsGST.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between font-bold text-gray-800 pt-1">
-                        <span>Total Parts</span>
-                        <span>₹{(calculations.partsBase + calculations.totalPartsGST).toFixed(2)}</span>
+                      <div className="flex justify-between font-bold text-gray-900 pt-1">
+                        <span>Parts Subtotal</span>
+                        <span className="font-black text-gray-900">₹{(calculations.partsBase + calculations.totalPartsGST).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
                 )}
                 {job.visitingCharges > 0 && (
                   <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
-                      <span className="w-6 h-6 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center text-xs"><FiClock /></span>
-                      Visiting Charges
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                      <span className="w-6 h-6 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-xs"><FiClock /></span>
+                      Visiting Charge
                     </h4>
-                    <div className="flex justify-between text-sm pl-2 font-bold text-gray-800">
-                      <span>Visiting Price</span>
+                    <div className="flex justify-between text-sm pl-2 font-bold text-gray-900">
+                      <span>Visiting Fee</span>
                       <span>₹{Number(job.visitingCharges).toFixed(2)}</span>
                     </div>
                   </div>
                 )}
                 {transportCharges > 0 && (
                   <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                       <span className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xs"><FiPackage /></span>
-                      Transport Charges
+                      Logistics Fee
                     </h4>
-                    <div className="flex justify-between text-sm pl-2 font-bold text-gray-800">
-                      <span>Transport Price</span>
+                    <div className="flex justify-between text-sm pl-2 font-bold text-gray-900">
+                      <span>Logistics Charge</span>
                       <span>₹{Number(transportCharges).toFixed(2)}</span>
                     </div>
                   </div>
                 )}
                 {(paymentMode && job.status === 'completed') && (
                   <div>
-                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-100">
+                    <h4 className="font-bold text-gray-900 flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${paymentMode === 'cash' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                         {paymentMode === 'cash' ? <FiDollarSign /> : <MdQrCode />}
                       </span>
@@ -998,7 +998,7 @@ const BillingPage = () => {
                     <div className="flex justify-between text-sm pl-2 font-black text-gray-900 uppercase tracking-tight">
                       <span>Status</span>
                       <span className={paymentMode === 'cash' ? 'text-emerald-600' : 'text-blue-600'}>
-                        {paymentMode === 'cash' ? 'Cash Collected' : 'Qr Online'}
+                        {paymentMode === 'cash' ? 'Cash Collected' : 'Digital QR'}
                       </span>
                     </div>
                   </div>
@@ -1009,26 +1009,26 @@ const BillingPage = () => {
               {job.status === 'completed' ? (
                 <div className="bg-emerald-50 px-6 py-4 border-t border-emerald-100">
                   <div className="space-y-2 mb-3">
-                    <div className="flex justify-between items-center text-emerald-700 text-sm">
+                    <div className="flex justify-between items-center text-emerald-800 text-sm">
                       <span>Service Earnings ({calculations.servicePayoutPct}%)</span>
                       <span className="font-bold">₹{calculations.workerServiceEarnings.toFixed(2)}</span>
                     </div>
                     {(calculations.workerPartsEarnings > 0) && (
-                      <div className="flex justify-between items-center text-emerald-700 text-sm">
+                      <div className="flex justify-between items-center text-emerald-800 text-sm">
                         <span>Parts Earnings ({calculations.partsPayoutPct}%)</span>
                         <span className="font-bold">₹{calculations.workerPartsEarnings.toFixed(2)}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-emerald-200/50">
-                    <span className="text-emerald-800 font-bold text-xs uppercase tracking-wider">Total Net Earnings</span>
+                    <span className="text-emerald-900 font-bold text-xs uppercase tracking-wider">Total Net Earnings</span>
                     <span className="text-emerald-700 font-black text-xl">₹{calculations.totalWorkerEarnings.toFixed(2)}</span>
                   </div>
                 </div>
               ) : (
-                <div className="bg-gray-50 px-6 py-4 border-t border-gray-100/50 text-center">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center justify-center gap-2">
-                    <FiClock className="w-3 h-3" /> Net Earnings will be revealed after completion
+                <div className="bg-gray-100 px-6 py-4 border-t border-gray-200 text-center">
+                  <p className="text-xs font-bold text-gray-600 flex items-center justify-center gap-2">
+                    <FiClock className="w-4 h-4 text-blue-600" /> Net earnings will be calculated after completion
                   </p>
                 </div>
               )}

@@ -41,10 +41,20 @@ const createOrUpdateBill = async (req, res) => {
     // Always use the booking's vendorId for the bill
     const billVendorId = booking.vendorId;
 
-    // ── Fetch Settings (frozen snapshot) ──
-    const settings = await Settings.findOne({ type: 'global' });
-    const serviceSplitPct = settings?.servicePayoutPercentage ?? 70;
-    const partsSplitPct = settings?.partsPayoutPercentage ?? 10;
+    // ── Fetch Settings & Vendor (dynamic level-based commission calculation) ──
+    const Vendor = require('../../models/Vendor');
+    const [settings, vendor] = await Promise.all([
+      Settings.findOne({ type: 'global' }),
+      Vendor.findById(billVendorId)
+    ]);
+
+    const vendorLevel = vendor?.level || 3;
+    const levelKey = `level${vendorLevel}`;
+
+    // Dynamic Level-based Commission Rate from Settings (Level 1: 10%, Level 2: 15%, Level 3: 20%)
+    const commissionRate = settings?.commissionRates?.[levelKey] ?? (vendorLevel === 1 ? 10 : vendorLevel === 2 ? 15 : 20);
+    const serviceSplitPct = 100 - commissionRate;
+    const partsSplitPct = settings?.partsPayoutPercentage ?? 100;
     const serviceGstPct = settings?.serviceGstPercentage ?? 18;
     const partsGstPct = settings?.partsGstPercentage ?? 18;
 
@@ -254,6 +264,7 @@ const createOrUpdateBill = async (req, res) => {
     booking.finalAmount = grandTotal;
     booking.userPayableAmount = grandTotal;
     booking.vendorBillId = bill._id;
+    booking.razorpayOrderId = null; // Invalidate stale Razorpay order to force new order matching grandTotal
     await booking.save();
 
     res.status(200).json({
@@ -299,7 +310,10 @@ const getBillByBookingId = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized for this booking' });
     }
 
-    const bill = await VendorBill.findOne({ bookingId }).populate('services.catalogId parts.catalogId');
+    const [bill, settings] = await Promise.all([
+      VendorBill.findOne({ bookingId }).populate('services.catalogId parts.catalogId'),
+      Settings.findOne({ type: 'global' })
+    ]);
 
     if (!bill) {
       // Return 200 instead of 404 to gracefully tell the frontend that a bill is not yet created
@@ -307,7 +321,21 @@ const getBillByBookingId = async (req, res) => {
       return res.status(200).json({ success: true, bill: null, message: 'Bill not found' });
     }
 
-    res.status(200).json({ success: true, bill });
+    const companyDetails = {
+      companyName: settings?.companyName || 'Nexora Go',
+      companyGSTIN: settings?.companyGSTIN || '',
+      companyPAN: settings?.companyPAN || '',
+      companyAddress: settings?.companyAddress || '',
+      companyCity: settings?.companyCity || '',
+      companyState: settings?.companyState || '',
+      companyPincode: settings?.companyPincode || '',
+      companyPhone: settings?.companyPhone || '',
+      companyEmail: settings?.companyEmail || '',
+      invoicePrefix: settings?.invoicePrefix || 'INV',
+      sacCode: settings?.sacCode || '998599'
+    };
+
+    res.status(200).json({ success: true, bill, companyDetails });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch bill' });
   }

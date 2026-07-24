@@ -58,15 +58,30 @@ const getPublicCategories = async (req, res) => {
 
       // 2. If it's a vendor-specific category
       if (cat.vendorId) {
+        // If the category has master/platform services created by Admin (vendorId: null), return it so users can access those services
+        const Service = require('../../models/UserService');
+        const hasPlatformItems = await Service.exists({
+          categoryId: cat._id,
+          vendorId: null,
+          status: 'active',
+          ...(req.query.offeringType ? { offeringType: req.query.offeringType } : {})
+        });
+
+        if (hasPlatformItems) {
+          return cat;
+        }
+
         const ownerVendor = await Vendor.findById(cat.vendorId).select('address status');
         if (!ownerVendor) return null;
 
-        // NEW: If offeringType filter is provided, check if the vendor has items of that type in this category
+        // If offeringType filter is provided, check if matching items exist
         if (req.query.offeringType) {
-          const Service = require('../../models/UserService');
           const hasMatchingItems = await Service.exists({
             categoryId: cat._id,
-            vendorId: cat.vendorId,
+            $or: [
+              { vendorId: cat.vendorId },
+              { vendorId: null }
+            ],
             status: 'active',
             offeringType: req.query.offeringType
           });

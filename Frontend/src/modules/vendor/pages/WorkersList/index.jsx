@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUsers, FiPlus, FiSearch, FiUser, FiBriefcase, FiChevronRight, FiStar } from 'react-icons/fi';
+import { FiUsers, FiPlus, FiSearch, FiUser, FiBriefcase, FiChevronRight, FiStar, FiRefreshCw } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
-import { getWorkers, deleteWorker } from '../../services/workerService';
+import { getWorkers, deleteWorker, linkWorker } from '../../services/workerService';
 
 const WorkersList = () => {
   const navigate = useNavigate();
@@ -12,40 +13,56 @@ const WorkersList = () => {
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadWorkers = async () => {
-      try {
-        if (workers.length === 0) setLoading(true);
-        const response = await getWorkers();
-        const mapped = (response.data || response).map(w => ({
-          ...w,
-          id: w._id || w.id
-        }));
-        setWorkers(mapped || []);
-      } catch (error) {
-        console.error('Error loading workers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadWorkers = async () => {
+    try {
+      setLoading(true);
+      const params = filter === 'past' ? { status: 'past' } : {};
+      const response = await getWorkers(params);
+      const mapped = (response.data || response).map(w => ({
+        ...w,
+        id: w._id || w.id
+      }));
+      setWorkers(mapped || []);
+    } catch (error) {
+      console.error('Error loading workers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadWorkers();
     window.addEventListener('vendorWorkersUpdated', loadWorkers);
 
     return () => {
       window.removeEventListener('vendorWorkersUpdated', loadWorkers);
     };
-  }, [workers.length]);
+  }, [filter]);
 
   const handleDelete = async (workerId) => {
-    if (window.confirm('Are you sure you want to delete this worker?')) {
+    if (window.confirm('Are you sure you want to remove this worker from your team?')) {
       try {
         await deleteWorker(workerId);
         setWorkers(workers.filter(w => w.id !== workerId));
+        toast.success('Worker removed from your active fleet');
         window.dispatchEvent(new Event('vendorWorkersUpdated'));
       } catch (error) {
         console.error('Error deleting worker:', error);
-        alert('Failed to delete worker');
+        toast.error(error.response?.data?.message || 'Failed to remove worker');
+      }
+    }
+  };
+
+  const handleRelink = async (phone) => {
+    if (window.confirm('Re-hire and add this past operative back to your active fleet?')) {
+      try {
+        await linkWorker(phone);
+        toast.success('Worker re-hired successfully!');
+        setFilter('all');
+        window.dispatchEvent(new Event('vendorWorkersUpdated'));
+      } catch (error) {
+        console.error('Error re-hiring worker:', error);
+        toast.error(error.response?.data?.message || 'Failed to re-hire worker');
       }
     }
   };
@@ -55,13 +72,14 @@ const WorkersList = () => {
     const isOnline = workerStatus === 'ONLINE';
     const isOffline = workerStatus !== 'ONLINE';
 
-    const matchesFilter = filter === 'all' ||
-      (filter === 'online' && isOnline) ||
-      (filter === 'offline' && isOffline);
+    let matchesFilter = true;
+    if (filter === 'online') matchesFilter = isOnline;
+    if (filter === 'offline') matchesFilter = isOffline;
+    // 'all' and 'past' are handled at backend query level
 
     const matchesSearch = searchQuery === '' ||
-      worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      worker.phone.includes(searchQuery);
+      (worker.name && worker.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (worker.phone && worker.phone.includes(searchQuery));
 
     return matchesFilter && matchesSearch;
   });
@@ -95,6 +113,7 @@ const WorkersList = () => {
             { id: 'all', label: 'All Fleet' },
             { id: 'online', label: 'Active' },
             { id: 'offline', label: 'Standby' },
+            { id: 'past', label: 'Past Operatives' },
           ].map((option) => (
             <button
               key={option.id}
@@ -136,22 +155,29 @@ const WorkersList = () => {
           <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-gray-100">
             <FiUsers className="w-10 h-10 text-gray-300" />
           </div>
-          <h3 className="text-xl font-normal text-gray-800 mb-2 capitalize tracking-tight">Empty Fleet</h3>
+          <h3 className="text-xl font-normal text-gray-800 mb-2 capitalize tracking-tight">
+            {filter === 'past' ? 'No Past Operatives' : 'Empty Fleet'}
+          </h3>
           <p className="text-sm text-gray-400 font-medium max-w-xs mx-auto mb-8">
-            You haven't authorized any team members for field deployments yet.
+            {filter === 'past' 
+              ? 'No operatives have been unlinked or removed from your fleet history yet.' 
+              : "You haven't authorized any team members for field deployments yet."}
           </p>
-          <button
-            onClick={() => navigate('/vendor/workers/new')}
-            className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-normal text-xs capitalize tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700"
-          >
-            Register Operative
-          </button>
+          {filter !== 'past' && (
+            <button
+              onClick={() => navigate('/vendor/workers/new')}
+              className="px-8 py-4 bg-blue-600 text-white rounded-2xl font-normal text-xs capitalize tracking-widest shadow-xl shadow-blue-100 active:scale-95 transition-all hover:bg-blue-700"
+            >
+              Register Operative
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 pb-12">
           {filteredWorkers.map((worker) => {
             const statusRaw = (worker.status || 'OFFLINE').toUpperCase();
             const isOnline = statusRaw === 'ONLINE';
+            const isPast = filter === 'past' || !worker.vendorId;
             const approval = worker.approvalStatus || 'pending';
 
             return (
@@ -161,7 +187,7 @@ const WorkersList = () => {
                 className="bg-white border border-gray-100 rounded-[32px] p-6 flex flex-col gap-6 relative group hover:shadow-md transition-all duration-300 overflow-hidden shadow-sm"
               >
                 {/* Status indicator bar */}
-                <div className={`absolute top-0 left-0 w-full h-1 ${isOnline ? 'bg-emerald-500' : 'bg-gray-200'}`} />
+                <div className={`absolute top-0 left-0 w-full h-1 ${isPast ? 'bg-amber-400' : isOnline ? 'bg-emerald-500' : 'bg-gray-200'}`} />
 
                 <div className="flex items-center gap-5">
                   {/* Photo */}
@@ -175,7 +201,7 @@ const WorkersList = () => {
                         </div>
                       )}
                     </div>
-                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white ${isOnline ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-gray-400'}`} />
+                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-4 border-white ${isPast ? 'bg-amber-400' : isOnline ? 'bg-emerald-500 shadow-lg shadow-emerald-200' : 'bg-gray-400'}`} />
                   </div>
 
                   {/* Info */}
@@ -191,17 +217,23 @@ const WorkersList = () => {
                     </div>
                     <p className="text-xs font-normal text-gray-400 capitalize tracking-wider mb-2">{worker.phone}</p>
                     
-                    {/* Approval Status Badge */}
+                    {/* Approval / Status Badge */}
                     <div className="flex flex-wrap gap-2">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                        approval === 'approved' 
-                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                          : approval === 'rejected'
-                          ? 'bg-rose-50 border-rose-100 text-rose-700'
-                          : 'bg-amber-50 border-amber-100 text-amber-700'
-                      }`}>
-                        {approval === 'approved' ? 'Approved' : approval === 'rejected' ? 'Rejected' : 'Pending Approval'}
-                      </span>
+                      {isPast ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-slate-100 border-slate-200 text-slate-700">
+                          Past Operative
+                        </span>
+                      ) : (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                          approval === 'approved' 
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                            : approval === 'rejected'
+                            ? 'bg-rose-50 border-rose-100 text-rose-700'
+                            : 'bg-amber-50 border-amber-100 text-amber-700'
+                        }`}>
+                          {approval === 'approved' ? 'Approved' : approval === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -212,31 +244,46 @@ const WorkersList = () => {
                       <FiBriefcase className="w-3.5 h-3.5" />
                       <span>{worker.completedJobs || 0} Jobs</span>
                     </div>
-                    <span className={`text-[10px] font-normal capitalize tracking-widest ${isOnline ? 'text-emerald-600' : 'text-gray-400'}`}>
-                      {isOnline ? 'Active' : 'Standby'}
+                    <span className={`text-[10px] font-normal capitalize tracking-widest ${isPast ? 'text-amber-600' : isOnline ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {isPast ? 'Removed' : isOnline ? 'Active' : 'Standby'}
                     </span>
                   </div>
 
-                  {/* Actions (Edit / Delete) */}
+                  {/* Actions */}
                   <div className="flex items-center gap-2 z-10">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/vendor/workers/edit/${worker.id}`);
-                      }}
-                      className="px-3 py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-700 rounded-lg text-[11px] font-medium border border-gray-100 transition-all"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(worker.id);
-                      }}
-                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-lg text-[11px] font-medium border border-rose-100 transition-all"
-                    >
-                      Delete
-                    </button>
+                    {isPast ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRelink(worker.phone);
+                        }}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[11px] font-semibold transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                      >
+                        <FiRefreshCw className="w-3 h-3" />
+                        Re-hire
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/vendor/workers/edit/${worker.id}`);
+                          }}
+                          className="px-3 py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-700 rounded-lg text-[11px] font-medium border border-gray-100 transition-all"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(worker.id);
+                          }}
+                          className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-lg text-[11px] font-medium border border-rose-100 transition-all"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </motion.div>

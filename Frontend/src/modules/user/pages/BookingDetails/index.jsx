@@ -329,47 +329,6 @@ const BookingDetails = () => {
   const handleOnlinePayment = async () => {
     if (paying) return;
 
-    // If a Razorpay order already exists for this booking and hasn't been used, skip creating a new one
-    if (booking.razorpayOrderId) {
-      // Open Razorpay with existing order
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: Math.round((booking.finalAmount || 0) * 100),
-        currency: 'INR',
-        order_id: booking.razorpayOrderId,
-        name: 'Homestr',
-        description: `Payment for ${booking.serviceName}`,
-        handler: async function (response) {
-          toast.loading('Verifying payment...');
-          const verifyResponse = await paymentService.verifyPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature
-          });
-          toast.dismiss();
-
-          if (verifyResponse.success) {
-            toast.success('Payment successful!');
-            window.location.reload();
-          } else {
-            toast.error('Payment verification failed');
-          }
-          setPaying(false);
-        },
-        modal: {
-          ondismiss: function () {
-            setPaying(false);
-          }
-        },
-        prefill: { name: 'User', contact: '' },
-        theme: { color: themeColors.button }
-      };
-      setPaying(true);
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-      return;
-    }
-
     try {
       setPaying(true);
       toast.loading('Creating payment order...');
@@ -585,7 +544,7 @@ const BookingDetails = () => {
   });
 
   // Use bill.originalGST if available
-  const originalGST = bill ? (bill.originalGST || 0) : (originalBase * 0.18);
+  const originalGST = bill ? (bill.originalGST || 0) : (parseFloat(booking.tax) || 0);
   const totalGST = originalGST + extraServiceGST + partsGST;
 
   // Final Total
@@ -831,8 +790,30 @@ const BookingDetails = () => {
             </div>
           )}
 
-          {/* Arrival OTP Card REMOVED AS PER SIMPLIFIED FLOW */}
-          {/* Formerly lines 801-839 */}
+          {/* Arrival OTP Card */}
+          {(booking?.visitOtp || booking?.arrivalOTP) && ['confirmed', 'assigned', 'journey_started', 'requested', 'searching'].includes(booking?.status?.toLowerCase()) && (
+            <div className="mb-6 relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 shadow-xl text-white">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
+              <div className="relative z-10 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
+                    <FiKey className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-blue-100 uppercase tracking-widest">Arrival Start Code (OTP)</p>
+                    <p className="text-3xl font-black text-white tracking-[0.25em] leading-none mt-1">
+                      {booking?.visitOtp || booking?.arrivalOTP}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 flex flex-col items-center justify-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)] mb-1"></div>
+                  <p className="text-[10px] text-blue-100 font-bold uppercase tracking-wider text-center leading-tight">Share with<br />partner</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Professional Arrived Notification - Only after OTP verified */}
           {booking?.status?.toLowerCase() === 'visited' && (

@@ -217,6 +217,7 @@ const JobTimeline = () => {
   };
 
   const isPending = (job?.status === 'assigned' || job?.status === 'confirmed' || job?.status === 'pending') && job?.workerResponse !== 'ACCEPTED';
+  const customerPaid = job?.cashCollected || job?.paymentStatus === 'SUCCESS' || job?.paymentStatus === 'success';
 
   const timelineStages = [
     {
@@ -260,9 +261,11 @@ const JobTimeline = () => {
       id: 5,
       title: 'Customer Payment',
       icon: FiDollarSign,
-      action: currentStage === 5 && !job?.cashCollected && job?.paymentMode === 'CASH' ? () => setIsPaymentModalOpen(true) : null,
-      actionLabel: 'Collect Cash',
-      description: job?.cashCollected ? 'Cash collected successfully.' : (job?.paymentMode === 'CASH' ? 'Pending cash collection.' : 'Online payment verified.'),
+      action: currentStage === 5 && !customerPaid ? () => navigate(`/worker/job/${id}/billing`) : null,
+      actionLabel: 'Make / Prepare Bill',
+      description: customerPaid 
+        ? 'Customer payment received & verified.' 
+        : 'Validation: Please go to Make / Prepare Bill page to calculate final bill & collect payment.',
       timestamp: null
     },
     {

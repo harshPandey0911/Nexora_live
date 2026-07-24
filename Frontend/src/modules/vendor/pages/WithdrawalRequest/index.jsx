@@ -92,13 +92,50 @@ const WithdrawalRequest = () => {
     setError('');
   };
 
+  const [fetchingIfsc, setFetchingIfsc] = useState(false);
+
+  const fetchBankFromIFSC = async (ifsc) => {
+    if (!ifsc || ifsc.length !== 11) return;
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(ifsc)) return;
+
+    try {
+      setFetchingIfsc(true);
+      const res = await fetch(`https://ifsc.razorpay.com/${ifsc}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.BANK) {
+          setBankAccount(prev => ({
+            ...prev,
+            bankName: data.BANK + (data.BRANCH ? ` (${data.BRANCH})` : '')
+          }));
+          toast.success(`Bank identified: ${data.BANK}`);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching IFSC details:', err);
+    } finally {
+      setFetchingIfsc(false);
+    }
+  };
+
   const handleBankInputChange = (e) => {
     const { name, value } = e.target;
 
-    // Validate number-only fields
+    // Numbers only for account numbers
     if (name === 'accountNumber' || name === 'confirmAccountNumber') {
       const numValue = value.replace(/[^0-9]/g, '');
       setBankAccount(prev => ({ ...prev, [name]: numValue }));
+      return;
+    }
+
+    // Auto uppercase for IFSC & auto fetch bank name
+    if (name === 'ifscCode') {
+      const upperIfsc = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+      setBankAccount(prev => ({ ...prev, ifscCode: upperIfsc }));
+      if (upperIfsc.length === 11) {
+        fetchBankFromIFSC(upperIfsc);
+      }
       return;
     }
 
@@ -106,20 +143,50 @@ const WithdrawalRequest = () => {
   };
 
   const saveBankDetails = () => {
-    if (!bankAccount.accountHolderName || !bankAccount.accountNumber || !bankAccount.bankName || !bankAccount.ifscCode) {
+    const { accountHolderName, bankName, accountNumber, confirmAccountNumber, ifscCode } = bankAccount;
+
+    if (!accountHolderName || !accountNumber || !bankName || !ifscCode) {
       toast.error('Please fill all mandatory bank details');
       return;
     }
 
-    if (bankAccount.accountNumber !== bankAccount.confirmAccountNumber) {
+    if (accountHolderName.trim().length < 3) {
+      toast.error('Account Holder Name must be at least 3 characters long');
+      return;
+    }
+
+    if (bankName.trim().length < 2) {
+      toast.error('Please enter a valid Bank Name');
+      return;
+    }
+
+    if (accountNumber.length < 9 || accountNumber.length > 18) {
+      toast.error('Bank Account Number must be between 9 and 18 digits');
+      return;
+    }
+
+    if (confirmAccountNumber && accountNumber !== confirmAccountNumber) {
       toast.error('Account numbers do not match');
       return;
     }
 
-    localStorage.setItem('vendorBankAccount', JSON.stringify(bankAccount));
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(ifscCode)) {
+      toast.error('Invalid IFSC Code format (e.g. SBIN0001234)');
+      return;
+    }
+
+    const updatedBank = {
+      ...bankAccount,
+      confirmAccountNumber: accountNumber,
+      ifscCode: ifscCode.toUpperCase()
+    };
+
+    localStorage.setItem('vendorBankAccount', JSON.stringify(updatedBank));
+    setBankAccount(updatedBank);
     setIsBankSaved(true);
     setShowBankForm(false);
-    toast.success('Bank details updated');
+    toast.success('Bank details verified & saved successfully');
   };
 
   const handleSubmit = async () => {
@@ -146,15 +213,13 @@ const WithdrawalRequest = () => {
     }
   };
 
-  const tdsRate = 1; // Updated to 1% as per user request
-  const commissionRate = vendorStats.commissionRate;
-  const platformFeeRate = vendorStats.platformFeeRate;
+  const tdsRate = 1; // Statutory TDS (1%)
+  const platformFeeRate = vendorStats.platformFeeRate || 1; // Platform Fee (1%)
 
   const grossAmount = parseInt(amount) || 0;
-  const commissionAmount = Math.round(grossAmount * (commissionRate / 100));
   const platformFeeAmount = Math.round(grossAmount * (platformFeeRate / 100));
   const tdsAmount = Math.round(grossAmount * (tdsRate / 100));
-  const netAmount = grossAmount - commissionAmount - platformFeeAmount - tdsAmount;
+  const netAmount = grossAmount - platformFeeAmount - tdsAmount;
 
   return (
     <AnimatePresence mode="wait">
@@ -250,20 +315,24 @@ const WithdrawalRequest = () => {
               )}
 
               {amount && !error && (
-                <div className="bg-gray-50 rounded-xl p-6 space-y-4 border border-gray-100">
-                  <div className="flex justify-between items-center text-[9px] font-medium capitalize tracking-[0.2em] text-gray-400">
-                    <span>Infrastructure Fee ({commissionRate + platformFeeRate}%)</span>
-                    <span className="text-gray-800">₹{(commissionAmount + platformFeeAmount).toLocaleString()}</span>
+                <div className="bg-gray-50 rounded-xl p-5 space-y-3 border border-gray-100">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                    <span>Requested Amount</span>
+                    <span className="text-gray-900">₹{grossAmount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center text-[9px] font-medium capitalize tracking-[0.2em] text-gray-400">
+                  <div className="flex justify-between items-center text-xs font-medium text-gray-500">
+                    <span>Platform Charge ({platformFeeRate}%)</span>
+                    <span className="text-red-500 font-bold">-₹{platformFeeAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs font-medium text-gray-500">
                     <span>Statutory TDS (1%)</span>
-                    <span className="text-gray-800">₹{tdsAmount.toLocaleString()}</span>
+                    <span className="text-red-500 font-bold">-₹{tdsAmount.toLocaleString()}</span>
                   </div>
-                  <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
-                    <span className="text-[10px] font-medium text-gray-900 capitalize tracking-[0.2em]">Net Deployment Credit</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-xs font-medium text-blue-600">₹</span>
-                      <span className="text-3xl font-medium text-blue-600 tracking-tighter">{netAmount.toLocaleString()}</span>
+                  <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Final Net Payout</span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-sm font-bold text-emerald-600">₹</span>
+                      <span className="text-2xl font-black text-emerald-600 tracking-tight">{netAmount.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -299,50 +368,72 @@ const WithdrawalRequest = () => {
                 <div className="space-y-5">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[8px] font-medium text-gray-400 capitalize tracking-[0.3em] ml-2">Account Proprietor</label>
+                      <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider ml-1">Account Holder Name</label>
                       <input
                         type="text"
                         name="accountHolderName"
                         value={bankAccount.accountHolderName}
                         onChange={handleBankInputChange}
-                        className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none text-[11px] font-medium text-gray-800 capitalize tracking-widest transition-all placeholder:text-gray-300"
-                        placeholder="ENTER FULL LEGAL NAME"
+                        className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none text-sm font-bold text-gray-900 transition-all placeholder:text-gray-400"
+                        placeholder="Full Name as per Bank Account"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[8px] font-medium text-gray-400 capitalize tracking-[0.3em] ml-2">Institution</label>
+                        <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider ml-1 flex items-center justify-between">
+                          <span>Bank Name</span>
+                          {fetchingIfsc && <span className="text-[9px] text-blue-600 font-normal animate-pulse">Auto-fetching...</span>}
+                        </label>
                         <input
                           type="text"
                           name="bankName"
                           value={bankAccount.bankName}
                           onChange={handleBankInputChange}
-                          className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none text-[11px] font-medium text-gray-800 capitalize tracking-widest transition-all placeholder:text-gray-300"
-                          placeholder="BANK NAME"
+                          className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none text-sm font-bold text-gray-900 transition-all placeholder:text-gray-400"
+                          placeholder="e.g. HDFC Bank, SBI"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[8px] font-medium text-gray-400 capitalize tracking-[0.3em] ml-2">Protocol Code</label>
-                        <input
-                          type="text"
-                          name="ifscCode"
-                          value={bankAccount.ifscCode}
-                          onChange={handleBankInputChange}
-                          className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none text-[11px] font-medium text-gray-800 capitalize tracking-widest transition-all placeholder:text-gray-300"
-                          placeholder="IFSC CODE"
-                          maxLength={11}
-                        />
+                        <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider ml-1">IFSC Code</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="ifscCode"
+                            value={bankAccount.ifscCode}
+                            onChange={handleBankInputChange}
+                            className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none text-sm font-bold text-gray-900 uppercase tracking-widest transition-all placeholder:text-gray-400"
+                            placeholder="e.g. SBIN0001234"
+                            maxLength={11}
+                          />
+                          {fetchingIfsc && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[8px] font-medium text-gray-400 capitalize tracking-[0.3em] ml-2">Identification Number</label>
+                      <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider ml-1">Account Number (9-18 digits)</label>
                       <input
-                        type="tel"
+                        type="text"
                         name="accountNumber"
                         value={bankAccount.accountNumber}
                         onChange={handleBankInputChange}
-                        className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-100 focus:border-blue-500 outline-none text-base font-medium text-gray-800 tracking-[0.3em] transition-all placeholder:text-gray-200"
-                        placeholder="0000 0000 0000"
+                        className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none text-base font-black text-gray-900 tracking-widest transition-all placeholder:text-gray-400"
+                        placeholder="Enter Bank Account Number"
+                        maxLength={18}
+                        inputMode="numeric"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-gray-700 uppercase tracking-wider ml-1">Confirm Account Number</label>
+                      <input
+                        type="text"
+                        name="confirmAccountNumber"
+                        value={bankAccount.confirmAccountNumber || ''}
+                        onChange={handleBankInputChange}
+                        className="w-full px-5 py-3.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-blue-500 outline-none text-base font-black text-gray-900 tracking-widest transition-all placeholder:text-gray-400"
+                        placeholder="Re-enter Bank Account Number"
+                        maxLength={18}
                         inputMode="numeric"
                       />
                     </div>
@@ -350,9 +441,9 @@ const WithdrawalRequest = () => {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={saveBankDetails}
-                    className="w-full py-4.5 bg-blue-600 text-white rounded-xl font-medium text-[10px] capitalize tracking-[0.3em] shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                    className="w-full py-4.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
                   >
-                    Authenticate Protocol
+                    Save & Authenticate Bank Details
                   </motion.button>
                 </div>
               ) : (

@@ -100,7 +100,7 @@ const Dashboard = memo(() => {
           address: b.address?.addressLine1 || 'Address not available',
           distance: distance
         },
-        price: (b.vendorEarnings > 0 ? b.vendorEarnings : (b.finalAmount > 0 ? b.finalAmount * 0.9 : 0)).toFixed(2),
+        price: (b.finalAmount || b.totalAmount || b.amount || 0).toFixed(2),
         vendorEarnings: b.vendorEarnings,
         timeSlot: {
           date: new Date(b.scheduledDate).toLocaleDateString(),
@@ -198,7 +198,7 @@ const Dashboard = memo(() => {
       serviceType: booking.serviceId?.title || 'Service',
       customerName: booking.userId?.name || 'Customer',
       location: booking.address?.addressLine1 || 'Address not available',
-      price: (booking.vendorEarnings > 0 ? booking.vendorEarnings : (booking.finalAmount ? booking.finalAmount * 0.9 : 0)).toFixed(2),
+      price: (booking.finalAmount || booking.totalAmount || booking.amount || 0).toFixed(2),
       vendorEarnings: booking.vendorEarnings,
       timeSlot: {
         date: new Date(booking.scheduledDate).toLocaleDateString(),

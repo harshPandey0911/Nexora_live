@@ -102,7 +102,7 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
   });
 
   // Tax Logic
-  const originalGST = bill ? (bill.originalGST || 0) : (originalBase * 0.18);
+  const originalGST = bill ? (bill.originalGST || 0) : (parseFloat(booking?.tax) || 0);
   const totalGST = originalGST + extraServiceGST + partsGST;
 
   // Final Total

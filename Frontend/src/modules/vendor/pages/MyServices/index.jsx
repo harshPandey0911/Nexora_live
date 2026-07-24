@@ -678,10 +678,6 @@ const MyServices = () => {
                     <span className="text-[9px] font-mono text-gray-500">{(selectedItem.id || '').slice(-10).toUpperCase()}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-400 uppercase tracking-wider">GST</span>
-                    <span className="text-[9px] font-semibold text-gray-600">{selectedItem.gstPercentage || 18}%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
                     <span className="text-[9px] text-gray-400 uppercase tracking-wider">Status</span>
                     <span className="text-[9px] font-semibold text-green-600 capitalize">{selectedItem.status || 'active'}</span>
                   </div>

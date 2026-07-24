@@ -13,9 +13,17 @@ const getVendorWorkers = async (req, res) => {
     const { status, page = 1, limit = 20 } = req.query;
 
     // Build query
-    const query = { vendorId };
-    if (status) {
-      query.status = status;
+    let query = {};
+    if (status === 'past') {
+      query = {
+        previousVendorIds: vendorId,
+        vendorId: { $ne: vendorId }
+      };
+    } else {
+      query = { vendorId };
+      if (status && status !== 'all') {
+        query.status = status;
+      }
     }
 
     // Pagination
@@ -141,7 +149,7 @@ const addWorker = async (req, res) => {
       serviceCategories: serviceCategories || [],
       address: address || {},
       location: workerLocation,
-      approvalStatus: 'approved',
+      approvalStatus: 'pending',
       status: WORKER_STATUS.OFFLINE
     });
 
@@ -199,7 +207,6 @@ const linkWorker = async (req, res) => {
 
     worker.vendorId = vendorId;
     worker.status = WORKER_STATUS.ACTIVE;
-    worker.approvalStatus = 'approved';
     await worker.save();
 
     res.status(200).json({
@@ -249,7 +256,6 @@ const updateWorker = async (req, res) => {
     if (updateData.name) worker.name = updateData.name;
     if (updateData.email !== undefined) worker.email = updateData.email || undefined;
     if (updateData.serviceCategories) worker.serviceCategories = updateData.serviceCategories;
-    if (worker.approvalStatus === 'pending') worker.approvalStatus = 'approved';
     if (updateData.address) {
       worker.address = { ...worker.address, ...updateData.address };
       if (updateData.address.lat !== undefined && updateData.address.lng !== undefined) {
@@ -334,6 +340,12 @@ const removeWorker = async (req, res) => {
 
     // Remove worker (soft delete by setting status to inactive)
     worker.status = WORKER_STATUS.INACTIVE;
+    if (worker.vendorId) {
+      if (!worker.previousVendorIds) worker.previousVendorIds = [];
+      if (!worker.previousVendorIds.some(vId => vId.toString() === worker.vendorId.toString())) {
+        worker.previousVendorIds.push(worker.vendorId);
+      }
+    }
     worker.vendorId = null; // Unassign from vendor
     await worker.save();
 
