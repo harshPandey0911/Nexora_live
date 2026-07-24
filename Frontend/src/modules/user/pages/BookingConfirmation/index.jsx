@@ -455,43 +455,116 @@ const BookingConfirmation = () => {
             </div>
 
             <div className="space-y-3">
-              {/* Base Price */}
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-600">Base Price</span>
-                {booking.paymentMethod === 'plan_benefit' ? (
-                  <div className="flex items-center gap-2">
-                    <span className="line-through text-slate-400 text-xs">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-                    <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+              {booking.bill ? (
+                <>
+                  {/* Base Price */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-600">Base Price ({booking.serviceName || 'Service'})</span>
+                    {booking.paymentMethod === 'plan_benefit' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="line-through text-slate-400 text-xs">₹{(booking.bill.originalServiceBase || booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-900">₹{(booking.bill.originalServiceBase || booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                    )}
                   </div>
-                ) : (
-                  <span className="font-medium text-slate-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
-                )}
-              </div>
 
-              {/* Discount */}
-              {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-green-600 font-medium">Discount</span>
-                  <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
-                </div>
-              )}
-
-              {/* Tax */}
-              {(booking.tax > 0 || booking.paymentMethod === 'plan_benefit') && (
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">GST (18%)</span>
-                  {booking.paymentMethod === 'plan_benefit' ? (
-                    <div className="flex items-center gap-2">
-                      <span className="line-through text-slate-400 text-xs">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
-                      <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                  {/* Extra Services */}
+                  {(booking.bill.services || []).filter(s => !s.isOriginal).map((s, idx) => (
+                    <div key={`s-${idx}`} className="flex justify-between items-center text-xs text-slate-600">
+                      <span>{s.name} x{s.quantity}</span>
+                      <span className="font-medium text-slate-900">₹{((s.price || 0) * (s.quantity || 1)).toFixed(2)}</span>
                     </div>
-                  ) : (
-                    <span className="font-medium text-slate-700">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
-                  )}
-                </div>
-              )}
+                  ))}
 
-              {/* Convenience Fee removed */}
+                  {/* Parts */}
+                  {(booking.bill.parts || []).map((p, idx) => (
+                    <div key={`p-${idx}`} className="flex justify-between items-center text-xs text-slate-600">
+                      <span>{p.name} x{p.quantity}</span>
+                      <span className="font-medium text-slate-900">₹{((p.price || 0) * (p.quantity || 1)).toFixed(2)}</span>
+                    </div>
+                  ))}
+
+                  {/* Custom Items */}
+                  {(booking.bill.customItems || []).map((c, idx) => (
+                    <div key={`c-${idx}`} className="flex justify-between items-center text-xs text-slate-600">
+                      <span>{c.name} x{c.quantity}</span>
+                      <span className="font-medium text-slate-900">₹{((c.price || 0) * (c.quantity || 1)).toFixed(2)}</span>
+                    </div>
+                  ))}
+
+                  {/* Tax */}
+                  {(booking.bill.totalGST > 0 || booking.tax > 0) && (
+                    <div className="flex justify-between items-center text-xs text-slate-500 border-t border-dashed border-slate-200 pt-1">
+                      <span>GST (18%)</span>
+                      <span className="font-medium text-slate-700">₹{(booking.bill.totalGST || booking.tax || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Visiting Charges */}
+                  {(booking.bill.visitingCharges > 0 || booking.visitingCharges > 0) && (
+                    <div className="flex justify-between items-center text-xs text-slate-600">
+                      <span>Visiting Charges</span>
+                      <span className="font-medium text-slate-900">₹{(booking.bill.visitingCharges || booking.visitingCharges || 0).toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  {/* Transport Charges */}
+                  {booking.bill.transportCharges > 0 && (
+                    <div className="flex justify-between items-center text-xs text-slate-600">
+                      <span>Transport Charges</span>
+                      <span className="font-medium text-slate-900">₹{booking.bill.transportCharges.toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Base Price */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-600">Base Price</span>
+                    {booking.paymentMethod === 'plan_benefit' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="line-through text-slate-400 text-xs">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                        <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-slate-900">₹{(booking.basePrice || 0).toLocaleString('en-IN')}</span>
+                    )}
+                  </div>
+
+                  {/* Discount */}
+                  {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-green-600 font-medium">Discount</span>
+                      <span className="font-medium text-green-600">-₹{booking.discount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+
+                  {/* Tax */}
+                  {(booking.tax > 0 || booking.paymentMethod === 'plan_benefit') && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-slate-500">GST (18%)</span>
+                      {booking.paymentMethod === 'plan_benefit' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="line-through text-slate-400 text-xs">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                          <span className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">FREE ✓</span>
+                        </div>
+                      ) : (
+                        <span className="font-medium text-slate-700">₹{(booking.tax || 0).toLocaleString('en-IN')}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Visiting Charges */}
+                  {booking.visitingCharges > 0 && (
+                    <div className="flex justify-between items-center text-xs text-slate-600">
+                      <span>Visiting Charges</span>
+                      <span className="font-medium text-slate-900">₹{booking.visitingCharges.toFixed(2)}</span>
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* Total */}
               <div className="border-t border-slate-200 pt-4 mt-2">
@@ -502,7 +575,7 @@ const BookingConfirmation = () => {
                       : 'Total Payable'}
                   </span>
                   <span className="text-xl font-black text-slate-900">
-                    ₹{(booking.paymentMethod === 'plan_benefit' ? 0 : (booking.finalAmount || booking.totalAmount || 0)).toLocaleString('en-IN')}
+                    ₹{(booking.paymentMethod === 'plan_benefit' ? 0 : (booking.bill?.grandTotal || booking.finalAmount || booking.totalAmount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>

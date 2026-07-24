@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
 import LogoLoader from '../../../../components/common/LogoLoader';
 import PaymentVerificationModal from '../../components/booking/PaymentVerificationModal';
+import { NEXORA_LOGO_BASE64 } from '../../../../utils/logoBase64';
 
 
 const toAssetUrl = (url) => {
@@ -82,15 +83,17 @@ const BookingTrack = () => {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: orderResponse.data.amount * 100,
+        key: orderResponse.data?.keyId || orderResponse.data?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw',
+        amount: Math.round(orderResponse.data.amount * 100),
         currency: orderResponse.data.currency || 'INR',
         order_id: orderResponse.data.orderId,
-        name: 'Appzeto',
+        name: 'Nexora Go',
         description: `Payment for ${booking.serviceName}`,
+        image: NEXORA_LOGO_BASE64,
         handler: async function (response) {
           toast.loading('Verifying payment...');
           const verifyResponse = await paymentService.verifyPayment({
+            bookingId: booking._id || booking.id,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature
@@ -259,11 +262,17 @@ const BookingTrack = () => {
 
       socket.on('live_location_update', handleLocationUpdate);
       socket.on('booking_updated', handleBookingUpdate);
+      socket.on('bill_finalized', handleBookingUpdate);
+      socket.on('bill_editing', handleBookingUpdate);
+      socket.on('bill_updated', handleBookingUpdate);
       socket.on('notification', handleBookingUpdate);
 
       return () => {
         socket.off('live_location_update', handleLocationUpdate);
         socket.off('booking_updated', handleBookingUpdate);
+        socket.off('bill_finalized', handleBookingUpdate);
+        socket.off('bill_editing', handleBookingUpdate);
+        socket.off('bill_updated', handleBookingUpdate);
         socket.off('notification', handleBookingUpdate);
       };
     }
@@ -728,7 +737,7 @@ const BookingTrack = () => {
       </div>
 
       {/* Bottom Status Card */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
+      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-28 md:pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
 
         {/* Status Header */}
@@ -795,8 +804,8 @@ const BookingTrack = () => {
           </div>
         </div>
 
-        {/* Arrival OTP - New Premium Display */}
-        {(booking?.visitOtp || booking?.arrivalOTP) && ['confirmed', 'assigned', 'journey_started'].includes(booking?.status?.toLowerCase()) && (
+        {/* Arrival OTP - Displayed on Tracking Page */}
+        {(booking?.visitOtp || booking?.arrivalOTP) && ['confirmed', 'assigned', 'journey_started', 'on_the_way', 'reached', 'requested', 'searching'].includes(booking?.status?.toLowerCase()) && (
           <div className="mb-3 relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 p-3 shadow-lg">
             <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -translate-y-10 translate-x-10 blur-xl"></div>
             <div className="relative z-10 flex items-center justify-between gap-3">
@@ -877,13 +886,20 @@ const BookingTrack = () => {
 
               {booking?.paymentStatus !== 'success' ? (
                 <>
-                  <button
-                    onClick={handleOnlinePayment}
-                    className="w-full py-4 bg-white text-orange-600 rounded-xl font-black text-sm shadow-xl hover:bg-orange-50 active:scale-95 transition-all flex items-center justify-center gap-2"
-                  >
-                    <FiDollarSign className="w-4 h-4" />
-                    Pay Online Now
-                  </button>
+                  {booking?.bill && (booking.bill.isFinalized === false || booking.bill.status === 'draft') ? (
+                    <div className="w-full py-4 bg-white/20 backdrop-blur-md text-amber-100 rounded-xl font-bold text-xs border border-white/20 flex items-center justify-center gap-2 text-center p-3">
+                      <FiClock className="w-4 h-4 text-amber-300 shrink-0" />
+                      <span>Vendor is updating invoice. Pay Online opens once bill is ready.</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className="w-full py-4 bg-white text-orange-600 rounded-xl font-black text-sm shadow-xl hover:bg-orange-50 active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      <FiDollarSign className="w-4 h-4" />
+                      Pay Online Now
+                    </button>
+                  )}
 
                   <div className="mt-6 flex flex-col items-center w-full">
                     <p className="text-[9px] font-black text-white/60 uppercase tracking-[0.3em] mb-3">Payment Verification OTP</p>

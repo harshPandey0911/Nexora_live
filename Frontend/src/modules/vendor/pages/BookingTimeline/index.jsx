@@ -297,12 +297,12 @@ const BookingTimeline = () => {
     },
     {
       id: 7,
-      title: booking?.isSelfJob ? 'Collect Payment' : 'Approve Worker Work',
+      title: booking?.isSelfJob ? 'Customer Payment' : 'Approve Worker Work',
       icon: FiCheckCircle,
       action: (() => {
-        if (booking?.status === 'completed' || booking?.status === 'COMPLETED' || booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid') return null;
+        if (booking?.status === 'completed' || booking?.status === 'COMPLETED' || booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected) return null;
 
-        if (booking?.isSelfJob && currentStage === 7) {
+        if (booking?.isSelfJob && (currentStage === 7 || booking?.status === 'work_done')) {
           return () => navigate(`/vendor/booking/${id}/billing`);
         }
 
@@ -311,7 +311,12 @@ const BookingTimeline = () => {
         }
         return null;
       })(),
-      description: booking?.isSelfJob ? 'Collect cash and complete booking' : 'Review and approve worker work',
+      actionLabel: booking?.isSelfJob ? 'Make / Prepare Bill' : 'Approve Work',
+      description: booking?.isSelfJob
+        ? (['completed', 'paid', 'success'].includes(booking?.status?.toLowerCase()) || booking?.cashCollected
+            ? 'Customer payment received & verified.'
+            : 'Validation: Please go to Make / Prepare Bill page to calculate final bill & collect payment.')
+        : 'Review and approve worker work',
     },
     {
       id: 8,
@@ -468,23 +473,25 @@ const BookingTimeline = () => {
                       {stage.action && !isSkipped && (
                         <button
                           onClick={stage.action}
-                          className="px-4 py-2 rounded-lg font-medium text-white text-sm transition-all active:scale-95"
+                          className="px-4 py-2 rounded-lg font-medium text-white text-sm transition-all active:scale-95 flex items-center gap-2"
                           style={{
                             background: themeColors.button,
                             boxShadow: `0 2px 8px ${themeColors.button}40`,
                           }}
                         >
-                          {stage.id === 3 ? 'Assign Worker' :
-                            stage.id === 4 ? 'Start Journey' :
-                              stage.id === 5 ? 'Mark Arrived' :
-                                stage.id === 6 ? 'Mark workdone' :
-                                  stage.id === 7 ? (
-                                    (booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid')
-                                      ? 'Online Payment Done'
-                                      : (booking?.isSelfJob ? 'Collect Cash' : 'Approve Work')
-                                  ) :
-                                    stage.id === 8 ? 'Pay Worker' :
-                                      stage.id === 9 ? 'Final Settlement' : 'Continue'}
+                          {stage.actionLabel || (
+                            stage.id === 3 ? 'Assign Worker' :
+                              stage.id === 4 ? 'Start Journey' :
+                                stage.id === 5 ? 'Mark Arrived' :
+                                  stage.id === 6 ? 'Mark workdone' :
+                                    stage.id === 7 ? (
+                                      (booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected)
+                                        ? 'Payment Completed ✓'
+                                        : (booking?.isSelfJob ? 'Make / Prepare Bill' : 'Approve Work')
+                                    ) :
+                                      stage.id === 8 ? 'Pay Worker' :
+                                        stage.id === 9 ? 'Final Settlement' : 'Continue'
+                          )}
                         </button>
                       )}
 

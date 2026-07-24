@@ -142,6 +142,16 @@ exports.initiateCashCollection = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    if (
+      booking.paymentStatus === PAYMENT_STATUS.SUCCESS ||
+      booking.paymentStatus === 'paid' ||
+      booking.paymentStatus === 'collected_by_vendor' ||
+      booking.status === BOOKING_STATUS.COMPLETED ||
+      booking.cashCollected
+    ) {
+      return res.status(400).json({ success: false, message: 'Payment has already been received and completed for this booking' });
+    }
+
     // Allow cash, pay_at_home, online (if user changes mind), AND plan_benefit (for final bill flow)
     const allowedMethods = ['cash', 'pay_at_home', 'plan_benefit', 'online'];
     if (!allowedMethods.includes(booking.paymentMethod)) {
@@ -524,6 +534,21 @@ exports.verifyOnlinePayment = async (req, res) => {
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Idempotency: If booking is already paid or completed, return success immediately
+    if (
+      booking.paymentStatus === PAYMENT_STATUS.SUCCESS ||
+      booking.paymentStatus === 'paid' ||
+      booking.paymentStatus === 'collected_by_vendor' ||
+      booking.status === BOOKING_STATUS.COMPLETED ||
+      booking.cashCollected
+    ) {
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verified and booking completed',
+        booking
+      });
     }
 
     if (!booking.razorpayQrId) {

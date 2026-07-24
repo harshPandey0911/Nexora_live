@@ -1,11 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { FiCheckCircle, FiShield, FiAlertCircle, FiPackage, FiX, FiInfo } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
-import { configService } from '../../../../services/configService';
+import { bookingService } from '../../../../services/bookingService';
 
-const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => {
+const PaymentVerificationModal = ({ isOpen, onClose, booking: initialBooking, onPayOnline }) => {
   const [isOnlinePaymentEnabled, setIsOnlinePaymentEnabled] = useState(true);
   const [configLoading, setConfigLoading] = useState(true);
+  const [booking, setBooking] = useState(initialBooking);
+
+  useEffect(() => {
+    setBooking(initialBooking);
+  }, [initialBooking]);
+
+  useEffect(() => {
+    const fetchFreshBooking = async () => {
+      const bId = initialBooking?._id || initialBooking?.id;
+      if (!bId) return;
+      try {
+        const res = await bookingService.getById(bId);
+        if (res.success && res.data) {
+          setBooking(res.data);
+        }
+      } catch (err) {
+        console.warn('Error fetching fresh booking in modal:', err);
+      }
+    };
+
+    if (isOpen) {
+      fetchFreshBooking();
+      // Poll every 3 seconds while modal is open to catch live vendor bill edits
+      const timer = setInterval(fetchFreshBooking, 3000);
+      return () => clearInterval(timer);
+    }
+  }, [isOpen, initialBooking]);
 
   // Helper to check if payment is complete (cash or online)
   const isPaymentComplete =
@@ -33,15 +60,18 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
     }
   }, [isOpen]);
 
-  // Lock body scroll when modal is open
+  // Lock body & document scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
     };
   }, [isOpen]);
 
@@ -121,7 +151,7 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md touch-none overscroll-contain">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -294,23 +324,43 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking, onPayOnline }) => 
               ) : (
                 <>
                   {/* Online Pay - CONDITIONALLY RENDERED */}
-                  {!configLoading && isOnlinePaymentEnabled ? (
-                    <button
-                      onClick={onPayOnline}
-                      className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
-                    >
-                      Pay Online Securely
-                    </button>
-                  ) : (
-                    !configLoading && (
-                      <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2">
-                        <FiAlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                        <p className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">
-                           Online payment temporarily unavailable. Please pay by cash.
-                        </p>
-                      </div>
-                    )
-                  )}
+                  {(() => {
+                    const isDraftBill = bill && (bill.isFinalized === false || bill.status === 'draft');
+                    if (isDraftBill) {
+                      return (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
+                          <FiInfo className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs font-bold text-amber-900">Vendor is updating your invoice</p>
+                            <p className="text-[11px] text-amber-700 mt-0.5">Pay Online will unlock as soon as the vendor reviews & finalizes the bill.</p>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (!configLoading && isOnlinePaymentEnabled) {
+                      return (
+                        <button
+                          onClick={onPayOnline}
+                          className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
+                        >
+                          Pay Online Securely
+                        </button>
+                      );
+                    }
+
+                    if (!configLoading) {
+                      return (
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2">
+                          <FiAlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                          <p className="text-[10px] font-bold text-amber-800 uppercase tracking-tight">
+                             Online payment temporarily unavailable. Please pay by cash.
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   <div className="relative py-2 text-center">
                     <span className="bg-white px-2 text-[10px] font-bold text-slate-400 relative z-10 uppercase tracking-wider">OR</span>

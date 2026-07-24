@@ -717,7 +717,7 @@ const BookingMap = () => {
       </div>
 
       {/* Modern Bottom Card */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
+      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-28 md:pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
         <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
 
         {/* Time & Distance Header */}

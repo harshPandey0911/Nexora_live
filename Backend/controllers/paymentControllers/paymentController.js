@@ -113,13 +113,16 @@ const verifyPaymentWebhook = async (req, res) => {
       });
     }
 
-    // Find booking by Razorpay order ID
-    const booking = await Booking.findOne({ razorpayOrderId: razorpay_order_id });
+    // Find booking by Razorpay order ID or bookingId fallback
+    let booking = await Booking.findOne({ razorpayOrderId: razorpay_order_id });
+    if (!booking && req.body.bookingId) {
+      booking = await Booking.findById(req.body.bookingId);
+    }
 
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found'
+        message: 'Booking not found for payment verification'
       });
     }
 
@@ -132,12 +135,38 @@ const verifyPaymentWebhook = async (req, res) => {
     // Update booking status based on current state
     if ([BOOKING_STATUS.PENDING, BOOKING_STATUS.SEARCHING, BOOKING_STATUS.AWAITING_PAYMENT].includes(booking.status)) {
       booking.status = BOOKING_STATUS.CONFIRMED;
-    } else if (booking.status === BOOKING_STATUS.WORK_DONE) {
+    } else if (booking.status === BOOKING_STATUS.WORK_DONE || booking.status === 'start_work' || booking.status === 'in_progress') {
       booking.status = BOOKING_STATUS.COMPLETED;
       booking.completedAt = new Date();
     }
 
     await booking.save();
+
+    // Emit real-time Socket events to User, Vendor, and Worker immediately
+    const io = req.app.get('io');
+    if (io) {
+      const payload = {
+        bookingId: booking._id,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        paymentMethod: booking.paymentMethod,
+        finalAmount: booking.finalAmount,
+        cashCollected: false
+      };
+
+      io.to(`user_${booking.userId}`).emit('payment_success', payload);
+      io.to(`user_${booking.userId}`).emit('booking_updated', payload);
+
+      if (booking.vendorId) {
+        io.to(`vendor_${booking.vendorId}`).emit('payment_success', payload);
+        io.to(`vendor_${booking.vendorId}`).emit('booking_updated', payload);
+      }
+
+      if (booking.workerId) {
+        io.to(`worker_${booking.workerId}`).emit('payment_success', payload);
+        io.to(`worker_${booking.workerId}`).emit('booking_updated', payload);
+      }
+    }
 
     // ── Credit Vendor Wallet from VendorBill (single source of truth) ──
     const Transaction = require('../../models/Transaction');

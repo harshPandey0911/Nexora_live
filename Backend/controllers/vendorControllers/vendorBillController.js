@@ -220,6 +220,8 @@ const createOrUpdateBill = async (req, res) => {
     // ═══════════════════════════════════════
     let bill = await VendorBill.findOne({ bookingId });
 
+    const isBillFinalized = req.body.isFinalized !== undefined ? Boolean(req.body.isFinalized) : true;
+
     const billData = {
       vendorId: billVendorId,
       services: allServices,
@@ -247,7 +249,8 @@ const createOrUpdateBill = async (req, res) => {
       vendorTotalEarning,
       companyRevenue,
       applyPartsGST,
-      status: BILL_STATUS.GENERATED,
+      isFinalized: isBillFinalized,
+      status: isBillFinalized ? BILL_STATUS.GENERATED : BILL_STATUS.DRAFT,
       generatedAt: new Date()
     };
 
@@ -266,6 +269,56 @@ const createOrUpdateBill = async (req, res) => {
     booking.vendorBillId = bill._id;
     booking.razorpayOrderId = null; // Invalidate stale Razorpay order to force new order matching grandTotal
     await booking.save();
+
+    // Emit real-time Socket events & notifications to user
+    const io = req.app.get('io');
+    if (io) {
+      if (isBillFinalized) {
+        io.to(`user_${booking.userId}`).emit('bill_finalized', {
+          bookingId: booking._id,
+          finalAmount: grandTotal,
+          bill,
+          isFinalized: true,
+          status: booking.status
+        });
+      } else {
+        io.to(`user_${booking.userId}`).emit('bill_editing', {
+          bookingId: booking._id,
+          isFinalized: false,
+          bill
+        });
+      }
+      io.to(`user_${booking.userId}`).emit('booking_updated', {
+        bookingId: booking._id,
+        finalAmount: grandTotal,
+        bill,
+        isFinalized: isBillFinalized,
+        status: booking.status
+      });
+      io.to(`user_${booking.userId}`).emit('bill_updated', {
+        bookingId: booking._id,
+        finalAmount: grandTotal,
+        bill,
+        isFinalized: isBillFinalized
+      });
+    }
+
+    if (isBillFinalized) {
+      try {
+        const { createNotification } = require('../notificationControllers/notificationController');
+        await createNotification({
+          recipientType: 'User',
+          recipientId: booking.userId,
+          userId: booking.userId,
+          title: 'Bill Finalized',
+          message: `Your final bill of ₹${grandTotal} is ready for review & payment.`,
+          type: 'bill_finalized',
+          data: { bookingId: booking._id, finalAmount: grandTotal }
+        });
+      } catch (notifErr) {
+        console.warn('Error sending bill_finalized notification:', notifErr);
+      }
+    }
 
     res.status(200).json({
       success: true,

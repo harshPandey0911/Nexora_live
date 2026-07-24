@@ -14,6 +14,7 @@ const Header = memo(({
   showSearch = false,
   showNotifications = false,
   notificationCount = 0,
+  showOnlineToggle = false,
   onMenuClick
 }) => {
   const navigate = useNavigate();
@@ -149,18 +150,20 @@ const Header = memo(({
 
         {/* Right: Notifications */}
         <div className="flex items-center gap-4">
-          {/* Online Toggle Switch (Mobile Only) */}
-          <div className="flex items-center gap-2 lg:hidden px-1">
-            <span className="text-[10px] font-normal text-gray-500 capitalize tracking-wider">{isOnline ? 'Online' : 'Offline'}</span>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleToggleOnline}
-              disabled={isToggling}
-              className={`w-10 h-5.5 rounded-full relative transition-all duration-300 focus:outline-none ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`}
-            >
-              <div className={`absolute top-0.75 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${isOnline ? 'left-5.5' : 'left-0.75'}`} />
-            </motion.button>
-          </div>
+          {/* Online Toggle Switch (Only on main screens) */}
+          {showOnlineToggle && (
+            <div className="flex items-center gap-2 lg:hidden px-1">
+              <span className="text-[10px] font-normal text-gray-500 capitalize tracking-wider">{isOnline ? 'Online' : 'Offline'}</span>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={handleToggleOnline}
+                disabled={isToggling}
+                className={`w-10 h-5.5 rounded-full relative transition-all duration-300 focus:outline-none ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`}
+              >
+                <div className={`absolute top-0.75 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${isOnline ? 'left-5.5' : 'left-0.75'}`} />
+              </motion.button>
+            </div>
+          )}
 
           {showSearch && (
             <button

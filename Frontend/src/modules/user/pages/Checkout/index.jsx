@@ -16,6 +16,7 @@ import { getPlans } from '../../services/planService';
 import { userAuthService } from '../../../../services/authService';
 import { useCart } from '../../../../context/CartContext';
 import LiveBookingCard from '../../components/booking/LiveBookingCard';
+import { NEXORA_LOGO_BASE64 } from '../../../../utils/logoBase64';
 
 const toAssetUrl = (url) => {
   if (!url) return '';
@@ -743,11 +744,7 @@ const Checkout = () => {
       toast.dismiss();
 
       // Get Razorpay key
-      const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
-      if (!razorpayKey) {
-        toast.error('Razorpay key not configured');
-        return;
-      }
+      const razorpayKey = orderResponse.data?.keyId || orderResponse.data?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw';
 
       if (!window.Razorpay) {
         toast.error('Razorpay SDK not loaded');
@@ -756,11 +753,12 @@ const Checkout = () => {
 
       const options = {
         key: razorpayKey,
-        amount: orderResponse.data.amount * 100,
+        amount: Math.round(orderResponse.data.amount * 100),
         currency: orderResponse.data.currency || 'INR',
         order_id: orderResponse.data.orderId,
-        name: 'Homestr',
+        name: 'Nexora Go',
         description: `Payment for ${bookingRequest.serviceName || 'service'}`,
+        image: NEXORA_LOGO_BASE64,
         handler: async function (response) {
           try {
             toast.loading('Verifying payment...');
@@ -974,10 +972,10 @@ const Checkout = () => {
         const { orderId, amount, key } = response.data;
 
         const options = {
-          key,
-          amount: amount * 100,
+          key: key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw',
+          amount: Math.round(amount * 100),
           currency: 'INR',
-          name: 'Homestr',
+          name: 'Nexora Go',
           description: `Payment for ${plan.name} ${isUpgrade ? '(Upgrade)' : ''}`,
           order_id: orderId,
           handler: async (response) => {

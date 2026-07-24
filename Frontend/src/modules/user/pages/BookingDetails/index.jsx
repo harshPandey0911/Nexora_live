@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NEXORA_LOGO_BASE64 } from '../../../../utils/logoBase64';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import useAppNotifications from '../../../../hooks/useAppNotifications';
@@ -205,10 +206,16 @@ const BookingDetails = () => {
       };
 
       socket.on('booking_updated', handleUpdate);
+      socket.on('bill_finalized', handleUpdate);
+      socket.on('bill_editing', handleUpdate);
+      socket.on('bill_updated', handleUpdate);
       socket.on('notification', handleUpdate);
 
       return () => {
         socket.off('booking_updated', handleUpdate);
+        socket.off('bill_finalized', handleUpdate);
+        socket.off('bill_editing', handleUpdate);
+        socket.off('bill_updated', handleUpdate);
         socket.off('notification', handleUpdate);
       };
     }
@@ -342,15 +349,17 @@ const BookingDetails = () => {
       }
 
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: orderResponse.data?.keyId || orderResponse.data?.key || import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw',
         amount: Math.round(orderResponse.data.amount * 100),
         currency: orderResponse.data.currency || 'INR',
         order_id: orderResponse.data.orderId,
-        name: 'Homestr',
+        name: 'Nexora Go',
         description: `Payment for ${booking.serviceName}`,
+        image: NEXORA_LOGO_BASE64,
         handler: async function (response) {
           toast.loading('Verifying payment...');
           const verifyResponse = await paymentService.verifyPayment({
+            bookingId: booking._id || booking.id,
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature
@@ -790,30 +799,7 @@ const BookingDetails = () => {
             </div>
           )}
 
-          {/* Arrival OTP Card */}
-          {(booking?.visitOtp || booking?.arrivalOTP) && ['confirmed', 'assigned', 'journey_started', 'requested', 'searching'].includes(booking?.status?.toLowerCase()) && (
-            <div className="mb-6 relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-700 p-6 shadow-xl text-white">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl"></div>
-              <div className="relative z-10 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
-                    <FiKey className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-blue-100 uppercase tracking-widest">Arrival Start Code (OTP)</p>
-                    <p className="text-3xl font-black text-white tracking-[0.25em] leading-none mt-1">
-                      {booking?.visitOtp || booking?.arrivalOTP}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20 flex flex-col items-center justify-center">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(74,222,128,0.5)] mb-1"></div>
-                  <p className="text-[10px] text-blue-100 font-bold uppercase tracking-wider text-center leading-tight">Share with<br />partner</p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Professional Arrived Notification - Only after OTP verified */}
           {booking?.status?.toLowerCase() === 'visited' && (
@@ -923,16 +909,21 @@ const BookingDetails = () => {
                 {/* Action Button for Online Payment - Only show if not paid */}
                 {booking.paymentStatus !== 'success' && (
                   <>
-                    <button
-                      onClick={handleOnlinePayment}
-                      className="w-full py-4 mb-4 bg-white text-orange-600 rounded-2xl font-black text-sm shadow-xl hover:bg-orange-50 active:scale-95 transition-all flex items-center justify-center gap-2 group"
-                    >
-                      <FiDollarSign className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                      Pay Online Now
-                      <FiChevronRight className="w-4 h-4" />
-                    </button>
-
-                    {/* Verification Code Display Removed for Simplified Flow */}
+                    {booking?.bill && (booking.bill.isFinalized === false || booking.bill.status === 'draft') ? (
+                      <div className="w-full py-3.5 mb-4 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl p-3 flex items-center justify-center gap-2 text-white font-bold text-xs shadow-lg text-center">
+                        <FiClock className="w-4 h-4 text-orange-200 shrink-0" />
+                        <span>Vendor is updating invoice. Pay Online opens when bill is ready.</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowPaymentModal(true)}
+                        className="w-full py-4 mb-4 bg-white text-orange-600 rounded-2xl font-black text-sm shadow-xl hover:bg-orange-50 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                      >
+                        <FiDollarSign className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                        Pay Online Now
+                        <FiChevronRight className="w-4 h-4" />
+                      </button>
+                    )}
                   </>
                 )}
 
@@ -1118,9 +1109,8 @@ const BookingDetails = () => {
             </div>
           </section>
 
-          {/* Payment Summary - Only show if payment is completed/collected OR if a payment request is active (Work Done) */}
-          {(['work_done', 'completed'].includes(booking.status?.toLowerCase()) || booking.paymentStatus === 'success' || booking.cashCollected) && (
-            <section className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden">
+          {/* Payment Summary */}
+          <section className="bg-white rounded-3xl shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 overflow-hidden">
               <div className="p-5">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
                   <div className={`p-2 rounded-lg ${booking.paymentMethod === 'plan_benefit' ? 'bg-amber-100' : 'bg-green-50'}`}>
@@ -1362,7 +1352,6 @@ const BookingDetails = () => {
                 </span>
               </div>
             </section>
-          )}
 
           {/* Action Card for Awaiting Payment */}
           {booking.status === 'awaiting_payment' && (
@@ -1376,14 +1365,21 @@ const BookingDetails = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-3">
-                <button
-                  onClick={handleOnlinePayment}
-                  className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
-                  style={{ background: themeColors.button }}
-                >
-                  <FiDollarSign className="w-5 h-5" />
-                  Pay Online (Razorpay/UPI)
-                </button>
+                {booking?.bill && (booking.bill.isFinalized === false || booking.bill.status === 'draft') ? (
+                  <div className="w-full py-3.5 rounded-xl font-bold text-amber-900 bg-amber-50 border border-amber-200 flex items-center justify-center gap-2 text-xs p-3 text-center">
+                    <FiClock className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Vendor is updating invoice. Pay Online opens once bill is ready.</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowPaymentModal(true)}
+                    className="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+                    style={{ background: themeColors.button }}
+                  >
+                    <FiDollarSign className="w-5 h-5" />
+                    Pay Online (Razorpay/UPI)
+                  </button>
+                )}
 
                 <button
                   onClick={handlePayAtHome}

@@ -150,6 +150,11 @@ const vendorBillSchema = new mongoose.Schema({
     default: true
   },
 
+  isFinalized: {
+    type: Boolean,
+    default: false
+  },
+
   note: { type: String, default: null }
 
 }, {

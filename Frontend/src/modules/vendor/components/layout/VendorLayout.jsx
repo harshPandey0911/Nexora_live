@@ -113,6 +113,7 @@ const VendorLayout = ({ children }) => {
             title={currentTitle} 
             showBack={false} 
             showNotifications={true} 
+            showOnlineToggle={true}
             onMenuClick={() => setSidebarOpen(true)}
           />
         )}
