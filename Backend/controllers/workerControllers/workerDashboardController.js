@@ -106,10 +106,32 @@ const getDashboardStats = async (req, res) => {
       .populate('userId', 'name phone')
       .populate('serviceId', 'title categoryName');
 
+    // Calculate active physical cash collected on field pending handover to vendor
+    const cashBookingsResult = await Booking.aggregate([
+      {
+        $match: {
+          workerId: worker._id,
+          status: { $in: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.WORK_DONE] },
+          isWorkerPaid: { $ne: true },
+          workerPaymentStatus: { $ne: 'PAID' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$finalAmount", "$basePrice"] } }
+        }
+      }
+    ]);
+
+    const cashCollectedOnField = cashBookingsResult[0]?.total || 0;
+
     res.status(200).json({
       success: true,
       data: {
         totalEarnings,
+        receivedSalary: worker.wallet?.balance || 0,
+        cashCollectedOnField,
         pendingJobs: pendingJobsCount,
         activeJobs: activeJobsCount,
         completedJobs: completedJobsCount,

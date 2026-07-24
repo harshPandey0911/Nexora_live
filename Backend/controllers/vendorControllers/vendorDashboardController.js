@@ -170,10 +170,11 @@ const getDashboardStats = async (req, res) => {
           rating: parseFloat(rating.toFixed(1)),
           isOnline: vendorProfile?.isOnline ?? req.user.isOnline,
           performanceScore: vendorProfile?.performanceScore || 0,
-          level: vendorProfile?.level || 3,
+          level: vendorProfile?.level || 1,
           commissionRate: vendorProfile?.commissionRate || 15,
           commissionRates: globalSettings?.commissionRates || { level1: 10, level2: 15, level3: 20 },
-          platformFeeRates: globalSettings?.platformFeeRates || { level1: 0.5, level2: 1.0, level3: 2.0 }
+          platformFeeRates: globalSettings?.platformFeeRates || { level1: 0.5, level2: 1.0, level3: 2.0 },
+          tdsPercentage: globalSettings?.tdsPercentage ?? 1
         },
         recentBookings
       }

@@ -138,6 +138,17 @@ const workerService = {
   updateStatus: async (status) => {
     const response = await api.put('/workers/profile', { status });
     return response.data;
+  },
+
+  // Billing
+  getBill: async (bookingId) => {
+    const response = await api.get(`/workers/jobs/${bookingId}/bill`);
+    return response.data;
+  },
+
+  createOrUpdateBill: async (bookingId, data) => {
+    const response = await api.post(`/workers/jobs/${bookingId}/bill`, data);
+    return response.data;
   }
 };
 

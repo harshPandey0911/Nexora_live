@@ -168,56 +168,36 @@ const Wallet = () => {
 
       <main className="px-4 py-6">
         {/* Balance Card */}
-        <div className="rounded-2xl p-6 shadow-xl relative overflow-hidden mb-6 bg-gradient-to-br from-teal-600 to-teal-800">
+        <div className="rounded-2xl p-6 shadow-xl relative overflow-hidden mb-6 bg-gradient-to-br from-teal-700 via-teal-800 to-slate-900">
           <div className="relative z-10 text-white">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="text-white/80 text-sm font-medium mb-1">Available Balance</p>
-                <p className="text-3xl font-bold mb-4">₹{wallet.balance?.toLocaleString() || 0}</p>
+                <p className="text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">Salary Received from Vendor</p>
+                <p className="text-3xl font-black">₹{(wallet.receivedSalary || wallet.balance || 0).toLocaleString('en-IN')}</p>
               </div>
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <FiDollarSign className="w-6 h-6 text-white" />
+              <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
+                <FiDollarSign className="w-6 h-6 text-teal-200" />
               </div>
             </div>
-            <div className="w-full bg-white/10 text-white py-2 rounded-xl font-medium text-xs text-center border border-white/20">
-              Payments are managed by your Vendor
+
+            {/* Field Cash Handover Badge */}
+            <div className="mt-4">
+              <div className="bg-amber-500/20 backdrop-blur-md p-3 rounded-xl border border-amber-400/30 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] text-amber-200 font-bold uppercase tracking-wider">💵 Field Cash to Hand Over</p>
+                  <p className="text-lg font-black text-amber-100 mt-0.5">₹{(wallet.cashCollectedOnField || 0).toLocaleString('en-IN')}</p>
+                </div>
+                <span className="text-[10px] text-amber-200/80 font-medium bg-amber-400/10 px-2 py-1 rounded-lg border border-amber-400/20">
+                  Hand over to Vendor
+                </span>
+              </div>
+            </div>
+
+            <div className="w-full bg-white/10 text-teal-100 py-2 rounded-xl font-semibold text-xs text-center border border-white/15 mt-3 backdrop-blur-sm">
+              🏢 Payments & Settlements Managed by Your Vendor Boss
             </div>
           </div>
         </div>
-
-        {/* Pending Payouts List */}
-        {wallet.pendingBookings?.length > 0 && (
-          <div className="mb-8">
-            <h3 className="font-bold text-gray-800 mb-4 px-1">Pending Payments</h3>
-            <div className="space-y-3">
-              {wallet.pendingBookings.map(booking => (
-                <div key={booking._id} className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100 flex justify-between items-center">
-                  <div className="min-w-0">
-                    <p className="font-bold text-gray-900 text-sm mb-0.5">{booking.serviceName}</p>
-                    <p className="text-xs text-gray-500 font-medium mb-1">Booking #{booking.bookingNumber}</p>
-                    <p className="text-[10px] text-gray-400">
-                      Completed: {new Date(booking.completedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRequestPayout(booking._id)}
-                    disabled={payoutLoading === booking._id}
-                    className="flex-shrink-0 px-3 py-2 bg-orange-50 text-orange-600 border border-orange-200 text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center gap-1.5 hover:bg-orange-100"
-                  >
-                    {payoutLoading === booking._id ? (
-                      <span className="w-3 h-3 border-2 border-orange-300 border-t-orange-600 rounded-full animate-spin"></span>
-                    ) : (
-                      <>
-                        <FiBell className="w-3.5 h-3.5" />
-                        Ask Vendor
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Filter Buttons */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">

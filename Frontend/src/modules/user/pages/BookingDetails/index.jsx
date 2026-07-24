@@ -801,6 +801,50 @@ const BookingDetails = () => {
 
 
 
+          {/* Start Service Verification OTP Card */}
+          {(() => {
+            const rawOtp = booking.visitOtp || booking.otp || booking.startOtp || booking.arrivalOTP;
+            const currentStatus = (booking.status || '').toLowerCase();
+            const isServiceActive = ['assigned', 'accepted', 'confirmed', 'journey_started', 'visited', 'in_progress', 'requested'].includes(currentStatus);
+            const isCompleted = ['completed', 'cancelled'].includes(currentStatus);
+            const isOTPVerified = booking.isVisitOtpVerified;
+            
+            if (!rawOtp || !isServiceActive || isCompleted || isOTPVerified) return null;
+
+            const otpDigits = rawOtp.toString().padStart(4, '0').split('');
+
+            return (
+              <div className="relative overflow-hidden rounded-3xl p-6 mb-6 bg-gradient-to-br from-indigo-900 via-slate-900 to-teal-950 shadow-xl border border-indigo-500/30 text-white">
+                <div className="absolute top-0 right-0 w-36 h-36 bg-teal-400/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <p className="text-xs font-bold text-teal-300 uppercase tracking-widest flex items-center gap-1.5">
+                        <FiKey className="w-4 h-4 text-teal-300" />
+                        Service Start OTP
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-300 max-w-xs font-medium leading-relaxed">
+                      Share this 4-digit OTP with your service professional when they arrive to start the service.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 bg-white/10 p-3 rounded-2xl border border-white/15 backdrop-blur-md shrink-0 shadow-inner">
+                    {otpDigits.map((digit, idx) => (
+                      <div
+                        key={idx}
+                        className="w-11 h-13 bg-white text-slate-950 font-black text-2xl rounded-xl flex items-center justify-center shadow-lg font-mono tracking-tighter"
+                      >
+                        {digit}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Professional Arrived Notification - Only after OTP verified */}
           {booking?.status?.toLowerCase() === 'visited' && (
             <div className="relative overflow-hidden rounded-3xl shadow-lg mb-6 active:scale-[0.98] transition-all">

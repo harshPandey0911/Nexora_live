@@ -26,6 +26,25 @@ const SettlementManagement = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalInput, setModalInput] = useState('');
   const [modalInput2, setModalInput2] = useState('');
+  const [vendorLedgerData, setVendorLedgerData] = useState(null);
+  const [vendorLedgerLoading, setVendorLedgerLoading] = useState(false);
+
+  const openVendorLedger = async (vendor) => {
+    try {
+      setSelectedItem(vendor);
+      setActiveModal('view_vendor_ledger');
+      setVendorLedgerLoading(true);
+      setVendorLedgerData(null);
+      const res = await adminSettlementService.getVendorLedger(vendor._id);
+      if (res?.success) {
+        setVendorLedgerData(res);
+      }
+    } catch (err) {
+      toast.error('Failed to load vendor ledger');
+    } finally {
+      setVendorLedgerLoading(false);
+    }
+  };
 
   // Determine active tab from URL
   useEffect(() => {
@@ -101,7 +120,7 @@ const SettlementManagement = () => {
 
   const openUpdateLimit = (vendor) => {
     setSelectedItem(vendor);
-    setModalInput(vendor.cashLimit || 10000);
+    setModalInput((vendor.cashLimit || 10000).toString());
     setActiveModal('update_limit');
   };
 
@@ -178,12 +197,14 @@ const SettlementManagement = () => {
   };
 
   const handleUpdateLimitSubmit = async () => {
-    if (!modalInput || isNaN(modalInput)) return toast.error('Valid limit required');
+    const cleanInput = (modalInput || '').toString().trim();
+    const parsedLimit = parseInt(cleanInput);
+    if (isNaN(parsedLimit) || parsedLimit <= 0) return toast.error('Valid cash limit required');
     try {
       setActionLoading(true);
-      const res = await adminSettlementService.updateCashLimit(selectedItem._id, parseInt(modalInput));
+      const res = await adminSettlementService.updateCashLimit(selectedItem._id, parsedLimit);
       if (res.success) {
-        toast.success('Limit updated');
+        toast.success('Cash limit updated successfully!');
         loadData();
         closeModals();
       }
@@ -502,54 +523,71 @@ const SettlementManagement = () => {
     ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {pendingSettlements.map(settlement => (
-          <div key={settlement._id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+          <div key={settlement._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4">
             <div className="flex justify-between items-start gap-4">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-gray-900">{settlement.vendorId?.name || 'Unknown Vendor'}</h3>
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{settlement.vendorId?.businessName}</span>
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-gray-900 text-sm">{settlement.vendorId?.name || 'Unknown Vendor'}</h3>
+                  {settlement.vendorId?.businessName && (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md truncate max-w-[140px]">
+                      {settlement.vendorId.businessName}
+                    </span>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2 mb-2">
-                  <p className="text-2xl font-bold text-blue-600">₹{settlement.amount?.toLocaleString()}</p>
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded">{settlement.paymentMethod}</span>
+                <div className="flex items-baseline gap-2 pt-1">
+                  <p className="text-2xl font-black text-gray-900 tracking-tight">₹{settlement.amount?.toLocaleString('en-IN')}</p>
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase rounded-md border border-blue-100">
+                    {settlement.paymentMethod?.replace('_', ' ')}
+                  </span>
                 </div>
 
                 {settlement.paymentReference && (
-                  <p className="text-xs text-gray-500 font-mono bg-gray-50 px-2 py-1 rounded inline-block">Ref: {settlement.paymentReference}</p>
+                  <p className="text-xs text-gray-600 font-mono bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-lg inline-block">
+                    Ref: <span className="font-bold text-gray-900">{settlement.paymentReference}</span>
+                  </p>
                 )}
 
-                <p className="text-xs text-gray-400 mt-2">{formatDate(settlement.createdAt)}</p>
+                <p className="text-[11px] text-gray-400 font-medium pt-1">
+                  Submitted: {formatDate(settlement.createdAt)}
+                </p>
               </div>
 
               <div className="flex flex-col gap-2 shrink-0">
                 {settlement.paymentProof && (
-                  <a
-                    href={settlement.paymentProof}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-200 text-center transition-colors mb-2"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedItem(settlement);
+                      setActiveModal('view_proof');
+                    }}
+                    className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold hover:bg-blue-100 text-center transition-all shadow-xs"
                   >
                     View Proof
-                  </a>
+                  </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => openApproveSettlement(settlement)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 shadow-sm transition-all"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-700 shadow-sm transition-all active:scale-95"
                 >
                   Approve
                 </button>
                 <button
+                  type="button"
                   onClick={() => openRejectSettlement(settlement)}
-                  className="px-4 py-2 bg-white border border-red-200 text-red-600 rounded-lg text-xs font-bold uppercase hover:bg-red-50 transition-all"
+                  className="px-4 py-2 bg-white border border-rose-200 text-rose-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-rose-50 transition-all active:scale-95"
                 >
                   Reject
                 </button>
               </div>
             </div>
+
             {settlement.vendorNotes && (
-              <div className="mt-3 pt-3 border-t border-gray-50">
-                <p className="text-xs text-gray-500 italic">"{settlement.vendorNotes}"</p>
+              <div className="pt-2.5 border-t border-gray-100">
+                <p className="text-xs text-gray-600 font-medium italic leading-relaxed">
+                  "{settlement.vendorNotes}"
+                </p>
               </div>
             )}
           </div>
@@ -592,7 +630,7 @@ const SettlementManagement = () => {
                 <td className="px-6 py-4 text-right">
                   <div className="flex flex-col items-end">
                     <p className="text-xs font-semibold text-gray-700 mb-1">
-                      ₹{Math.abs(vendor.balance).toLocaleString()} <span className="text-gray-400">/</span> ₹{vendor.cashLimit?.toLocaleString()}
+                      ₹{(vendor.amountDue || 0).toLocaleString('en-IN')} <span className="text-gray-400">/</span> ₹{(vendor.cashLimit || 10000).toLocaleString('en-IN')}
                     </p>
                     <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
@@ -611,18 +649,20 @@ const SettlementManagement = () => {
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <button
-                      onClick={() => navigate(`/admin/settlements/vendor/${vendor._id}`)}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="View Ledger"
+                      type="button"
+                      onClick={() => openVendorLedger(vendor)}
+                      className="p-2.5 text-blue-600 bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl transition-all shadow-xs active:scale-95"
+                      title="View Vendor Financial Ledger & History"
                     >
                       <FiEye className="w-4 h-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={() => openUpdateLimit(vendor)}
-                      className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                      title="Update Limit"
+                      className="p-2.5 text-emerald-600 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 rounded-xl transition-all shadow-xs active:scale-95 flex items-center justify-center min-w-[34px]"
+                      title="Update Vendor Cash Collection Limit"
                     >
-                      <FiDollarSign className="w-4 h-4" />
+                      <span className="font-black text-sm leading-none">₹</span>
                     </button>
                     {vendor.isBlocked ? (
                       <button
@@ -759,7 +799,13 @@ const SettlementManagement = () => {
                 Reject
               </button>
             </div>
-            {request.adminNotes && (
+            {request.rejectionReason && (
+              <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-lg">
+                <p className="text-[11px] font-bold text-rose-700 uppercase tracking-wide mb-0.5">Rejection Reason</p>
+                <p className="text-xs text-rose-600">{request.rejectionReason}</p>
+              </div>
+            )}
+            {request.adminNotes && !request.rejectionReason && (
               <p className="mt-3 text-xs text-gray-500 italic text-center">"{request.adminNotes}"</p>
             )}
           </div>
@@ -807,27 +853,117 @@ const SettlementManagement = () => {
       </div>
 
       {/* --- Modals --- */}
+      {/* View Proof Screenshot Modal */}
+      <Modal
+        isOpen={activeModal === 'view_proof'}
+        onClose={closeModals}
+        title="Settlement Payment Proof"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{selectedItem?.vendorId?.name || 'Vendor'}</p>
+              <p className="text-xs text-gray-500 font-mono">Ref: {selectedItem?.paymentReference || 'N/A'}</p>
+            </div>
+            <p className="text-xl font-black text-emerald-600">₹{selectedItem?.amount?.toLocaleString('en-IN')}</p>
+          </div>
+
+          {selectedItem?.paymentProof ? (
+            <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-gray-900 flex items-center justify-center max-h-[60vh]">
+              <img
+                src={selectedItem.paymentProof}
+                alt="Payment Proof"
+                className="max-h-[55vh] w-auto object-contain"
+              />
+            </div>
+          ) : (
+            <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-400">
+              No proof image attached
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-2">
+            <a
+              href={selectedItem?.paymentProof}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-bold text-blue-600 hover:underline"
+            >
+              Open Full Image ↗
+            </a>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  closeModals();
+                  openRejectSettlement(selectedItem);
+                }}
+                className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold hover:bg-rose-100 transition-all"
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => {
+                  closeModals();
+                  openApproveSettlement(selectedItem);
+                }}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 shadow-sm transition-all"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       {/* Approve Settlement Modal */}
       <Modal
         isOpen={activeModal === 'approve_settlement'}
         onClose={closeModals}
-        title="Approve Settlement"
-        size="sm"
+        title="Approve Cash Settlement"
+        size="md"
       >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            Are you sure you want to approve this settlement of
-            <span className="font-bold text-gray-900 mx-1">₹{selectedItem?.amount?.toLocaleString()}</span>
-            from {selectedItem?.vendorId?.name}?
-          </p>
-          <div className="flex justify-end gap-3 mt-6">
+        <div className="space-y-5">
+          {/* Vendor Summary */}
+          <div className="p-4 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold flex items-center justify-center shadow-sm">
+                {selectedItem?.vendorId?.name?.charAt(0) || 'V'}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">{selectedItem?.vendorId?.name}</p>
+                <p className="text-xs text-gray-500">{selectedItem?.vendorId?.businessName || 'Verified Partner'}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 font-medium">Deposit Amount</p>
+              <p className="text-2xl font-black text-emerald-700">₹{selectedItem?.amount?.toLocaleString('en-IN')}</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-medium">Payment Mode</span>
+              <span className="font-bold text-gray-900 uppercase">{selectedItem?.paymentMethod?.replace('_', ' ')}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-medium">UTR / Transaction Ref</span>
+              <span className="font-mono font-bold text-gray-900">{selectedItem?.paymentReference || 'N/A'}</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800 leading-relaxed font-medium">
+            💡 <strong>Impact:</strong> Approving this settlement will deduct <strong>₹{selectedItem?.amount?.toLocaleString('en-IN')}</strong> from {selectedItem?.vendorId?.name}'s active dues balance and record it under <strong>Total Settled</strong>.
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={closeModals}>Cancel</Button>
             <Button
               onClick={handleApproveSettlement}
               isLoading={actionLoading}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
-              Confirm Approval
+              Approve & Clear Dues
             </Button>
           </div>
         </div>
@@ -837,26 +973,82 @@ const SettlementManagement = () => {
       <Modal
         isOpen={activeModal === 'reject_settlement'}
         onClose={closeModals}
-        title="Reject Settlement"
-        size="sm"
+        title="Reject Cash Settlement"
+        size="md"
       >
-        <div className="space-y-4">
-          <p className="text-gray-600">Please provide a reason for rejecting this settlement.</p>
-          <textarea
-            value={modalInput}
-            onChange={(e) => setModalInput(e.target.value)}
-            placeholder="e.g., Transaction ID not found, Invalid screenshot..."
-            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-            rows={3}
-          />
-          <div className="flex justify-end gap-3 mt-4">
+        <div className="space-y-5">
+          {/* Vendor Summary Header */}
+          <div className="p-4 bg-rose-50/70 border border-rose-100 rounded-2xl flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-600 text-white font-bold flex items-center justify-center shadow-sm">
+                {selectedItem?.vendorId?.name?.charAt(0) || 'V'}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">{selectedItem?.vendorId?.name}</p>
+                <p className="text-xs text-gray-500">Ref: {selectedItem?.paymentReference || 'N/A'}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-500 font-medium">Claimed Amount</p>
+              <p className="text-xl font-black text-rose-600">₹{selectedItem?.amount?.toLocaleString('en-IN')}</p>
+            </div>
+          </div>
+
+          {/* Quick Rejection Preset Chips */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              Quick Rejection Presets
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                'Invalid UTR / Transaction Reference ID',
+                'Payment Screenshot Unclear or Missing',
+                'Amount Mismatch on Payment Proof',
+                'Bank / UPI Transfer Not Received',
+                'Duplicate Cash Settlement Submission'
+              ].map((reasonChip) => (
+                <button
+                  key={reasonChip}
+                  type="button"
+                  onClick={() => setModalInput(reasonChip)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border text-left ${
+                    modalInput === reasonChip
+                      ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-rose-50 hover:border-rose-300'
+                  }`}
+                >
+                  {reasonChip}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Rejection Reason Input */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              Detailed Rejection Reason <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={modalInput}
+              onChange={(e) => setModalInput(e.target.value)}
+              placeholder="Select a quick preset above or type custom rejection reason..."
+              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none text-xs font-medium transition-all"
+              rows={3}
+            />
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 leading-relaxed font-medium">
+            ⚠️ Rejecting this settlement request will notify {selectedItem?.vendorId?.name} and keep their active dues balance unchanged.
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={closeModals}>Cancel</Button>
             <Button
               onClick={handleRejectSettlement}
               isLoading={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold"
             >
-              Reject Settlement
+              Confirm Rejection
             </Button>
           </div>
         </div>
@@ -918,31 +1110,169 @@ const SettlementManagement = () => {
         </div>
       </Modal>
 
-      {/* Update Limit Modal */}
+      {/* Vendor Financial Ledger & History Modal */}
+      <Modal
+        isOpen={activeModal === 'view_vendor_ledger'}
+        onClose={closeModals}
+        title="Vendor Financial Ledger"
+        size="lg"
+      >
+        <div className="space-y-5">
+          {/* Vendor Summary Header */}
+          <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-sm">
+                {selectedItem?.name?.charAt(0) || 'V'}
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">{selectedItem?.name}</h3>
+                <p className="text-xs text-gray-500 font-medium">{selectedItem?.businessName} • {selectedItem?.phone}</p>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <div className="bg-white p-2.5 rounded-xl border border-gray-200 text-center min-w-[100px]">
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Active Dues</p>
+                <p className="text-base font-black text-rose-600">₹{selectedItem?.amountDue?.toLocaleString('en-IN') || 0}</p>
+              </div>
+              <div className="bg-white p-2.5 rounded-xl border border-gray-200 text-center min-w-[100px]">
+                <p className="text-[10px] text-gray-400 font-bold uppercase">Cash Limit</p>
+                <p className="text-base font-black text-gray-900">₹{selectedItem?.cashLimit?.toLocaleString('en-IN') || 10000}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Transaction History Ledger Table */}
+          {vendorLedgerLoading ? (
+            <div className="p-12 text-center">
+              <div className="w-8 h-8 border-3 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+              <p className="text-xs font-medium text-gray-500">Loading vendor ledger transactions...</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Financial Activity & Audit Log
+                </h4>
+                <span className="text-xs text-gray-500 font-semibold">
+                  {vendorLedgerData?.data?.length || 0} Transactions Found
+                </span>
+              </div>
+
+              {vendorLedgerData?.data?.length > 0 ? (
+                <div className="max-h-[50vh] overflow-y-auto border border-gray-100 rounded-2xl">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gray-50 sticky top-0 border-b border-gray-100 text-gray-500 uppercase font-bold text-[10px]">
+                      <tr>
+                        <th className="p-3">Ref ID / Type</th>
+                        <th className="p-3">Description</th>
+                        <th className="p-3 text-right">Amount</th>
+                        <th className="p-3 text-right">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 font-medium">
+                      {vendorLedgerData.data.map((tx) => (
+                        <tr key={tx._id} className="hover:bg-gray-50/70 transition-colors">
+                          <td className="p-3">
+                            <span className="font-mono font-bold text-gray-900 block">{tx.referenceId || tx.type}</span>
+                            <span className="text-[10px] uppercase font-extrabold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block mt-0.5">
+                              {tx.type?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-600 max-w-[200px] truncate" title={tx.description}>
+                            {tx.description || tx.bookingId?.serviceName || 'Ledger transaction'}
+                          </td>
+                          <td className="p-3 text-right font-black">
+                            <span className={tx.type === 'settlement' || tx.type === 'credit' ? 'text-emerald-600' : 'text-rose-600'}>
+                              {tx.type === 'settlement' ? '-' : '+'}₹{Number(tx.amount || 0).toLocaleString('en-IN')}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right text-gray-500 font-mono text-[11px]">
+                            {formatDate(tx.createdAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 text-xs">
+                  No transaction history recorded yet for this vendor.
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-end pt-2">
+            <Button variant="ghost" onClick={closeModals}>Close Ledger</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Update Cash Limit Modal */}
       <Modal
         isOpen={activeModal === 'update_limit'}
         onClose={closeModals}
-        title="Update Cash Limit"
-        size="sm"
+        title="Update Cash Collection Limit"
+        size="md"
       >
-        <div className="space-y-4">
-          <p className="text-gray-600">Set a new cash collection limit for {selectedItem?.name}.</p>
-          <div className="relative">
-            <span className="absolute left-3 top-3 text-gray-500 font-bold">₹</span>
-            <input
-              type="number"
-              value={modalInput}
-              onChange={(e) => setModalInput(e.target.value)}
-              className="w-full p-3 pl-8 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+        <div className="space-y-5">
+          <div className="p-3.5 bg-emerald-50/70 border border-emerald-100 rounded-2xl flex items-center justify-between">
+            <div>
+              <p className="font-bold text-gray-900 text-sm">{selectedItem?.name}</p>
+              <p className="text-xs text-gray-500">Current Limit: ₹{selectedItem?.cashLimit?.toLocaleString('en-IN') || 10000}</p>
+            </div>
+            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase rounded-lg border border-emerald-200">
+              Active Vendor
+            </span>
           </div>
-          <div className="flex justify-end gap-3 mt-4">
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              Quick Limit Presets
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[5000, 10000, 25000, 50000, 100000].map((presetLimit) => (
+                <button
+                  key={presetLimit}
+                  type="button"
+                  onClick={() => setModalInput(presetLimit.toString())}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                    modalInput === presetLimit.toString()
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-emerald-50 hover:border-emerald-300'
+                  }`}
+                >
+                  ₹{presetLimit.toLocaleString('en-IN')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              New Maximum Cash Limit (₹) <span className="text-emerald-500">*</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">₹</span>
+              <input
+                type="number"
+                value={modalInput}
+                onChange={(e) => setModalInput(e.target.value)}
+                placeholder="10000"
+                className="w-full pl-9 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-lg font-bold text-gray-900 focus:outline-none focus:border-emerald-600 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
             <Button variant="ghost" onClick={closeModals}>Cancel</Button>
             <Button
               onClick={handleUpdateLimitSubmit}
               isLoading={actionLoading}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
             >
-              Update Limit
+              Save New Limit
             </Button>
           </div>
         </div>
@@ -967,36 +1297,108 @@ const SettlementManagement = () => {
           </div>
 
           {/* Fee Breakdown */}
-          <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Payout Breakdown</h4>
+          {(() => {
+            const gross = selectedItem?.amount || 0;
+            const vendorLevel = selectedItem?.vendorId?.level || 1;
+            const levelKey = `level${vendorLevel}`;
+            const tdsRate = settings?.tdsPercentage ?? 1;
+            const platformRate = settings?.platformFeeRates?.[levelKey] ?? settings?.platformFeePercentage ?? (vendorLevel === 1 ? 0.5 : vendorLevel === 2 ? 1.0 : 2.0);
+            const tdsAmt = Math.round((gross * tdsRate) / 100);
+            const platformAmt = Math.round((gross * platformRate) / 100);
+            const netAmt = gross - tdsAmt - platformAmt;
+            return (
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Payout Breakdown</h4>
 
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">Gross Amount</span>
-              <span className="font-bold text-gray-900">₹{selectedItem?.amount?.toLocaleString()}</span>
-            </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Gross Amount</span>
+                  <span className="font-bold text-gray-900">₹{gross.toLocaleString('en-IN')}</span>
+                </div>
 
-            <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center gap-1">
-                <span className="text-gray-600">TDS Deduction</span>
-                <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">{settings?.tdsPercentage || 1}%</span>
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-600">TDS Deduction</span>
+                    <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">{tdsRate}%</span>
+                  </div>
+                  <span className="font-bold text-red-600">-₹{tdsAmt.toLocaleString('en-IN')}</span>
+                </div>
+
+                <div className="flex justify-between items-center text-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-600">Platform Charge</span>
+                    <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold">Level {vendorLevel} · {platformRate}%</span>
+                  </div>
+                  <span className="font-bold text-red-600">-₹{platformAmt.toLocaleString('en-IN')}</span>
+                </div>
+
+                <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+                  <span className="font-bold text-gray-800">Final Net Payout</span>
+                  <span className="text-xl font-black text-emerald-600">₹{netAmt.toLocaleString('en-IN')}</span>
+                </div>
               </div>
-              <span className="font-bold text-red-600">-₹{Math.round((selectedItem?.amount * (settings?.tdsPercentage || 1)) / 100).toLocaleString()}</span>
-            </div>
+            );
+          })()}
 
-            <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center gap-1">
-                <span className="text-gray-600">Platform Charge</span>
-                <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold">{settings?.platformFeePercentage || 1}%</span>
+          {/* Vendor Beneficiary Bank Details */}
+          <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-3.5 space-y-2 text-xs">
+            <div className="flex justify-between items-center border-b border-emerald-100/60 pb-1.5">
+              <span className="font-bold text-gray-700 uppercase tracking-wider text-[10px]">Beneficiary Account Details</span>
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">Verify & Transfer</span>
+            </div>
+            
+            {selectedItem?.bankDetails ? (
+              <div className="grid grid-cols-2 gap-2 font-medium text-gray-800">
+                {selectedItem.bankDetails.upiId && (
+                  <div className="col-span-2 flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100 shadow-2xs">
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">UPI VPA</p>
+                      <p className="font-mono font-bold text-gray-900">{selectedItem.bankDetails.upiId}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedItem.bankDetails.upiId);
+                        toast.success('UPI ID copied!');
+                      }}
+                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 active:scale-95 transition-all shadow-2xs"
+                    >
+                      Copy UPI
+                    </button>
+                  </div>
+                )}
+
+                {selectedItem.bankDetails.accountNumber && (
+                  <>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">Bank Name</p>
+                      <p className="font-bold text-gray-900">{selectedItem.bankDetails.bankName || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">IFSC Code</p>
+                      <p className="font-mono font-bold text-gray-900">{selectedItem.bankDetails.ifscCode || 'N/A'}</p>
+                    </div>
+                    <div className="col-span-2 flex justify-between items-center bg-white p-2.5 rounded-lg border border-emerald-100 shadow-2xs mt-1">
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase">Account Number</p>
+                        <p className="font-mono font-bold text-gray-900">{selectedItem.bankDetails.accountNumber}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(selectedItem.bankDetails.accountNumber);
+                          toast.success('Account number copied!');
+                        }}
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 active:scale-95 transition-all shadow-2xs"
+                      >
+                        Copy Acc No
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
-              <span className="font-bold text-red-600">-₹{Math.round((selectedItem?.amount * (settings?.platformFeePercentage || 1)) / 100).toLocaleString()}</span>
-            </div>
-
-            <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-              <span className="font-bold text-gray-800">Final Net Payout</span>
-              <span className="text-xl font-black text-green-600">
-                ₹{Math.round(selectedItem?.amount - (selectedItem?.amount * (settings?.tdsPercentage || 1) / 100) - (selectedItem?.amount * (settings?.platformFeePercentage || 1) / 100)).toLocaleString()}
-              </span>
-            </div>
+            ) : (
+              <p className="text-gray-500 italic">No bank details attached to request</p>
+            )}
           </div>
 
           <div>
@@ -1028,26 +1430,80 @@ const SettlementManagement = () => {
       <Modal
         isOpen={activeModal === 'reject_withdrawal'}
         onClose={closeModals}
-        title="Reject Withdrawal"
-        size="sm"
+        title="Reject Withdrawal Request"
+        size="md"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">Reason for rejection:</p>
-          <textarea
-            value={modalInput}
-            onChange={(e) => setModalInput(e.target.value)}
-            placeholder="Reason for rejecting withdrawal..."
-            className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none"
-            rows={3}
-          />
+          {/* Vendor & Request Summary Header */}
+          <div className="flex items-center justify-between p-3.5 bg-red-50/70 border border-red-100 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 font-bold flex items-center justify-center text-sm border border-red-200">
+                {selectedItem?.vendorId?.name?.charAt(0) || 'V'}
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 text-sm">{selectedItem?.vendorId?.name}</p>
+                <p className="text-xs text-gray-500">{selectedItem?.bankDetails?.bankName ? `${selectedItem.bankDetails.bankName} • ****${selectedItem.bankDetails.accountNumber?.slice(-4)}` : selectedItem?.bankDetails?.upiId || 'Bank Transfer'}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-base font-black text-red-600">₹{selectedItem?.amount?.toLocaleString()}</span>
+              <p className="text-[10px] text-gray-400 uppercase font-semibold">Requested</p>
+            </div>
+          </div>
+
+          {/* Quick Preset Rejection Reason Chips */}
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Quick Rejection Reasons</label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                'Invalid Bank Account Number or IFSC Code',
+                'Account Holder Name Mismatch',
+                'UPI ID Inactive or Not Found',
+                'Incomplete KYC Verification',
+                'Active Booking Dispute / Audit Pending'
+              ].map((reasonText) => (
+                <button
+                  key={reasonText}
+                  type="button"
+                  onClick={() => setModalInput(reasonText)}
+                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition-all text-left ${
+                    modalInput === reasonText 
+                      ? 'bg-red-600 text-white border-red-600 font-semibold shadow-xs' 
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-red-50 hover:border-red-200'
+                  }`}
+                >
+                  + {reasonText}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Rejection Reason (Visible to Vendor):</label>
+            <textarea
+              value={modalInput}
+              onChange={(e) => setModalInput(e.target.value)}
+              placeholder="Select a preset above or type custom reason..."
+              className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none text-sm"
+              rows={3}
+            />
+          </div>
+
+          {/* Wallet Balance Release Informational Alert */}
+          <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-start gap-2 text-xs text-gray-600">
+            <span className="text-blue-500 font-bold shrink-0">ℹ️</span>
+            <p>Rejecting will cancel this payout request and release ₹{selectedItem?.amount?.toLocaleString()} back to the vendor's wallet earnings.</p>
+          </div>
+
           <div className="flex justify-end gap-3 mt-4">
             <Button variant="ghost" onClick={closeModals}>Cancel</Button>
             <Button
               onClick={handleRejectWithdrawalSubmit}
               isLoading={actionLoading}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={!modalInput.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
             >
-              Reject Request
+              Confirm Rejection
             </Button>
           </div>
         </div>

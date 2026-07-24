@@ -323,17 +323,20 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking: initialBooking, on
                 </div>
               ) : (
                 <>
-                  {/* Online Pay - CONDITIONALLY RENDERED */}
+                  {/* Online Pay - CONDITIONALLY RRENDERED ONLY WHEN BILL IS FINALIZED */}
                   {(() => {
-                    const isDraftBill = bill && (bill.isFinalized === false || bill.status === 'draft');
-                    if (isDraftBill) {
+                    const isBillFinalized = Boolean((bill && bill.isFinalized === true && bill.status !== 'draft') || booking.customerConfirmationOTP || booking.paymentOtp);
+
+                    if (!isBillFinalized) {
                       return (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2.5">
-                          <FiInfo className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-xs font-bold text-amber-900">Vendor is updating your invoice</p>
-                            <p className="text-[11px] text-amber-700 mt-0.5">Pay Online will unlock as soon as the vendor reviews & finalizes the bill.</p>
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-700">
+                            <FiInfo className="w-5 h-5" />
                           </div>
+                          <p className="text-sm font-bold text-amber-900">Professional is Preparing Your Invoice</p>
+                          <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                            Payment options & verification codes will unlock automatically as soon as the professional finalizes the bill.
+                          </p>
                         </div>
                       );
                     }
@@ -362,22 +365,24 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking: initialBooking, on
                     return null;
                   })()}
 
-                  <div className="relative py-2 text-center">
-                    <span className="bg-white px-2 text-[10px] font-bold text-slate-400 relative z-10 uppercase tracking-wider">OR</span>
-                    <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 z-0"></div>
-                  </div>
-
-                  {/* Cash Code */}
-                  {!isPaymentComplete && (booking.customerConfirmationOTP || booking.paymentOtp) && (
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-                      <p className="text-xs font-bold text-slate-700 mb-2">Paying Cash? Share Code</p>
-                      <div className="bg-white border-2 border-dashed border-slate-300 rounded-lg py-2 px-4 inline-block mb-1">
-                        <span className="text-2xl font-black font-mono text-slate-900 tracking-[0.2em]">
-                          {booking.customerConfirmationOTP || booking.paymentOtp || '....'}
-                        </span>
+                  {/* Cash Code - ONLY SHOWN WHEN BILL IS FINALIZED */}
+                  {!isPaymentComplete && Boolean((bill && bill.isFinalized === true) || booking.customerConfirmationOTP || booking.paymentOtp) && (
+                    <>
+                      <div className="relative py-2 text-center">
+                        <span className="bg-white px-2 text-[10px] font-bold text-slate-400 relative z-10 uppercase tracking-wider">OR</span>
+                        <div className="absolute top-1/2 left-0 right-0 h-px bg-slate-100 z-0"></div>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">Share with professional to confirm cash payment</p>
-                    </div>
+
+                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                        <p className="text-xs font-bold text-slate-700 mb-2">Paying Cash? Share Code</p>
+                        <div className="bg-white border-2 border-dashed border-slate-300 rounded-lg py-2 px-4 inline-block mb-1">
+                          <span className="text-2xl font-black font-mono text-slate-900 tracking-[0.2em]">
+                            {booking.customerConfirmationOTP || booking.paymentOtp || '....'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">Share with professional to confirm cash payment</p>
+                      </div>
+                    </>
                   )}
                 </>
               )}

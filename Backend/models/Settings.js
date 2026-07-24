@@ -124,6 +124,28 @@ const settingsSchema = new mongoose.Schema({
     default: 'INR'
   },
 
+  // Admin Receiving Account Details for Cash Dues Settlements
+  adminUpiId: {
+    type: String,
+    default: 'nexora.settle@okicici'
+  },
+  adminAccountName: {
+    type: String,
+    default: 'Nexora Platform Pvt Ltd'
+  },
+  adminBankName: {
+    type: String,
+    default: 'HDFC Bank Ltd'
+  },
+  adminAccountNumber: {
+    type: String,
+    default: '50200088991122'
+  },
+  adminIfscCode: {
+    type: String,
+    default: 'HDFC0001234'
+  },
+
   // Billing & Invoice Configuration
   companyName: {
     type: String,

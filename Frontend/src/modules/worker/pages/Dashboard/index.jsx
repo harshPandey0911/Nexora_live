@@ -165,6 +165,8 @@ const Dashboard = () => {
 
         setStats({
           totalEarnings: totalEarnings || 0,
+          receivedSalary: statsRes.data?.receivedSalary ?? profileRes.worker?.wallet?.balance ?? 0,
+          cashCollectedOnField: statsRes.data?.cashCollectedOnField || 0,
           pendingJobs: pending,
           acceptedJobs: accepted,
           inProgressJobs: inProgress,
@@ -358,7 +360,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* TOTAL EARNINGS HIGHLIGHT CARD */}
+            {/* TOTAL EARNINGS & CASH HANDOVER HIGHLIGHT CARD */}
             <div 
               onClick={() => navigate('/worker/wallet')}
               className="rounded-3xl p-5 bg-gradient-to-r from-teal-700 via-teal-800 to-slate-900 text-white shadow-xl cursor-pointer hover:shadow-2xl transition-all relative overflow-hidden group"
@@ -369,16 +371,18 @@ const Dashboard = () => {
                 <div>
                   <p className="text-[10px] text-teal-200 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5">
                     <FiDollarSign className="w-3.5 h-3.5 text-teal-300" />
-                    Total Payout Balance
+                    Salary Received (Vendor)
                   </p>
                   <h3 className="text-3xl font-black tracking-tight text-white">
-                    ₹{Number(stats.totalEarnings).toLocaleString('en-IN')}
+                    ₹{Number(stats.receivedSalary || 0).toLocaleString('en-IN')}
                   </h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-[11px] font-medium text-teal-100 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/15 backdrop-blur-sm flex items-center gap-1">
-                      <FiTrendingUp className="w-3 h-3 text-emerald-400" />
-                      Updated Live
-                    </span>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {stats.cashCollectedOnField > 0 && (
+                      <span className="text-[11px] font-bold text-amber-200 bg-amber-500/20 px-2.5 py-0.5 rounded-full border border-amber-400/30 backdrop-blur-sm flex items-center gap-1">
+                        💵 ₹{Number(stats.cashCollectedOnField).toLocaleString('en-IN')} Cash to Hand Over
+                      </span>
+                    )}
                     <span className="text-[11px] text-teal-200 font-semibold underline flex items-center gap-0.5">
                       View Wallet <FiChevronRight className="w-3 h-3" />
                     </span>

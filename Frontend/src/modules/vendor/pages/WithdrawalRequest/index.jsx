@@ -45,22 +45,25 @@ const WithdrawalRequest = () => {
         getWithdrawalHistory(),
         vendorDashboardService.getDashboardStats()
       ]);
-      setWallet({ available: walletRes.earnings || 0 });
+      const netAvailable = walletRes.availableEarnings ?? walletRes.balance ?? (walletRes.earnings - (walletRes.pendingWithdrawalAmount || 0));
+      setWallet({ available: netAvailable || 0, gross: walletRes.earnings || 0, pending: walletRes.pendingWithdrawalAmount || 0 });
       setHistory(historyRes || []);
 
       if (statsRes.success) {
         const stats = statsRes.data.stats;
-        const level = stats.level || 3;
+        const level = stats.level || 1;
         const levelKey = `level${level}`;
 
-        // Use dynamic rates from backend
-        const commRate = stats.commissionRates?.[levelKey] || stats.commissionRate || 15;
-        const pfRate = stats.platformFeeRates?.[levelKey] || 2;
+        // Use dynamic rates from backend Admin Settings
+        const commRate = stats.commissionRates?.[levelKey] ?? stats.commissionRate ?? 15;
+        const pfRate = stats.platformFeeRates?.[levelKey] ?? (level === 1 ? 0.5 : level === 2 ? 1.0 : 2.0);
+        const tdsRate = stats.tdsPercentage ?? walletRes.tdsRate ?? 1;
 
         setVendorStats({
           commissionRate: commRate,
           level: level,
-          platformFeeRate: pfRate
+          platformFeeRate: pfRate,
+          tdsRate: tdsRate
         });
       }
 
@@ -213,13 +216,13 @@ const WithdrawalRequest = () => {
     }
   };
 
-  const tdsRate = 1; // Statutory TDS (1%)
-  const platformFeeRate = vendorStats.platformFeeRate || 1; // Platform Fee (1%)
+  const tdsRate = vendorStats.tdsRate ?? 1;
+  const platformFeeRate = vendorStats.platformFeeRate ?? 0.5;
 
   const grossAmount = parseInt(amount) || 0;
   const platformFeeAmount = Math.round(grossAmount * (platformFeeRate / 100));
   const tdsAmount = Math.round(grossAmount * (tdsRate / 100));
-  const netAmount = grossAmount - platformFeeAmount - tdsAmount;
+  const netAmount = Math.max(0, grossAmount - platformFeeAmount - tdsAmount);
 
   return (
     <AnimatePresence mode="wait">
@@ -494,7 +497,63 @@ const WithdrawalRequest = () => {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center gap-3 px-10">
+        {/* Recent Withdrawal Requests History */}
+        {history.length > 0 && (
+          <div className="mt-10 space-y-4">
+            <h3 className="text-base font-bold text-gray-900 px-1 flex items-center justify-between">
+              <span>Withdrawal Requests History</span>
+              <span className="text-xs text-gray-500 font-semibold">{history.length} Requests</span>
+            </h3>
+
+            <div className="space-y-3">
+              {history.map((req) => {
+                const isPending = req.status === 'pending';
+                const isApproved = req.status === 'approved';
+                const isRejected = req.status === 'rejected';
+
+                return (
+                  <div
+                    key={req._id}
+                    className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
+                        isPending ? 'bg-amber-50 text-amber-600 border border-amber-200' :
+                        isApproved ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' :
+                        'bg-rose-50 text-rose-600 border border-rose-200'
+                      }`}>
+                        {isPending ? '⏳' : isApproved ? '✅' : '❌'}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-black text-gray-900 text-sm">₹{Number(req.amount).toFixed(2)}</p>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase ${
+                            isPending ? 'bg-amber-100 text-amber-800' :
+                            isApproved ? 'bg-emerald-100 text-emerald-800' :
+                            'bg-rose-100 text-rose-800'
+                          }`}>
+                            {isPending ? 'Pending Approval' : isApproved ? 'Approved' : 'Rejected'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mt-0.5">
+                          {req.bankDetails?.bankName || 'Bank'} • {new Date(req.createdAt || req.requestDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                        {req.transactionReference && (
+                          <p className="text-[10px] text-emerald-600 font-medium">Ref: {req.transactionReference}</p>
+                        )}
+                        {req.rejectionReason && (
+                          <p className="text-[10px] text-rose-500 font-medium">Reason: {req.rejectionReason}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-col items-center gap-3 px-10">
           <FiClock className="w-4 h-4 text-gray-300" />
           <p className="text-center text-[8px] text-gray-400 font-medium capitalize tracking-[0.2em] leading-relaxed">
             Secure processing timeline: 24-48 business hours.<br />

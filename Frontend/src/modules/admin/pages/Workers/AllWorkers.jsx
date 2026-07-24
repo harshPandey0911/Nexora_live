@@ -64,24 +64,32 @@ const AllWorkers = () => {
       const response = await adminWorkerService.getAllWorkers();
       if (response.success) {
         // Transform backend data to frontend format
-        const transformedWorkers = response.data.map(worker => ({
-          id: worker._id,
-          name: worker.name,
-          email: worker.email,
-          phone: worker.phone,
-          serviceCategory: worker.serviceCategory || worker.service || 'N/A',
-          approvalStatus: worker.approvalStatus,
-          aadhar: worker.aadhar?.number,
-          pan: worker.pan?.number,
-          documents: {
-            aadhar: worker.aadhar?.document,
-            aadharBack: worker.aadhar?.backDocument,
-            pan: worker.pan?.document,
-            other: worker.otherDocuments?.[0]
-          },
-          createdAt: worker.createdAt,
-          isActive: worker.isActive
-        }));
+        const transformedWorkers = response.data.map(worker => {
+          const vendorObj = worker.vendorId && typeof worker.vendorId === 'object' ? worker.vendorId : null;
+          const vendorName = vendorObj ? `${vendorObj.name || ''} ${vendorObj.businessName ? `(${vendorObj.businessName})` : ''}`.trim() : 'Direct Platform Worker';
+          const cat = worker.serviceCategory || (Array.isArray(worker.serviceCategories) && worker.serviceCategories[0]) || vendorObj?.serviceCategories?.[0] || (typeof vendorObj?.category === 'object' ? vendorObj?.category?.name : vendorObj?.category) || 'General';
+
+          return {
+            id: worker._id,
+            name: worker.name,
+            email: worker.email,
+            phone: worker.phone,
+            vendorName: vendorName || 'Direct Worker',
+            vendorObj,
+            serviceCategory: cat,
+            approvalStatus: worker.approvalStatus,
+            aadhar: worker.aadhar?.number,
+            pan: worker.pan?.number,
+            documents: {
+              aadhar: worker.aadhar?.document,
+              aadharBack: worker.aadhar?.backDocument,
+              pan: worker.pan?.document,
+              other: worker.otherDocuments?.[0]
+            },
+            createdAt: worker.createdAt,
+            isActive: worker.isActive
+          };
+        });
         setWorkers(transformedWorkers);
       } else {
         toast.error(response.message || 'Failed to load workers');
@@ -313,7 +321,12 @@ const AllWorkers = () => {
                         <div>
                           <p className="font-bold text-gray-900 text-xs">{worker.name}</p>
                           <p className="text-[10px] text-gray-500">{worker.phone}</p>
-                          <p className="text-[10px] text-gray-400">{worker.email}</p>
+                          {worker.email && <p className="text-[10px] text-gray-400">{worker.email}</p>}
+                          <div className="mt-1 flex items-center gap-1">
+                            <span className="text-[10px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/80 inline-flex items-center gap-1">
+                              🏢 {worker.vendorName}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -417,7 +430,13 @@ const AllWorkers = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Service Category</label>
-                <div className="text-gray-900">{selectedWorker.serviceCategory}</div>
+                <div className="text-gray-900 font-bold text-sm bg-blue-50 px-3 py-1 rounded-lg text-blue-700 inline-block">{selectedWorker.serviceCategory}</div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Registered Under Vendor</label>
+                <div className="text-purple-700 font-bold text-sm bg-purple-50 p-2 rounded-lg border border-purple-100 flex items-center gap-1.5">
+                  🏢 {selectedWorker.vendorName}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Aadhar</label>

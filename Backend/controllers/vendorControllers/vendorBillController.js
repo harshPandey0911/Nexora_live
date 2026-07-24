@@ -192,12 +192,14 @@ const createOrUpdateBill = async (req, res) => {
     const grandTotal = parseFloat((totalServiceBaseForBill + totalPartsBase + totalGST + visitingCharges + finalTransportCharges).toFixed(2));
 
     // ═══════════════════════════════════════
-    // 5. REVENUE SPLIT (% applied on BASE only)
+    // 5. REVENUE SPLIT (% applied on BASE only, Transport to Vendor)
     // ═══════════════════════════════════════
     const vendorServiceEarning = parseFloat(((totalServiceBaseForEarnings * serviceSplitPct) / 100).toFixed(2));
     const vendorPartsEarning = parseFloat(((totalPartsBase * partsSplitPct) / 100).toFixed(2));
-    const vendorTotalEarning = parseFloat((vendorServiceEarning + vendorPartsEarning).toFixed(2));
-    const companyRevenue = parseFloat((grandTotal - vendorTotalEarning).toFixed(2));
+    // Transport charges go 100% to vendor/worker who travelled
+    const vendorTotalEarning = parseFloat((vendorServiceEarning + vendorPartsEarning + finalTransportCharges).toFixed(2));
+    // Platform commission earned by company (excluding GST & vendor transport)
+    const companyRevenue = parseFloat(Math.max(0, grandTotal - vendorTotalEarning - totalGST).toFixed(2));
 
     // ═══════════════════════════════════════
     // 6. ALL SERVICES (original + vendor-added)
@@ -220,7 +222,7 @@ const createOrUpdateBill = async (req, res) => {
     // ═══════════════════════════════════════
     let bill = await VendorBill.findOne({ bookingId });
 
-    const isBillFinalized = req.body.isFinalized !== undefined ? Boolean(req.body.isFinalized) : true;
+    const isBillFinalized = req.body.isFinalized === true;
 
     const billData = {
       vendorId: billVendorId,

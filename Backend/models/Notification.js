@@ -71,6 +71,9 @@ const notificationSchema = new mongoose.Schema({
       'scrap_completed',
       'vendor_withdrawal_request',
       'new_vendor_registration',
+      'bill_finalized',
+      'bill_created',
+      'bill_updated',
       'general'
     ],
     index: true

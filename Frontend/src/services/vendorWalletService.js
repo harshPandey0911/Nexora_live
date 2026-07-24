@@ -123,6 +123,14 @@ const vendorWalletService = {
   requestWithdrawal: async (data) => {
     const response = await api.post('/vendors/wallet/withdrawal', data);
     return response.data;
+  },
+
+  /**
+   * Get Vendor Withdrawal Requests
+   */
+  getWithdrawals: async (params = {}) => {
+    const response = await api.get('/vendors/wallet/withdrawals', { params });
+    return response.data;
   }
 };
 

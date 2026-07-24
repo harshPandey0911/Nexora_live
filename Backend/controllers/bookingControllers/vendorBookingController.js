@@ -1604,8 +1604,9 @@ const completeSelfJob = async (req, res) => {
 
     const vendorServiceEarning = parseFloat(((totalServiceBase * serviceSplitPct) / 100).toFixed(2));
     const vendorPartsEarning = parseFloat(((totalPartsBase * partsSplitPct) / 100).toFixed(2));
-    const vendorTotalEarning = parseFloat((vendorServiceEarning + vendorPartsEarning).toFixed(2));
-    const companyRevenue = parseFloat((grandTotal - vendorTotalEarning).toFixed(2));
+    // Transport / visiting charges go 100% to vendor/worker
+    const vendorTotalEarning = parseFloat((vendorServiceEarning + vendorPartsEarning + visitingCharges).toFixed(2));
+    const companyRevenue = parseFloat(Math.max(0, grandTotal - vendorTotalEarning - totalGST).toFixed(2));
 
     // ═══════════════════════════════════════════
     // STEP 6: PERSIST BILL

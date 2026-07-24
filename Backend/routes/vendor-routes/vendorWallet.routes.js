@@ -61,6 +61,11 @@ router.post('/withdraw', authenticate, isVendor, [
   body('bankDetails').optional().isObject()
 ], requestWithdrawal);
 
+router.post('/wallet/withdrawal', authenticate, isVendor, [
+  body('amount').isFloat({ min: 1 }).withMessage('Valid amount is required'),
+  body('bankDetails').optional().isObject()
+], requestWithdrawal);
+
 // Get withdrawal history
 router.get('/wallet/withdrawals', authenticate, isVendor, getWithdrawals);
 

@@ -424,35 +424,19 @@ const BillingPage = () => {
   const handleStepChange = async (targetStep) => {
     setCurrentStep(targetStep);
 
-    if (targetStep === 5) {
-      // Step 5 (Summary & Pay): finalize bill on backend & unlock customer Pay Online
-      try {
-        await workerBillService.createOrUpdateBill(id, {
-          services: selectedServices,
-          parts: selectedParts,
-          customItems,
-          transportCharges,
-          applyPartsGST,
-          isFinalized: true
-        });
-        toast.success('Invoice finalized & sent to customer!');
-      } catch (err) {
-        console.warn('Notice setting isFinalized true:', err);
-      }
-    } else {
-      // Steps 1-4 (Editing): un-finalize bill on backend to lock customer Pay Online
-      try {
-        await workerBillService.createOrUpdateBill(id, {
-          services: selectedServices,
-          parts: selectedParts,
-          customItems,
-          transportCharges,
-          applyPartsGST,
-          isFinalized: false
-        });
-      } catch (err) {
-        console.warn('Notice setting isFinalized false:', err);
-      }
+    // Keep bill in DRAFT mode (isFinalized: false) while worker is editing or on review screen
+    // Customer Pay Online unlocks only when worker initiates payment (Pay in Cash / Online QR)
+    try {
+      await workerBillService.createOrUpdateBill(id, {
+        services: selectedServices,
+        parts: selectedParts,
+        customItems,
+        transportCharges,
+        applyPartsGST,
+        isFinalized: false
+      });
+    } catch (err) {
+      console.warn('Notice setting isFinalized false:', err);
     }
   };
 
@@ -548,7 +532,7 @@ const BillingPage = () => {
   };
 
   // Auto-poll payment status every 3 seconds when on Summary & Pay step or QR modal is open
-  const isPaid = job?.cashCollected || ['success', 'collected_by_vendor', 'paid', 'paid_online'].includes(job?.paymentStatus?.toLowerCase()) || ['completed'].includes(job?.status?.toLowerCase());
+  const isPaid = Boolean(job?.cashCollected === true || ['success', 'collected_by_vendor', 'paid', 'paid_online'].includes(job?.paymentStatus?.toLowerCase()));
 
   useEffect(() => {
     let pollInterval = null;
@@ -558,7 +542,7 @@ const BillingPage = () => {
         try {
           const jobRes = await workerService.getJobById(id);
           const freshData = jobRes.data || jobRes;
-          const freshIsPaid = freshData?.cashCollected || ['success', 'collected_by_vendor', 'paid', 'paid_online'].includes(freshData?.paymentStatus?.toLowerCase()) || ['completed'].includes(freshData?.status?.toLowerCase());
+          const freshIsPaid = Boolean(freshData?.cashCollected === true || ['success', 'collected_by_vendor', 'paid', 'paid_online'].includes(freshData?.paymentStatus?.toLowerCase()));
 
           if (freshIsPaid) {
             setJob(freshData);
@@ -1147,12 +1131,11 @@ const BillingPage = () => {
                     customItems,
                     transportCharges,
                     applyPartsGST,
-                    isFinalized: true
+                    isFinalized: false
                   });
-                  toast.success('Invoice finalized & sent to customer!');
                   setCurrentStep(5);
                 } catch (err) {
-                  toast.error('Failed to finalize invoice');
+                  setCurrentStep(5);
                 } finally {
                   setSubmitting(false);
                 }

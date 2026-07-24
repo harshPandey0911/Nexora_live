@@ -40,9 +40,10 @@ const getAllWorkers = async (req, res) => {
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get workers
+    // Get workers with populated vendor details
     const workers = await Worker.find(query)
       .select('-password')
+      .populate('vendorId', 'name businessName phone serviceCategories category')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));

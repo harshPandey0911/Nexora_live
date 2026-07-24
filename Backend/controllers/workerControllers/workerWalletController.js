@@ -14,20 +14,32 @@ const getWallet = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Worker not found' });
     }
 
-    // List of bookings pending payment
-    const pendingBookings = await Booking.find({
-      workerId: workerId,
-      status: 'completed', // Only completed jobs
-      workerPaymentStatus: 'PENDING'
-    })
-      .select('bookingNumber serviceName completedAt vendorId finalAmount vendorBillId')
-      .sort({ completedAt: -1 });
+    // Calculate total active physical cash collected on field pending handover to vendor
+    const cashBookingsResult = await Booking.aggregate([
+      {
+        $match: {
+          workerId: worker._id,
+          status: { $in: ['completed', 'WORK_DONE'] },
+          isWorkerPaid: { $ne: true },
+          workerPaymentStatus: { $ne: 'PAID' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$finalAmount", "$basePrice"] } }
+        }
+      }
+    ]);
+
+    const cashCollectedOnField = cashBookingsResult[0]?.total || 0;
 
     res.status(200).json({
       success: true,
       data: {
         balance: worker.wallet?.balance || 0,
-        pendingBookings: pendingBookings
+        receivedSalary: worker.wallet?.balance || 0,
+        cashCollectedOnField
       }
     });
 

@@ -27,7 +27,12 @@ const AdminSettings = () => {
     waveDuration: 60,
     searchRadius: 10,
     maxCartItemQuantity: 100,
-    isOnlinePaymentEnabled: true
+    isOnlinePaymentEnabled: true,
+    adminUpiId: 'nexora.settle@okicici',
+    adminAccountName: 'Nexora Platform Pvt Ltd',
+    adminBankName: 'HDFC Bank Ltd',
+    adminAccountNumber: '50200088991122',
+    adminIfscCode: 'HDFC0001234'
   });
 
   const [slotConfig, setSlotConfig] = useState({
@@ -177,7 +182,12 @@ const AdminSettings = () => {
             cancellationPenalty: res.settings.cancellationPenalty !== undefined ? res.settings.cancellationPenalty : 49,
             searchRadius: res.settings.searchRadius || 10,
             maxCartItemQuantity: res.settings.maxCartItemQuantity || 100,
-            isOnlinePaymentEnabled: res.settings.isOnlinePaymentEnabled !== undefined ? res.settings.isOnlinePaymentEnabled : true
+            isOnlinePaymentEnabled: res.settings.isOnlinePaymentEnabled !== undefined ? res.settings.isOnlinePaymentEnabled : true,
+            adminUpiId: res.settings.adminUpiId || 'nexora.settle@okicici',
+            adminAccountName: res.settings.adminAccountName || 'Nexora Platform Pvt Ltd',
+            adminBankName: res.settings.adminBankName || 'HDFC Bank Ltd',
+            adminAccountNumber: res.settings.adminAccountNumber || '50200088991122',
+            adminIfscCode: res.settings.adminIfscCode || 'HDFC0001234'
           });
           if (res.settings.slotConfig) {
             setSlotConfig(res.settings.slotConfig);
@@ -961,6 +971,81 @@ const AdminSettings = () => {
                             min="1"
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                           <p className="text-[10px] text-gray-400 mt-1">Maximum quantity a user can add for a single item in the cart</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Official Admin Receiving Account for Vendor Cash Settlements */}
+                    <div className="pt-4 border-t border-gray-100 md:col-span-2 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-blue-100 rounded-md text-blue-600">
+                          <FiShield className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-gray-800 uppercase">Official Admin Receiving Account (Cash Dues Settlement)</h4>
+                          <p className="text-[11px] text-gray-500">Displayed on vendor "Clear Dues" page for receiving cash dues transfers</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/70 p-4 rounded-xl border border-gray-200">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Admin UPI VPA</label>
+                          <input
+                            type="text"
+                            name="adminUpiId"
+                            value={financialSettings.adminUpiId}
+                            onChange={handleFinancialChange}
+                            placeholder="e.g. nexora.settle@okicici"
+                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-blue-700 outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Beneficiary Account Name</label>
+                          <input
+                            type="text"
+                            name="adminAccountName"
+                            value={financialSettings.adminAccountName}
+                            onChange={handleFinancialChange}
+                            placeholder="e.g. Nexora Platform Pvt Ltd"
+                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-900 outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Receiving Bank Name</label>
+                          <input
+                            type="text"
+                            name="adminBankName"
+                            value={financialSettings.adminBankName}
+                            onChange={handleFinancialChange}
+                            placeholder="e.g. HDFC Bank Ltd"
+                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-900 outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">Bank Account Number</label>
+                          <input
+                            type="text"
+                            name="adminAccountNumber"
+                            value={financialSettings.adminAccountNumber}
+                            onChange={handleFinancialChange}
+                            placeholder="e.g. 50200088991122"
+                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 outline-none focus:border-blue-500 transition-all"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold text-gray-700 uppercase mb-1">IFSC Code</label>
+                          <input
+                            type="text"
+                            name="adminIfscCode"
+                            value={financialSettings.adminIfscCode}
+                            onChange={handleFinancialChange}
+                            placeholder="e.g. HDFC0001234"
+                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-900 outline-none focus:border-blue-500 transition-all uppercase"
+                          />
                         </div>
                       </div>
                     </div>

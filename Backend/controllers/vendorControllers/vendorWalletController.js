@@ -29,6 +29,17 @@ const getWallet = async (req, res) => {
     const earnings = vendor.wallet?.earnings || 0;
     const totalWithdrawn = vendor.wallet?.totalWithdrawn || 0;
 
+    // Get pending withdrawals total
+    const pendingWithdrawalsResult = await Withdrawal.aggregate([
+      { $match: { vendorId: vendor._id, status: 'pending' } },
+      { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+    ]);
+    const pendingWithdrawalAmount = pendingWithdrawalsResult[0]?.total || 0;
+    const pendingWithdrawalCount = pendingWithdrawalsResult[0]?.count || 0;
+
+    // Funds available to withdraw (Gross Earnings minus Pending Withdrawal Requests)
+    const availableEarnings = Math.max(0, earnings - pendingWithdrawalAmount);
+
     // Get pending settlements count
     const pendingSettlements = await Settlement.countDocuments({
       vendorId,
@@ -52,7 +63,7 @@ const getWallet = async (req, res) => {
       }
     ]);
 
-    // Get total settled amount
+    // Get total settled amount from Transactions & Settlements
     const settledResult = await Transaction.aggregate([
       {
         $match: {
@@ -69,24 +80,61 @@ const getWallet = async (req, res) => {
       }
     ]);
 
+    const approvedSettlementResult = await Settlement.aggregate([
+      {
+        $match: {
+          vendorId: vendor._id,
+          status: 'approved'
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$amount' }
+        }
+      }
+    ]);
+
     const totalCashCollected = cashCollectedResult[0]?.total || 0;
-    const totalSettled = settledResult[0]?.total || 0;
+    const totalSettled = (settledResult[0]?.total || 0) + (approvedSettlementResult[0]?.total || 0);
+
+    // Fetch settings for dynamic rates
+    const Settings = require('../../models/Settings');
+    const settings = await Settings.findOne({ type: 'global' });
+    const vendorLevel = vendor.level || 1;
+    const levelKey = `level${vendorLevel}`;
+    const tdsRate = settings?.tdsPercentage ?? 1;
+    const platformFeeRate = settings?.platformFeeRates?.[levelKey] ?? settings?.platformFeePercentage ?? (vendorLevel === 1 ? 0.5 : vendorLevel === 2 ? 1.0 : 2.0);
 
     res.status(200).json({
       success: true,
       data: {
         dues,
         earnings,
-        amountDue: dues, // Clarification for frontend but 'dues' is self-explanatory
-        balance: earnings - dues, // Net position for reference (optional)
+        pendingWithdrawalAmount,
+        pendingWithdrawalCount,
+        availableEarnings,
+        amountDue: dues,
+        balance: availableEarnings, // Available for withdrawal
         totalWithdrawn,
         totalCashCollected,
         totalSettled,
         pendingSettlements,
         cashLimit: vendor.wallet?.cashLimit || 10000,
+        tdsRate,
+        adminPaymentDetails: {
+          upiId: settings?.adminUpiId || 'nexora.settle@okicici',
+          accountName: settings?.adminAccountName || 'Nexora Platform Pvt Ltd',
+          bankName: settings?.adminBankName || 'HDFC Bank Ltd',
+          accountNumber: settings?.adminAccountNumber || '50200088991122',
+          ifscCode: settings?.adminIfscCode || 'HDFC0001234'
+        },
         vendor: {
           name: vendor.name,
-          businessName: vendor.businessName
+          businessName: vendor.businessName,
+          level: vendorLevel,
+          tdsRate,
+          platformFeeRate
         }
       }
     });
@@ -490,12 +538,31 @@ const requestWithdrawal = async (req, res) => {
       });
     }
 
+    // Fetch settings for dynamic rates
+    const Settings = require('../../models/Settings');
+    const settings = await Settings.findOne({ type: 'global' });
+
+    const vendorLevel = vendor.level || 1;
+    const levelKey = `level${vendorLevel}`;
+
+    const tdsRate = settings?.tdsPercentage ?? 1;
+    const platformFeeRate = settings?.platformFeeRates?.[levelKey] ?? settings?.platformFeePercentage ?? (vendorLevel === 1 ? 0.5 : vendorLevel === 2 ? 1.0 : 2.0);
+
+    const tdsAmount = Math.round((amount * tdsRate) / 100);
+    const platformFeeAmount = Math.round((amount * platformFeeRate) / 100);
+    const netAmount = amount - tdsAmount - platformFeeAmount;
+
     const withdrawal = await Withdrawal.create({
       vendorId,
       amount,
       bankDetails: sanitizedBankDetails,
       adminNotes: notes,
-      status: 'pending'
+      status: 'pending',
+      tdsRate,
+      tdsAmount,
+      platformFeeRate,
+      platformFeeAmount,
+      netAmount
     });
 
     // 🔔 NOTIFY ALL ADMINS about withdrawal request
@@ -757,8 +824,12 @@ const payWorker = async (req, res) => {
     booking.workerPaymentStatus = 'PAID';
     booking.isWorkerPaid = true;
     booking.workerPaidAt = new Date();
-    booking.status = 'completed'; // Job is fully done and paid
-    booking.completedAt = booking.completedAt || new Date();
+
+    // Only mark booking status completed if the customer has also paid
+    if (booking.cashCollected === true || ['success', 'paid', 'collected_by_vendor', 'paid_online'].includes(booking.paymentStatus?.toLowerCase())) {
+      booking.status = 'completed';
+      booking.completedAt = booking.completedAt || new Date();
+    }
 
     await Promise.all([
       transaction.save(),

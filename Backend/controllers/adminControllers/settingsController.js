@@ -58,7 +58,9 @@ exports.updateSettings = async (req, res, next) => {
       // Configurable Policies
       termsAndConditions, privacyPolicy,
       workerTermsAndConditions, workerPrivacyPolicy,
-      vendorTermsAndConditions, vendorPrivacyPolicy
+      vendorTermsAndConditions, vendorPrivacyPolicy,
+      // Admin Receiving Account Details
+      adminUpiId, adminAccountName, adminBankName, adminAccountNumber, adminIfscCode
     } = req.body;
 
     let settings = await Settings.findOne({ type: 'global' });
@@ -83,6 +85,13 @@ exports.updateSettings = async (req, res, next) => {
     if (cloudinaryCloudName !== undefined) settings.cloudinaryCloudName = cloudinaryCloudName;
     if (cloudinaryApiKey !== undefined) settings.cloudinaryApiKey = cloudinaryApiKey;
     if (cloudinaryApiSecret !== undefined) settings.cloudinaryApiSecret = cloudinaryApiSecret;
+
+    // Admin Receiving Account Details
+    if (adminUpiId !== undefined) settings.adminUpiId = adminUpiId;
+    if (adminAccountName !== undefined) settings.adminAccountName = adminAccountName;
+    if (adminBankName !== undefined) settings.adminBankName = adminBankName;
+    if (adminAccountNumber !== undefined) settings.adminAccountNumber = adminAccountNumber;
+    if (adminIfscCode !== undefined) settings.adminIfscCode = adminIfscCode;
 
     // Billing update
     if (companyName !== undefined) settings.companyName = companyName;

@@ -46,7 +46,7 @@ const withdrawalSchema = new mongoose.Schema({
   // TDS Details (calculated at approval)
   tdsRate: {
     type: Number,
-    default: 2 // Default 2% TDS
+    default: 1 // Default 1% TDS u/s 194-O
   },
   tdsAmount: {
     type: Number,
@@ -60,8 +60,16 @@ const withdrawalSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  commissionRate: {
+    type: Number,
+    default: 0
+  },
+  commissionAmount: {
+    type: Number,
+    default: 0
+  },
   netAmount: {
-    type: Number, // Amount actually transferred to vendor (amount - tdsAmount - platformFeeAmount)
+    type: Number, // Amount actually transferred to vendor (amount - commission - tdsAmount - platformFeeAmount)
     default: 0
   }
 }, {
