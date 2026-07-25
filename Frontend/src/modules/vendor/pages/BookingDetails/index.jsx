@@ -452,11 +452,11 @@ export default function BookingDetails() {
   };
 
   const handleViewTimeline = () => {
-    navigate(`/vendor/booking/${booking.id}/timeline`);
+    navigate(`/vendor/booking/${booking.id}/timeline`, { replace: true });
   };
 
   const handleAssignWorker = () => {
-    navigate(`/vendor/booking/${booking.id}/assign-worker`);
+    navigate(`/vendor/booking/${booking.id}/assign-worker`, { replace: true });
   };
 
   const handleAssignToSelf = async () => {
@@ -506,7 +506,7 @@ export default function BookingDetails() {
       }
     }
 
-    navigate(`/vendor/booking/${booking.id || id}/map`);
+    navigate(`/vendor/booking/${booking.id || id}/map`, { replace: true });
   };
 
   const handleVendorReached = async () => {
@@ -636,8 +636,8 @@ export default function BookingDetails() {
         <div className="flex items-center gap-4 md:gap-6">
           <motion.button 
             whileTap={{ scale: 0.9 }}
-            onClick={() => navigate(-1)}
-            className="w-8 h-8 md:w-10 md:h-10 bg-gray-50 rounded-lg md:rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors"
+            onClick={() => navigate('/vendor/service-bookings', { replace: true })}
+            className="w-8 h-8 md:w-10 md:h-10 bg-gray-50 rounded-lg md:rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <FiX className="w-4 h-4 md:w-5 md:h-5 text-gray-600" />
           </motion.button>

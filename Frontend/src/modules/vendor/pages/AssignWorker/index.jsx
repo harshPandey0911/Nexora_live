@@ -99,7 +99,7 @@ const AssignWorker = () => {
         toast.success('Worker assigned successfully');
         // Notify other components
         window.dispatchEvent(new Event('vendorJobsUpdated'));
-        navigate(`/vendor/booking/${id}`);
+        navigate(`/vendor/booking/${id}`, { replace: true });
       } else {
         throw new Error(response?.message || 'Failed to assign worker');
       }
@@ -131,7 +131,7 @@ const AssignWorker = () => {
 
   return (
     <div className="min-h-screen pb-20 bg-white">
-      <Header title="Assign Worker" />
+      <Header title="Assign Worker" onBack={() => navigate(`/vendor/booking/${id}`, { replace: true })} />
 
       <main className="px-4 pt-24 pb-6">
         {/* Booking Summary (Black Theme) */}

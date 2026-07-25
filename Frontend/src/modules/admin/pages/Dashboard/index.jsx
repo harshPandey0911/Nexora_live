@@ -105,6 +105,8 @@ const AdminDashboard = () => {
     };
 
     fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, [period, customDates.start, customDates.end]);
 
   const handleExportCsv = () => {

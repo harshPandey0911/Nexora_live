@@ -535,8 +535,8 @@ const BookingMap = () => {
       {/* Top Floating Header - Always Visible */}
       <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
         <button
-          onClick={() => navigate(-1)}
-          className="pointer-events-auto bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg text-gray-700 hover:bg-white transition-all active:scale-95"
+          onClick={() => navigate(`/vendor/booking/${id}`, { replace: true })}
+          className="pointer-events-auto bg-white/90 backdrop-blur-md p-3 rounded-full shadow-lg text-gray-700 hover:bg-white transition-all active:scale-95 cursor-pointer"
         >
           <FiArrowLeft className="w-6 h-6" />
         </button>

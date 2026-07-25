@@ -5,9 +5,12 @@ import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { getBookings, assignWorker as assignWorkerApi, acceptBooking, rejectBooking } from '../../services/bookingService';
 import { ConfirmDialog, RejectionReasonModal } from '../../components/common';
+import Pagination from '../../../../components/common/Pagination';
 
 const ActiveJobs = memo(() => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [jobs, setJobs] = useState(() => {
     const cached = localStorage.getItem('vendorJobsList');
     return cached ? JSON.parse(cached) : [];
@@ -48,80 +51,75 @@ const ActiveJobs = memo(() => {
         price: (job.finalAmount || job.totalAmount || job.amount || 0).toFixed(2),
         status: job.status,
         assignedTo: job.workerId ? { name: job.workerId.name } : (job.assignedAt ? { name: 'You (Self)' } : null),
-        workerResponse: job.workerResponse,
-        rejectedWorker: job.rejectedWorkerId ? { name: job.rejectedWorkerId.name } : null,
-        offeringType: job.offeringType || 'SERVICE',
         timeSlot: {
-          date: job.timeSlot?.date || (job.scheduledDate && !isNaN(new Date(job.scheduledDate).getTime()) 
-            ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) 
-            : (job.createdAt && !isNaN(new Date(job.createdAt).getTime())
-                ? new Date(job.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-                : 'Today')),
-          time: job.timeSlot?.time || (job.timeSlot?.start && job.timeSlot?.end 
-            ? `${job.timeSlot.start} - ${job.timeSlot.end}` 
-            : (job.scheduledTime && job.scheduledTime !== 'N/A' ? job.scheduledTime : 'ASAP'))
-        }
+          date: job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Scheduled',
+          time: job.scheduledTime || 'ASAP'
+        },
+        scheduledDate: job.scheduledDate,
+        scheduledTime: job.scheduledTime,
+        bookingId: job.bookingId,
+        workerResponse: job.workerResponse,
+        rejectedWorker: job.rejectedWorker
       }));
+
       setJobs(mappedJobs);
       localStorage.setItem('vendorJobsList', JSON.stringify(mappedJobs));
-      setIsInitialLoad(false);
     } catch (error) {
       console.error('Error loading jobs:', error);
-      toast.error('Failed to load jobs');
+      toast.error('Failed to load service bookings');
     } finally {
       setLoading(false);
+      setIsInitialLoad(false);
     }
   }, [isInitialLoad]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadJobs(filter, searchQuery);
-    }, filter === 'all' && searchQuery === '' ? 0 : 500);
+    setCurrentPage(1);
+    loadJobs(filter, searchQuery);
 
-    return () => clearTimeout(timer);
-  }, [filter, searchQuery, loadJobs]);
-
-  useEffect(() => {
     const handleUpdate = () => loadJobs(filter, searchQuery);
     window.addEventListener('vendorJobsUpdated', handleUpdate);
+
     return () => {
       window.removeEventListener('vendorJobsUpdated', handleUpdate);
     };
-  }, [loadJobs, filter, searchQuery]);
+  }, [filter, searchQuery, loadJobs]);
 
-  const filteredJobs = jobs;
+  const filteredJobs = useMemo(() => {
+    return jobs.filter(job => {
+      const status = job.status?.toLowerCase();
+      let matchesFilter = true;
 
-  const handleAssignToSelf = async (jobId) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Assign to Self',
-      message: 'Are you sure you want to do this job yourself?',
-      onConfirm: async () => {
-        try {
-          const response = await assignWorkerApi(jobId, 'SELF');
-          if (response && response.success) {
-            toast.success("Assigned to yourself!");
-            loadJobs(filter, searchQuery);
-          }
-        } catch (error) {
-          console.error("Error assigning to self:", error);
-          toast.error("Failed to assign to yourself");
-        }
+      if (filter === 'pending') {
+        matchesFilter = status === 'pending' || status === 'requested';
+      } else if (filter === 'assigned') {
+        matchesFilter = status === 'assigned';
+      } else if (filter === 'in_progress') {
+        matchesFilter = ['on_the_way', 'work_started', 'work_done'].includes(status);
+      } else if (filter === 'completed') {
+        matchesFilter = status === 'completed';
       }
+
+      const matchesSearch = !searchQuery ||
+        job.serviceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.location.address.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesFilter && matchesSearch;
     });
-  };
+  }, [jobs, filter, searchQuery]);
 
   const handleAcceptJob = async (jobId) => {
     try {
       const response = await acceptBooking(jobId);
-      if (response && response.success) {
-        toast.success("Job accepted successfully!");
+      if (response.success) {
+        toast.success("Job accepted successfully");
         loadJobs(filter, searchQuery);
         window.dispatchEvent(new Event('vendorJobsUpdated'));
       }
     } catch (error) {
       console.error("Error accepting job:", error);
-      toast.error(error.response?.data?.message || "Failed to accept job");
+      toast.error("Failed to accept job");
     }
   };
 
@@ -133,7 +131,7 @@ const ActiveJobs = memo(() => {
     if (!rejectingJobId) return;
     try {
       const response = await rejectBooking(rejectingJobId, reason);
-      if (response && response.success) {
+      if (response.success) {
         toast.success("Job skipped");
         loadJobs(filter, searchQuery);
         window.dispatchEvent(new Event('vendorJobsUpdated'));
@@ -148,7 +146,7 @@ const ActiveJobs = memo(() => {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Header - Admin Style - Hidden on Mobile */}
+      {/* Header */}
       <div className="hidden md:flex bg-white p-5 rounded-2xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
         <div>
           <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
@@ -163,7 +161,7 @@ const ActiveJobs = memo(() => {
         </div>
       </div>
 
-      {/* Search Bar - Clean Admin Style */}
+      {/* Search Bar */}
       <div className="relative group max-w-2xl">
         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
         <input
@@ -175,7 +173,7 @@ const ActiveJobs = memo(() => {
         />
       </div>
 
-      {/* Navigation Tabs - Admin Style */}
+      {/* Navigation Tabs */}
       <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
         {[
           { id: 'all', label: 'All Streams' },
@@ -218,107 +216,124 @@ const ActiveJobs = memo(() => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 pb-12">
-          {filteredJobs.map((job) => {
-            const isCompleted = job.status?.toLowerCase() === 'completed';
-            const isPending = job.status?.toLowerCase() === 'pending' || job.status?.toLowerCase() === 'requested';
+        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 pb-6">
+          {filteredJobs
+            .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+            .map((job) => {
+              const isCompleted = job.status?.toLowerCase() === 'completed';
+              const isPending = job.status?.toLowerCase() === 'pending' || job.status?.toLowerCase() === 'requested';
 
-            return (
-              <div 
-                key={job.id} 
-                className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col relative overflow-hidden h-fit"
-                onClick={() => navigate(`/vendor/booking/${job.id}`)}
-              >
-                {/* Status Indicator Bar */}
-                <div className={`absolute top-0 left-0 w-full h-1 ${isPending ? 'bg-orange-400' : isCompleted ? 'bg-green-400' : 'bg-blue-500'}`} />
-                
-                <div>
-                  <div className="flex items-start justify-between mb-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                      <FiBriefcase className="w-4.5 h-4.5" />
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-gray-800 tracking-tight leading-none text-right">₹{job.price}</p>
-                      <span className={`text-[8px] font-medium capitalize tracking-wider px-1.5 py-0.5 rounded-md mt-1 inline-block ${
-                        job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                        isPending ? 'bg-orange-50 text-orange-600 border border-orange-100' : 
-                        isCompleted ? 'bg-green-50 text-green-600 border border-green-100' : 
-                        'bg-blue-50 text-blue-600 border border-blue-100'
-                      }`}>
-                        {job.workerResponse === 'REJECTED' && !job.assignedTo ? 'Rejected by Worker' : job.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  <h3 className="text-xs font-normal text-gray-900 capitalize truncate mb-1 group-hover:text-blue-600 transition-colors tracking-tight">
-                    {job.serviceType}
-                  </h3>
+              return (
+                <div 
+                  key={job.id} 
+                  className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col relative overflow-hidden h-fit"
+                  onClick={() => navigate(`/vendor/booking/${job.id}`)}
+                >
+                  <div className={`absolute top-0 left-0 w-full h-1 ${isPending ? 'bg-orange-400' : isCompleted ? 'bg-green-400' : 'bg-blue-500'}`} />
                   
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-gray-500">
-                      <FiUser className="w-3 h-3 shrink-0 text-gray-400" />
-                      <span className="text-[10px] font-medium">{job.user.name}</span>
+                  <div>
+                    <div className="flex items-start justify-between mb-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                        <FiBriefcase className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-gray-800 tracking-tight leading-none text-right">₹{job.price}</p>
+                        <span className={`text-[8px] font-medium capitalize tracking-wider px-1.5 py-0.5 rounded-md mt-1 inline-block ${
+                          job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                          isPending ? 'bg-orange-50 text-orange-600 border border-orange-100' : 
+                          isCompleted ? 'bg-green-50 text-green-600 border border-green-100' : 
+                          'bg-blue-50 text-blue-600 border border-blue-100'
+                        }`}>
+                          {job.workerResponse === 'REJECTED' && !job.assignedTo ? 'Rejected by Worker' : job.status}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-gray-500">
-                      <FiMapPin className="w-3 h-3 shrink-0 text-gray-400" />
-                      <span className="text-[10px] font-medium truncate">{job.location.address}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-gray-500">
-                      <FiClock className="w-3 h-3 shrink-0 text-gray-400" />
-                      <span className="text-[10px] font-medium text-gray-600 capitalize">{job.timeSlot.date} • {job.timeSlot.time}</span>
+
+                    <h3 className="text-xs font-normal text-gray-900 capitalize truncate mb-1 group-hover:text-blue-600 transition-colors tracking-tight">
+                      {job.serviceType}
+                    </h3>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <FiUser className="w-3 h-3 shrink-0 text-gray-400" />
+                        <span className="text-[10px] font-medium">{job.user.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <FiMapPin className="w-3 h-3 shrink-0 text-gray-400" />
+                        <span className="text-[10px] font-medium truncate">{job.location.address}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <FiClock className="w-3 h-3 shrink-0 text-gray-400" />
+                        <span className="text-[10px] font-medium text-gray-600 capitalize">{job.timeSlot.date} • {job.timeSlot.time}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-1.5">
-                  {isPending ? (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleAcceptJob(job.id); }}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-normal py-2 rounded-lg shadow transition-all active:scale-95"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRejectJob(job.id); }}
-                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-normal py-2 rounded-lg transition-all active:scale-95"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${
-                          job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
-                        }`} />
-                        <p className="text-[9px] font-medium text-gray-500 capitalize tracking-wider">
-                          {job.workerResponse === 'REJECTED' && !job.assignedTo 
-                            ? `Declined by: ${job.rejectedWorker?.name || 'Worker'}` 
-                            : job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Ready for Assignment'}
-                        </p>
-                      </div>
-                      
-                      {job.workerResponse === 'REJECTED' && !job.assignedTo && !['completed', 'cancelled', 'rejected', 'work_done'].includes(job.status?.toLowerCase()) ? (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-1.5">
+                    {isPending ? (
+                      <div className="flex gap-2">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/vendor/booking/${job.id}/assign-worker`);
-                          }}
-                          className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider transition-all"
+                          onClick={(e) => { e.stopPropagation(); handleAcceptJob(job.id); }}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-normal py-2 rounded-lg shadow transition-all active:scale-95"
                         >
-                          Reassign
+                          Accept
                         </button>
-                      ) : (
-                        <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-4 h-4" />
-                      )}
-                    </div>
-                  )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRejectJob(job.id); }}
+                          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-normal py-2 rounded-lg transition-all active:scale-95"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-1.5 h-1.5 rounded-full ${
+                            job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
+                          }`} />
+                          <p className="text-[9px] font-medium text-gray-500 capitalize tracking-wider">
+                            {job.workerResponse === 'REJECTED' && !job.assignedTo 
+                              ? `Declined by: ${job.rejectedWorker?.name || 'Worker'}` 
+                              : job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Ready for Assignment'}
+                          </p>
+                        </div>
+                        
+                        {job.workerResponse === 'REJECTED' && !job.assignedTo && !['completed', 'cancelled', 'rejected', 'work_done'].includes(job.status?.toLowerCase()) ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/vendor/booking/${job.id}/assign-worker`);
+                            }}
+                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider transition-all"
+                          >
+                            Reassign
+                          </button>
+                        ) : (
+                          <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-4 h-4" />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
+      )}
+
+      {/* Pagination Bar */}
+      {!loading && filteredJobs.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredJobs.length / pageSize) || 1}
+          totalItems={filteredJobs.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          className="mt-4"
+        />
       )}
 
       <ConfirmDialog
@@ -337,5 +352,7 @@ const ActiveJobs = memo(() => {
     </div>
   );
 });
+
+ActiveJobs.displayName = 'VendorActiveJobs';
 
 export default ActiveJobs;

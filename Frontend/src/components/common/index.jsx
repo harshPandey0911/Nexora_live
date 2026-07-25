@@ -11,3 +11,4 @@ export { default as OptimizedVideo } from './OptimizedVideo.jsx';
 export { default as LazyImage } from './LazyImage.jsx';
 export * from './SkeletonLoaders.jsx';
 export { default as CustomDateInput } from './CustomDateInput.jsx';
+export { default as Pagination } from './Pagination.jsx';

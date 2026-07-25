@@ -151,6 +151,10 @@ const bookingSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  isFinalized: {
+    type: Boolean,
+    default: false
+  },
   extraCharges: [{
     name: { type: String, required: true },
     quantity: { type: Number, default: 1 },

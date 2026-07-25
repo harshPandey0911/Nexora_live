@@ -7,12 +7,15 @@ import Button from '../../components/Button';
 import adminSettlementService from '../../../../services/adminSettlementService';
 import { getSettings } from '../../services/settingsService';
 import { exportToCSV } from '../../../../utils/csvExport';
+import Pagination from '../../../../components/common/Pagination';
 
 const SettlementManagement = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [dashboard, setDashboard] = useState(null);
   const [pendingSettlements, setPendingSettlements] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -57,6 +60,7 @@ const SettlementManagement = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    setCurrentPage(1);
     loadData();
   }, [activeTab]);
 
@@ -844,10 +848,104 @@ const SettlementManagement = () => {
           </div>
         ) : (
           <div className="p-6">
-            {activeTab === 'pending' && renderPendingSettlements()}
+            {activeTab === 'pending' && (
+              pendingSettlements.length === 0 ? (
+                <div className="text-center py-10">
+                  <FiClock className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+                  <p className="text-gray-500 text-sm font-medium">No pending settlements</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {pendingSettlements.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(settlement => (
+                    <div key={settlement._id} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-gray-900 text-sm">{settlement.vendorId?.name || 'Unknown Vendor'}</h3>
+                            {settlement.vendorId?.businessName && (
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold rounded-md truncate max-w-[140px]">
+                                {settlement.vendorId.businessName}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-baseline gap-2 pt-1">
+                            <p className="text-2xl font-black text-gray-900 tracking-tight">₹{settlement.amount?.toLocaleString('en-IN')}</p>
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold uppercase rounded-md border border-blue-100">
+                              {settlement.paymentMethod?.replace('_', ' ')}
+                            </span>
+                          </div>
+                          {settlement.paymentReference && (
+                            <p className="text-xs text-gray-600 font-mono bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-lg inline-block">
+                              Ref: <span className="font-bold text-gray-900">{settlement.paymentReference}</span>
+                            </p>
+                          )}
+                          <p className="text-[11px] text-gray-400 font-medium pt-1">
+                            Submitted: {formatDate(settlement.createdAt)}
+                          </p>
+                        </div>
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {settlement.paymentProof && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedItem(settlement);
+                                setActiveModal('view_proof');
+                              }}
+                              className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold hover:bg-blue-100 text-center transition-all shadow-xs"
+                            >
+                              View Proof
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => openApproveSettlement(settlement)}
+                            className="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 text-center transition-all shadow-sm"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openRejectSettlement(settlement)}
+                            className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold hover:bg-rose-100 text-center transition-all shadow-xs"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
             {activeTab === 'vendors' && renderVendorsList()}
             {activeTab === 'history' && renderHistoryList()}
             {activeTab === 'withdrawals' && renderWithdrawalsList()}
+
+            {/* Global Pagination Bar */}
+            {!loading && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil((
+                  activeTab === 'pending' ? pendingSettlements.length :
+                  activeTab === 'vendors' ? vendors.length :
+                  activeTab === 'history' ? history.length :
+                  withdrawals.length
+                ) / pageSize) || 1}
+                totalItems={
+                  activeTab === 'pending' ? pendingSettlements.length :
+                  activeTab === 'vendors' ? vendors.length :
+                  activeTab === 'history' ? history.length :
+                  withdrawals.length
+                }
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
+                className="mt-6 border-t pt-4"
+              />
+            )}
           </div>
         )}
       </div>

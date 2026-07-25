@@ -120,9 +120,22 @@ const PendingJobCard = ({ booking, onAccept, onReject, onClick, loadingAction, s
               <FiClock className="w-5 h-5 text-blue-600" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-medium text-gray-400 capitalize tracking-widest leading-none mb-1">Deployment Time</span>
+              <span className="text-[10px] font-medium text-gray-400 capitalize tracking-widest leading-none mb-1">Booked Slot</span>
               <span className="text-xs font-medium text-gray-900 capitalize tracking-[0.1em]">
-                {booking.timeSlot?.time || 'ASAP'}
+                {(() => {
+                  const dateVal = booking.timeSlot?.date || booking.scheduledDate;
+                  let formattedDate = '';
+                  if (dateVal && dateVal !== 'Invalid Date') {
+                    const d = new Date(dateVal);
+                    if (!isNaN(d.getTime())) {
+                      formattedDate = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+                    } else if (typeof dateVal === 'string' && dateVal.trim()) {
+                      formattedDate = dateVal;
+                    }
+                  }
+                  const timeVal = booking.timeSlot?.time || (booking.timeSlot?.start && booking.timeSlot?.end ? `${booking.timeSlot.start} - ${booking.timeSlot.end}` : booking.scheduledTime) || 'ASAP';
+                  return formattedDate ? `${formattedDate} • ${timeVal}` : timeVal;
+                })()}
               </span>
             </div>
           </div>

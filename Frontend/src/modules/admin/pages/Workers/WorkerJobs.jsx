@@ -4,6 +4,7 @@ import { FiSearch, FiFilter, FiLoader, FiCalendar, FiClock, FiUser, FiMapPin } f
 import { toast } from 'react-hot-toast';
 import CardShell from '../UserCategories/components/CardShell';
 import adminWorkerService from '../../../../services/adminWorkerService';
+import Pagination from '../../../../components/common/Pagination';
 
 const WorkerJobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -144,21 +145,19 @@ const WorkerJobs = () => {
         </div>
 
         {/* Pagination */}
-        {!loading && pagination.pages > 1 && (
-          <div className="flex justify-center mt-8 gap-2">
-            {[...Array(pagination.pages)].map((_, i) => (
-              <button
-                key={i}
-                onClick={() => loadJobs(i + 1)}
-                className={`w-10 h-10 rounded-lg font-semibold transition-all ${pagination.page === i + 1
-                    ? 'bg-primary-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
+        {!loading && jobs.length > 0 && (
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages || Math.ceil(pagination.total / pagination.limit) || 1}
+            totalItems={pagination.total || jobs.length}
+            pageSize={pagination.limit}
+            onPageChange={(p) => loadJobs(p)}
+            onPageSizeChange={(newLimit) => {
+              setPagination(prev => ({ ...prev, limit: newLimit }));
+              loadJobs(1);
+            }}
+            className="mt-6 border-t pt-4"
+          />
         )}
       </CardShell>
     </div>

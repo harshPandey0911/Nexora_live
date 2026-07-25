@@ -154,6 +154,12 @@ const LiveBookingCard = ({ hasBottomNav }) => {
 
   if (!activeBooking || isDismissed) return null;
 
+  // Don't render floating LiveBookingCard if user is ALREADY viewing this booking's details, confirmation, or tracking page
+  const currentBookingId = String(activeBooking._id || activeBooking.id || '');
+  if (currentBookingId && location.pathname.includes(currentBookingId)) {
+    return null;
+  }
+
   const statusInfo = getStatusInfo(activeBooking.status);
   if (!statusInfo) return null;
 
@@ -244,7 +250,7 @@ const LiveBookingCard = ({ hasBottomNav }) => {
             }
             setActiveBooking(null); // Force clear booking state to guarantee immediate dismissal
           }}
-          className="absolute top-2 right-2 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 rounded-full z-[100] pointer-events-auto transition-all shadow-sm"
+          className="absolute -top-2.5 -right-2.5 w-6 h-6 bg-slate-900 hover:bg-slate-800 text-white rounded-full flex items-center justify-center z-[100] pointer-events-auto transition-all shadow-lg border-2 border-white cursor-pointer"
           title="Dismiss notification"
         >
           <FiX className="w-3.5 h-3.5" />

@@ -269,6 +269,7 @@ const createOrUpdateBill = async (req, res) => {
     booking.finalAmount = grandTotal;
     booking.userPayableAmount = grandTotal;
     booking.vendorBillId = bill._id;
+    booking.isFinalized = isBillFinalized;
     booking.razorpayOrderId = null; // Invalidate stale Razorpay order to force new order matching grandTotal
     await booking.save();
 

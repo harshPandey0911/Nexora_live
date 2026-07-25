@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CustomDateInput } from '../../../../components/common';
+import Pagination from '../../../../components/common/Pagination';
 import {
   FiFileText,
   FiDownload,
@@ -187,67 +188,15 @@ const DataTable = ({ data, columns, loading }) => {
 
       {/* Pagination Footer */}
       {data.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex-wrap gap-2 rounded-b-xl">
-          <p className="text-xs text-gray-500 font-medium">
-            Showing {((currentPage - 1) * itemsPerPage) + 1}–{Math.min(currentPage * itemsPerPage, data.length)} of {data.length} entries
-          </p>
-
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
-                title="First page"
-              >
-                «
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
-              >
-                Prev
-              </button>
-              
-              {(() => {
-                const pages = [];
-                const maxVisible = 5;
-                const start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-                const end = Math.min(totalPages, start + maxVisible - 1);
-                
-                for (let i = start; i <= end; i++) {
-                  pages.push(
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all ${currentPage === i ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
-                    >
-                      {i}
-                    </button>
-                  );
-                }
-                return pages;
-              })()}
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
-              >
-                Next
-              </button>
-              <button
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all"
-                title="Last page"
-              >
-                »
-              </button>
-            </div>
-          )}
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={data.length}
+          pageSize={itemsPerPage}
+          onPageChange={(p) => setCurrentPage(p)}
+          onPageSizeChange={(newSize) => setItemsPerPage(newSize)}
+          className="rounded-t-none border-t border-gray-100"
+        />
       )}
     </div>
   );

@@ -110,6 +110,14 @@ const workerSchema = new mongoose.Schema({
       default: 0
     }
   },
+  // Bank & UPI Details for Vendor Payouts
+  bankDetails: {
+    accountNumber: { type: String, trim: true, default: '' },
+    ifscCode: { type: String, trim: true, default: '' },
+    bankName: { type: String, trim: true, default: '' },
+    accountHolderName: { type: String, trim: true, default: '' },
+    upiId: { type: String, trim: true, default: '' }
+  },
   // Settings
   settings: {
     notifications: {

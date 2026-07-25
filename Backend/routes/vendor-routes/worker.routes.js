@@ -10,7 +10,9 @@ const {
   linkWorker,
   updateWorker,
   removeWorker,
-  getWorkerPerformance
+  getWorkerPerformance,
+  payAndResetWorkerSalary,
+  getWorkerPaymentHistory
 } = require('../../controllers/vendorControllers/vendorWorkerController');
 
 // Validation rules
@@ -44,6 +46,7 @@ router.get('/:id', authenticate, isVendor, getVendorWorkerById);
 router.put('/:id', authenticate, isVendor, updateWorkerValidation, updateWorker);
 router.delete('/:id', authenticate, isVendor, removeWorker);
 router.get('/:id/performance', authenticate, isVendor, getWorkerPerformance);
+router.get('/:id/payments', authenticate, isVendor, getWorkerPaymentHistory);
+router.post('/:id/pay-reset', authenticate, isVendor, payAndResetWorkerSalary);
 
 module.exports = router;
-

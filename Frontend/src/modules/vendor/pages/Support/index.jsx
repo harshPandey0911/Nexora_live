@@ -5,9 +5,12 @@ import { supportService } from '../../services/supportService';
 import Header from '../../components/layout/Header';
 import { vendorTheme } from '../../../../theme';
 import toast from 'react-hot-toast';
+import Pagination from '../../../../components/common/Pagination';
 
 const SupportList = () => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -128,7 +131,9 @@ const SupportList = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {tickets.map(ticket => (
+            {tickets
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map(ticket => (
               <div
                 key={ticket._id}
                 onClick={() => navigate(`/vendor/support/${ticket._id}`)}
@@ -160,6 +165,22 @@ const SupportList = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Pagination Bar */}
+        {!loading && tickets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(tickets.length / pageSize) || 1}
+            totalItems={tickets.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            className="mt-4"
+          />
         )}
       </div>
 

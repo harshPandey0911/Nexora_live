@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
-import { FiDollarSign, FiArrowUp, FiArrowDown, FiClock, FiBell, FiX, FiImage, FiFileText, FiCreditCard, FiCalendar, FiInfo } from 'react-icons/fi';
+import React, { useState, useEffect, useLayoutEffect, useMemo } from 'react';
+import { FiDollarSign, FiArrowUp, FiArrowDown, FiClock, FiBell, FiX, FiImage, FiFileText, FiCreditCard, FiCalendar, FiInfo, FiCheckCircle, FiAward } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import workerWalletService from '../../../../services/workerWalletService';
 import { toast } from 'react-hot-toast';
 import LogoLoader from '../../../../components/common/LogoLoader';
+import Pagination from '../../../../components/common/Pagination';
+
+const isSalarySettlement = (txn) => {
+  if (!txn) return false;
+  return txn.type === 'worker_payment' && (
+    Boolean(txn.metadata?.resetByVendor) ||
+    Boolean(txn.description && /settlement|reset|salary payout/i.test(txn.description))
+  );
+};
 
 const Wallet = () => {
   const [loading, setLoading] = useState(true);
@@ -22,6 +31,8 @@ const Wallet = () => {
     return cached ? JSON.parse(cached) : [];
   });
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
@@ -44,15 +55,15 @@ const Wallet = () => {
   }, []);
 
   useEffect(() => {
-    loadWalletData();
+    fetchWalletData();
   }, []);
 
-  const loadWalletData = async () => {
+  const fetchWalletData = async () => {
     try {
-      if (transactions.length === 0) setLoading(true);
-      const [walletRes, txnRes] = await Promise.all([
-        workerWalletService.getWallet(),
-        workerWalletService.getTransactions({ limit: 50 })
+      setLoading(true);
+      const [walletRes, txnsRes] = await Promise.all([
+        workerWalletService.getWalletInfo(),
+        workerWalletService.getTransactions()
       ]);
 
       if (walletRes.success) {
@@ -60,14 +71,12 @@ const Wallet = () => {
         localStorage.setItem('workerWalletData', JSON.stringify(walletRes.data));
       }
 
-      if (txnRes.success) {
-        const txns = txnRes.data || [];
-        setTransactions(txns);
-        localStorage.setItem('workerTransactions', JSON.stringify(txns));
+      if (txnsRes.success) {
+        setTransactions(txnsRes.data || []);
       }
     } catch (error) {
-      console.error('Error loading wallet:', error);
-      toast.error('Failed to load wallet data');
+      console.error('Error fetching wallet data:', error);
+      toast.error('Failed to load wallet information');
     } finally {
       setLoading(false);
     }
@@ -86,13 +95,32 @@ const Wallet = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter(txn => {
-    if (filter === 'all') return true;
-    return txn.type === filter;
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(txn => {
+      if (filter === 'all') return true;
+      if (filter === 'salary_payouts') return isSalarySettlement(txn);
+      if (filter === 'job_payments') return txn.type === 'worker_payment' && !isSalarySettlement(txn);
+      return txn.type === filter;
+    });
+  }, [transactions, filter]);
 
-  const getTransactionIcon = (type) => {
-    switch (type) {
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  const totalPages = Math.ceil(filteredTransactions.length / pageSize) || 1;
+
+  const paginatedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredTransactions.slice(start, start + pageSize);
+  }, [filteredTransactions, currentPage, pageSize]);
+
+
+  const getTransactionIcon = (txn) => {
+    if (isSalarySettlement(txn)) {
+      return <FiCheckCircle className="w-6 h-6 text-emerald-600" />;
+    }
+    switch (txn.type) {
       case 'worker_payment':
         return <FiArrowDown className="w-5 h-5 text-green-500" />;
       case 'cash_collected':
@@ -102,14 +130,17 @@ const Wallet = () => {
     }
   };
 
-  const getTransactionLabel = (type) => {
-    switch (type) {
+  const getTransactionLabel = (txn) => {
+    if (isSalarySettlement(txn)) {
+      return '🏢 Vendor Salary Settlement & Reset';
+    }
+    switch (txn.type) {
       case 'worker_payment':
         return 'Payment Received';
       case 'cash_collected':
         return 'Cash Collected';
       default:
-        return type.replace('_', ' ');
+        return txn.type.replace('_', ' ');
     }
   };
 
@@ -172,8 +203,8 @@ const Wallet = () => {
           <div className="relative z-10 text-white">
             <div className="flex justify-between items-start mb-3">
               <div>
-                <p className="text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">Salary Received from Vendor</p>
-                <p className="text-3xl font-black">₹{(wallet.receivedSalary || wallet.balance || 0).toLocaleString('en-IN')}</p>
+                <p className="text-teal-200 text-xs font-bold uppercase tracking-wider mb-1">Pending Salary Owed by Vendor</p>
+                <p className="text-3xl font-black">₹{Number(wallet.salaryOwed !== undefined ? wallet.salaryOwed : (wallet.receivedSalary || wallet.balance || 0)).toLocaleString('en-IN')}</p>
               </div>
               <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
                 <FiDollarSign className="w-6 h-6 text-teal-200" />
@@ -203,8 +234,9 @@ const Wallet = () => {
         <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
           {[
             { id: 'all', label: 'All' },
-            { id: 'worker_payment', label: 'Payments' },
-            { id: 'cash_collected', label: 'Cash Collected' },
+            { id: 'salary_payouts', label: '💰 Salary Payouts' },
+            { id: 'job_payments', label: '📋 Job Payments' },
+            { id: 'cash_collected', label: '💵 Field Cash' },
           ].map((filterOption) => (
             <button
               key={filterOption.id}
@@ -240,53 +272,77 @@ const Wallet = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredTransactions.map((txn) => (
-                <div
-                  key={txn._id}
-                  onClick={() => handleTransactionClick(txn)}
-                  className={`bg-white rounded-xl p-4 shadow-md border-l-4 ${txn.type === 'worker_payment' ? 'cursor-pointer hover:shadow-lg active:scale-[0.98] transition-all' : ''}`}
-                  style={{
-                    borderLeftColor: txn.type === 'cash_collected' ? '#DC2626' : '#10B981'
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        background: txn.type === 'cash_collected' ? '#FEE2E2' : '#D1FAE5'
-                      }}
-                    >
-                      {getTransactionIcon(txn.type)}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-bold text-gray-900 text-sm">
-                          {getTransactionLabel(txn.type)}
-                        </p>
-                        <p className={`text-lg font-bold ${txn.type === 'cash_collected' ? 'text-red-600' : 'text-green-600'
-                          }`}>
-                          {txn.type === 'cash_collected' ? 'Collected' : '+'} ₹{Math.abs(txn.amount).toLocaleString()}
-                        </p>
+              {paginatedTransactions.map((txn) => {
+                const isSettlement = isSalarySettlement(txn);
+                return (
+                  <div
+                    key={txn._id}
+                    onClick={() => handleTransactionClick(txn)}
+                    className={`bg-white rounded-xl p-4 shadow-md border-l-4 ${txn.type === 'worker_payment' ? 'cursor-pointer hover:shadow-lg active:scale-[0.98] transition-all' : ''}`}
+                    style={{
+                      borderLeftColor: txn.type === 'cash_collected' ? '#DC2626' : isSettlement ? '#059669' : '#10B981'
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${isSettlement ? 'bg-emerald-100 border border-emerald-200' : ''}`}
+                        style={{
+                          background: isSettlement ? undefined : txn.type === 'cash_collected' ? '#FEE2E2' : '#D1FAE5'
+                        }}
+                      >
+                        {getTransactionIcon(txn)}
                       </div>
 
-                      <p className="text-xs text-gray-600 truncate mb-1">{txn.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className={`font-bold text-sm ${isSettlement ? 'text-emerald-900 font-extrabold' : 'text-gray-900'}`}>
+                            {getTransactionLabel(txn)}
+                          </p>
+                          <p className={`text-lg font-bold ${txn.type === 'cash_collected' ? 'text-red-600' : 'text-green-600'}`}>
+                            {txn.type === 'cash_collected' ? 'Collected' : '+'} ₹{Math.abs(txn.amount).toLocaleString('en-IN')}
+                          </p>
+                        </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{formatDate(txn.createdAt)}</span>
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${txn.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          txn.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                          {txn.status}
-                        </span>
-                        {txn.type === 'worker_payment' && (
-                          <span className="text-xs text-teal-600 font-medium">Tap for details →</span>
-                        )}
+                        <p className="text-xs text-gray-600 truncate mb-1">{txn.description}</p>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs text-gray-400 font-medium">{formatDateTime(txn.createdAt)}</span>
+                          {isSettlement ? (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              ✓ Salary Reset to ₹0
+                            </span>
+                          ) : (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${txn.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              txn.status === 'pending' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                              {txn.status}
+                            </span>
+                          )}
+                          {txn.type === 'worker_payment' && (
+                            <span className="text-xs text-teal-600 font-medium">Tap for details →</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
+              {/* Wallet Pagination Bar */}
+              {filteredTransactions.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredTransactions.length}
+                  pageSize={pageSize}
+                  onPageChange={(p) => setCurrentPage(p)}
+                  onPageSizeChange={(newSize) => {
+                    setPageSize(newSize);
+                    setCurrentPage(1);
+                  }}
+                  className="mt-4"
+                />
+              )}
             </div>
           )}
         </div>
@@ -366,31 +422,33 @@ const Wallet = () => {
                 )}
 
                 {/* Payment Method */}
-                {selectedTransaction.metadata?.paymentMethod && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <FiCreditCard className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Payment Method</h4>
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-gray-700 font-semibold capitalize">
-                        {selectedTransaction.metadata.paymentMethod === 'hand_to_hand'
-                          ? 'Cash / Hand-to-Hand'
-                          : selectedTransaction.metadata.paymentMethod}
-                      </p>
-                    </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <FiCreditCard className="w-5 h-5 text-teal-600" />
+                    <h4 className="font-bold text-gray-900">Payment Method</h4>
                   </div>
-                )}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-gray-800 font-bold text-sm">
+                      {(selectedTransaction.paymentMethod || selectedTransaction.metadata?.paymentMethod) === 'upi'
+                        ? '📱 UPI (GPay / PhonePe / Paytm)'
+                        : (selectedTransaction.paymentMethod || selectedTransaction.metadata?.paymentMethod) === 'bank_transfer'
+                        ? '🏛️ Bank Transfer / NEFT / IMPS'
+                        : '💵 Cash (Direct Handover)'}
+                    </p>
+                  </div>
+                </div>
 
-                {/* Transaction ID */}
-                {selectedTransaction.metadata?.transactionId && (
+                {/* Transaction / Reference ID */}
+                {(selectedTransaction.referenceId || selectedTransaction.metadata?.transactionId) && (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <FiFileText className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Transaction ID</h4>
+                      <h4 className="font-bold text-gray-900">Reference / Txn ID</h4>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-gray-700 font-mono text-sm break-all">{selectedTransaction.metadata.transactionId}</p>
+                      <p className="text-gray-700 font-mono text-sm break-all">
+                        {selectedTransaction.referenceId || selectedTransaction.metadata?.transactionId}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -400,7 +458,7 @@ const Wallet = () => {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <FiInfo className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Payment Notes</h4>
+                      <h4 className="font-bold text-gray-900">Settlement Notes</h4>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-gray-700 text-sm leading-relaxed">{selectedTransaction.metadata.notes}</p>
@@ -412,19 +470,19 @@ const Wallet = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-teal-50 rounded-xl p-4">
                     <p className="text-xs text-teal-600 font-semibold mb-1">Status</p>
-                    <p className="text-sm font-bold text-gray-900 capitalize">{selectedTransaction.status}</p>
+                    <p className="text-sm font-bold text-teal-800 capitalize">{selectedTransaction.status || 'Completed'}</p>
                   </div>
                   <div className="bg-blue-50 rounded-xl p-4">
-                    <p className="text-xs text-blue-600 font-semibold mb-1">Type</p>
-                    <p className="text-sm font-bold text-gray-900">Payment Received</p>
+                    <p className="text-xs text-blue-600 font-semibold mb-1">Settlement Type</p>
+                    <p className="text-sm font-bold text-blue-800">Salary Reset & Payout</p>
                   </div>
                 </div>
 
                 {/* Description */}
                 {selectedTransaction.description && (
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-                    <p className="text-xs text-gray-500 font-semibold mb-2">Description</p>
-                    <p className="text-sm text-gray-700 leading-relaxed">{selectedTransaction.description}</p>
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+                    <p className="text-xs text-emerald-700 font-bold mb-1 uppercase tracking-wider">Settlement Details</p>
+                    <p className="text-sm text-emerald-900 font-medium leading-relaxed">{selectedTransaction.description}</p>
                   </div>
                 )}
 

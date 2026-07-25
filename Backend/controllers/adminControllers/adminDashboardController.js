@@ -24,15 +24,15 @@ const getDashboardStats = async (req, res) => {
       }
     }
 
-    // Revenue date filter (use completedAt for revenue consistency)
+    // Revenue date filter
     const revenueDateFilter = {};
     if (startDate || endDate) {
-      revenueDateFilter.completedAt = {};
-      if (startDate) revenueDateFilter.completedAt.$gte = new Date(startDate);
+      revenueDateFilter.createdAt = {};
+      if (startDate) revenueDateFilter.createdAt.$gte = new Date(startDate);
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        revenueDateFilter.completedAt.$lte = end;
+        revenueDateFilter.createdAt.$lte = end;
       }
     }
 
@@ -53,43 +53,42 @@ const getDashboardStats = async (req, res) => {
       pendingScraps,
       recentActivityDocs
     ] = await Promise.all([
-      User.countDocuments({ isActive: true, ...dateFilter }),
-      Vendor.countDocuments({ isActive: true, ...dateFilter }),
-      Worker.countDocuments({ isActive: true, ...dateFilter }),
+      User.countDocuments(dateFilter),
+      Vendor.countDocuments(dateFilter),
+      Worker.countDocuments(dateFilter),
       Booking.countDocuments(dateFilter),
       Booking.countDocuments({
         ...dateFilter,
-        status: { $nin: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED] }
+        status: { $nin: ['completed', 'COMPLETED', 'cancelled', 'CANCELLED'] }
       }),
       Booking.countDocuments({
         ...dateFilter,
-        status: BOOKING_STATUS.COMPLETED
+        status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] }
       }),
       Booking.countDocuments({
         ...dateFilter,
-        status: BOOKING_STATUS.CANCELLED
+        status: { $in: ['cancelled', 'CANCELLED'] }
       }),
       Booking.aggregate([
         {
           $match: {
-            status: BOOKING_STATUS.COMPLETED,
-            paymentStatus: { $in: [PAYMENT_STATUS.SUCCESS, PAYMENT_STATUS.COLLECTED_BY_VENDOR, 'success', 'collected_by_vendor', 'collected_by_worker', 'paid'] },
+            status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
             ...revenueDateFilter
           }
         },
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: '$finalAmount' },
+            totalRevenue: { $sum: { $ifNull: ['$finalAmount', '$basePrice'] } },
             totalBookings: { $sum: 1 }
           }
         }
       ]),
-      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.PENDING, ...dateFilter }),
-      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED, ...dateFilter }),
-      Withdrawal.countDocuments({ status: 'pending', ...dateFilter }),
-      Settlement.countDocuments({ status: 'pending', ...dateFilter }),
-      Scrap.countDocuments({ status: 'pending', ...dateFilter }),
+      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED }),
+      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED }),
+      Withdrawal.countDocuments({ status: 'pending' }),
+      Settlement.countDocuments({ status: 'pending' }),
+      Scrap.countDocuments({ status: 'pending' }),
       Booking.find(dateFilter)
         .populate('userId', 'name phone')
         .populate('vendorId', 'name businessName')
@@ -98,7 +97,13 @@ const getDashboardStats = async (req, res) => {
         .limit(20)
     ]);
 
-    const recentBookings = recentActivityDocs.map(b => ({
+    const revenue = (revenueResult && revenueResult.length > 0)
+      ? revenueResult[0]
+      : { totalRevenue: 0, totalBookings: 0 };
+
+    const platformCommission = Math.round((revenue.totalRevenue || 0) * 0.10);
+
+    const recentBookings = (recentActivityDocs || []).map(b => ({
       id: b.bookingNumber || b._id,
       _id: b._id,
       status: b.status,
@@ -124,7 +129,7 @@ const getDashboardStats = async (req, res) => {
           pendingBookings,
           completedBookings,
           cancelledBookings,
-          totalRevenue: revenue.totalRevenue,
+          totalRevenue: revenue.totalRevenue || 0,
           platformCommission,
           pendingVendors,
           approvedVendors,
@@ -170,9 +175,7 @@ const getRevenueAnalytics = async (req, res) => {
     const revenueData = await Booking.aggregate([
       {
         $match: {
-          status: BOOKING_STATUS.COMPLETED,
-          paymentStatus: { $in: [PAYMENT_STATUS.SUCCESS, PAYMENT_STATUS.COLLECTED_BY_VENDOR, 'success', 'collected_by_vendor', 'collected_by_worker', 'paid'] },
-          ...dateFilter
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] }
         }
       },
       {
@@ -180,12 +183,12 @@ const getRevenueAnalytics = async (req, res) => {
           _id: {
             $dateToString: {
               format: groupFormat,
-              date: '$completedAt'
+              date: { $ifNull: ['$completedAt', '$createdAt'] }
             }
           },
-          revenue: { $sum: '$finalAmount' },
+          revenue: { $sum: { $ifNull: ['$finalAmount', '$basePrice'] } },
           bookings: { $sum: 1 },
-          platformCommission: { $sum: { $multiply: ['$finalAmount', 0.2] } }
+          platformCommission: { $sum: { $multiply: [{ $ifNull: ['$finalAmount', '$basePrice'] }, 0.10] } }
         }
       },
       { $sort: { _id: 1 } }

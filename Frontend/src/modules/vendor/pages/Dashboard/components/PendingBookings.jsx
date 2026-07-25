@@ -5,9 +5,12 @@ import { toast } from 'react-hot-toast';
 import { acceptBooking, rejectBooking } from '../../../services/bookingService';
 import PendingJobCard from '../../../components/bookings/PendingJobCard';
 import { RejectionReasonModal } from '../../../components/common';
+import Pagination from '../../../../../components/common/Pagination';
 
 const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBooking, maxSearchTimeMins = 5 }) => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
   const [loadingAction, setLoadingAction] = useState({ id: null, type: null });
   const [declineTargetBooking, setDeclineTargetBooking] = useState(null);
 
@@ -86,7 +89,9 @@ const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBook
         </button>
       </div>
       <div className="space-y-3">
-        {bookings.map((booking) => (
+        {bookings
+          .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+          .map((booking) => (
           <PendingJobCard
             key={booking.id || booking._id}
             booking={booking}
@@ -99,6 +104,22 @@ const PendingBookings = memo(({ bookings, setPendingBookings, setActiveAlertBook
           />
         ))}
       </div>
+
+      {/* Pagination */}
+      {bookings.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(bookings.length / pageSize) || 1}
+          totalItems={bookings.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          className="mt-3"
+        />
+      )}
 
       <RejectionReasonModal
         isOpen={!!declineTargetBooking}

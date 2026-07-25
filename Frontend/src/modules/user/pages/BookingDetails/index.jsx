@@ -154,23 +154,21 @@ const BookingDetails = () => {
   // Track if we've shown the payment modal this session to prevent re-opening on data refresh
 
 
-  // Handle Payment Modal Visibility - Simplified Flow
+  // Handle Payment Modal Visibility - Auto-open when bill is finalized
   useEffect(() => {
     if (!booking) return;
 
     const isPaymentDone = booking.paymentStatus === 'success' || booking.cashCollected === true;
+    const isBillFinalized = Boolean(
+      (booking.bill && booking.bill.isFinalized === true && booking.bill.status !== 'draft') ||
+      booking.isFinalized === true ||
+      booking.customerConfirmationOTP ||
+      booking.qrPaymentInitiated
+    );
 
-    // We only show if it was never shown and we have a pending payment request
-    const hasShown = sessionStorage.getItem(`payment_modal_shown_${booking._id}`);
-
-    if (!isPaymentDone && !hasShown && (booking.status === 'work_done' || booking.qrPaymentInitiated)) {
+    if (!isPaymentDone && isBillFinalized && ['work_done', 'completed'].includes(booking.status?.toLowerCase())) {
       setShowPaymentModal(true);
-      sessionStorage.setItem(`payment_modal_shown_${booking._id}`, 'true');
-    } else if (booking.qrPaymentInitiated === false && booking.status === 'work_done' && !isPaymentDone) {
-      setShowPaymentModal(true);
-    }
-    // Close if payment becomes done
-    else if (isPaymentDone) {
+    } else if (isPaymentDone) {
       setShowPaymentModal(false);
     }
   }, [booking]);
@@ -861,8 +859,8 @@ const BookingDetails = () => {
             </div>
           )}
 
-          {/* Waiting for Vendor to initiate Payment */}
-          {!booking.customerConfirmationOTP && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
+          {/* Waiting for Vendor to initiate Payment - ONLY when bill is NOT finalized */}
+          {Boolean(!booking.bill || booking.bill.isFinalized === false || booking.bill.status === 'draft') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && !booking.customerConfirmationOTP && (
             <div className="bg-white rounded-3xl p-6 shadow-lg border border-teal-100 mb-6 flex items-center gap-4 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -translate-y-12 translate-x-12 blur-2xl"></div>
               <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 border border-teal-100">
@@ -918,8 +916,8 @@ const BookingDetails = () => {
               </div>
             )}
 
-          {/* Payment Card - Show when work is done AND bill is finalized (OTP exists) or paid */}
-          {(booking.customerConfirmationOTP || booking.paymentStatus === 'success') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
+          {/* Payment Card - Show when work is done AND bill is finalized or OTP exists or paid */}
+          {Boolean((booking.bill && booking.bill.isFinalized === true && booking.bill.status !== 'draft') || booking.isFinalized === true || booking.customerConfirmationOTP || booking.paymentStatus === 'success') && ['work_done'].includes(booking.status?.toLowerCase()) && !booking.cashCollected && (
             <div
               onClick={() => setShowPaymentModal(true)}
               className={`relative overflow-hidden rounded-3xl shadow-lg border cursor-pointer active:scale-[0.98] transition-all ${booking.paymentStatus === 'success' ? 'border-green-100' : 'border-orange-100'

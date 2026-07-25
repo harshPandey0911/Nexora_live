@@ -5,6 +5,7 @@ import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import { CashCollectionModal, WorkCompletionModal } from '../../components/common';
 import workerService from '../../../../services/workerService';
+import workerWalletService from '../../../../services/workerWalletService';
 import { toast } from 'react-hot-toast';
 
 const JobTimeline = () => {
@@ -97,11 +98,20 @@ const JobTimeline = () => {
     }
   };
 
-  const handleRequestPayment = () => {
-    toast.success('Payment request sent to Vendor', {
-      icon: '🔔',
-      style: { borderRadius: '10px', background: '#333', color: '#fff' },
-    });
+  const handleRequestPayment = async () => {
+    try {
+      setActionLoading(true);
+      const res = await workerWalletService.requestPayout(id);
+      toast.success(res.message || 'Payment request sent to Vendor', {
+        icon: '🔔',
+        style: { borderRadius: '10px', background: '#333', color: '#fff' },
+      });
+      fetchJobDetails();
+    } catch (err) {
+      toast.error(err.message || 'Failed to send payout request to vendor');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleConfirmSettlement = async () => {
@@ -319,7 +329,7 @@ const JobTimeline = () => {
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
-      <Header title="Job Timeline" />
+      <Header title="Job Timeline" onBack={() => navigate(`/worker/job/${id}`, { replace: true })} />
 
       <main className="px-4 py-8">
         <div

@@ -424,8 +424,9 @@ const BillingPage = () => {
   const handleStepChange = async (targetStep) => {
     setCurrentStep(targetStep);
 
-    // Keep bill in DRAFT mode (isFinalized: false) while worker is editing or on review screen
-    // Customer Pay Online unlocks only when worker initiates payment (Pay in Cash / Online QR)
+    // Bill is finalized (isFinalized: true) on step 5 (Final Review).
+    // It reverts to draft (isFinalized: false) if worker steps back to edit steps 1-4.
+    const isFinal = targetStep === 5;
     try {
       await workerBillService.createOrUpdateBill(id, {
         services: selectedServices,
@@ -433,17 +434,17 @@ const BillingPage = () => {
         customItems,
         transportCharges,
         applyPartsGST,
-        isFinalized: false
+        isFinalized: isFinal
       });
     } catch (err) {
-      console.warn('Notice setting isFinalized false:', err);
+      console.warn('Notice setting isFinalized:', err);
     }
   };
 
   const handleSendOTP = async () => {
     if (isPaid) {
       toast.success('Payment has already been received!');
-      navigate(`/worker/job/${id}`);
+      navigate(`/worker/job/${id}`, { replace: true });
       return;
     }
 
@@ -490,7 +491,7 @@ const BillingPage = () => {
         localStorage.removeItem(`worker_billing_max_step_${id}`);
         localStorage.removeItem(`worker_billing_data_${id}`);
         fetchData();
-        navigate(`/worker/job/${id}`);
+        navigate(`/worker/job/${id}`, { replace: true });
       } else {
         toast.error(res.message || 'Invalid OTP');
       }
@@ -552,7 +553,7 @@ const BillingPage = () => {
             localStorage.removeItem(`worker_billing_step_${id}`);
             localStorage.removeItem(`worker_billing_max_step_${id}`);
             localStorage.removeItem(`worker_billing_data_${id}`);
-            navigate(`/worker/job/${id}`);
+            navigate(`/worker/job/${id}`, { replace: true });
           }
         } catch (e) {
           // silent poll error
@@ -576,7 +577,7 @@ const BillingPage = () => {
         localStorage.removeItem(`worker_billing_max_step_${id}`);
         localStorage.removeItem(`worker_billing_data_${id}`);
         fetchData();
-        navigate(`/worker/job/${id}`);
+        navigate(`/worker/job/${id}`, { replace: true });
       } else {
         toast.error(res.message || 'Payment not yet confirmed');
       }
@@ -601,7 +602,7 @@ const BillingPage = () => {
             localStorage.removeItem(`worker_billing_step_${id}`);
             localStorage.removeItem(`worker_billing_max_step_${id}`);
             localStorage.removeItem(`worker_billing_data_${id}`);
-            setTimeout(() => navigate(`/worker/job/${id}`), 1000);
+            setTimeout(() => navigate(`/worker/job/${id}`, { replace: true }), 1000);
           }
         }
       };
@@ -774,7 +775,7 @@ const BillingPage = () => {
     <div className="min-h-screen bg-gray-50 pb-0 flex flex-col">
       <div className="sticky top-0 z-50 bg-white">
         <div className="px-4 py-4 shadow-sm border-b border-gray-100 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
+          <button onClick={() => navigate(`/worker/job/${id}`, { replace: true })} className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-full">
             <FiArrowLeft className="w-5 h-5" />
           </button>
           <div>
@@ -1131,7 +1132,7 @@ const BillingPage = () => {
                     customItems,
                     transportCharges,
                     applyPartsGST,
-                    isFinalized: false
+                    isFinalized: true
                   });
                   setCurrentStep(5);
                 } catch (err) {

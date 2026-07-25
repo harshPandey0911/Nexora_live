@@ -15,6 +15,15 @@ const getAssignedJobs = async (req, res) => {
     if (status) {
       query.status = status;
     }
+    if (req.query.startDate || req.query.endDate) {
+      query.createdAt = {};
+      if (req.query.startDate) query.createdAt.$gte = new Date(req.query.startDate);
+      if (req.query.endDate) {
+        const end = new Date(req.query.endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
 
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -25,7 +34,7 @@ const getAssignedJobs = async (req, res) => {
       .populate('vendorId', 'name businessName phone')
       .populate('serviceId', 'title iconUrl')
       .populate('categoryId', 'title slug')
-      .sort({ scheduledDate: 1, createdAt: -1 })
+      .sort({ createdAt: -1, scheduledDate: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 

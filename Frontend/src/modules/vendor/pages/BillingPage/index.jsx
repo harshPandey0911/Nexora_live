@@ -531,7 +531,7 @@ const BillingPage = () => {
   const handleSendOTP = async () => {
     if (isPaid) {
       toast.success('Payment has already been received!');
-      navigate(`/vendor/booking/${id}`);
+      navigate(`/vendor/booking/${id}`, { replace: true });
       return;
     }
 
@@ -590,7 +590,7 @@ const BillingPage = () => {
         localStorage.removeItem(`billing_max_step_${id}`);
         localStorage.removeItem(`billing_data_${id}`);
         fetchData();
-        navigate(`/vendor/booking/${id}`);
+        navigate(`/vendor/booking/${id}`, { replace: true });
       } else {
         toast.error(res.message || 'Invalid OTP');
       }
@@ -654,7 +654,7 @@ const BillingPage = () => {
             localStorage.removeItem(`billing_step_${id}`);
             localStorage.removeItem(`billing_max_step_${id}`);
             localStorage.removeItem(`billing_data_${id}`);
-            navigate(`/vendor/booking/${id}`);
+            navigate(`/vendor/booking/${id}`, { replace: true });
           }
         } catch (e) {
           // silent poll error
@@ -679,7 +679,7 @@ const BillingPage = () => {
         localStorage.removeItem(`billing_max_step_${id}`);
         localStorage.removeItem(`billing_data_${id}`);
         fetchData();
-        navigate(`/vendor/booking/${id}`);
+        navigate(`/vendor/booking/${id}`, { replace: true });
       } else {
         toast.error(res.message || 'Payment not yet confirmed');
       }
@@ -867,7 +867,7 @@ const BillingPage = () => {
         {/* Title Bar */}
         <div className="px-4 py-4 md:px-10 md:py-6 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6">
-            <button onClick={() => navigate(-1)} className="w-9 h-9 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-inner">
+            <button onClick={() => navigate(`/vendor/booking/${id}`, { replace: true })} className="w-9 h-9 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-inner cursor-pointer">
               <FiArrowLeft className="w-5 h-5 text-gray-400" />
             </button>
             <div>

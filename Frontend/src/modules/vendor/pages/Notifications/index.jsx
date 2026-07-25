@@ -12,9 +12,12 @@ import {
   deleteAllNotifications
 } from '../../services/notificationService';
 import { assignWorker } from '../../services/bookingService';
+import Pagination from '../../../../components/common/Pagination';
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -277,8 +280,10 @@ const Notifications = () => {
             <p className="text-[10px] text-gray-400 font-normal capitalize tracking-widest">No pending alerts in the current matrix.</p>
           </div>
         ) : (
-          <div className="space-y-3.5 pb-12">
-            {filteredNotifications.map((notif) => (
+          <div className="space-y-3.5 pb-6">
+            {filteredNotifications
+              .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+              .map((notif) => (
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
@@ -358,14 +363,16 @@ const Notifications = () => {
                         e.stopPropagation();
                         handleMarkAsRead(notif.id);
                       }}
-                      className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all border border-blue-100"
+                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Mark as read"
                     >
-                      <FiCheck className="w-3.5 h-3.5" />
+                      <FiCheck className="w-4 h-4" />
                     </button>
                   )}
                   <button
                     onClick={(e) => handleDelete(e, notif.id)}
-                    className="p-2.5 rounded-xl bg-gray-50 text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-all border border-gray-100"
+                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Delete"
                   >
                     <FiX className="w-4 h-4" />
                   </button>
@@ -373,6 +380,22 @@ const Notifications = () => {
               </div>
             ))}
           </div>
+        )}
+
+        {/* Pagination Bar */}
+        {filteredNotifications.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filteredNotifications.length / pageSize) || 1}
+            totalItems={filteredNotifications.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            className="mt-4"
+          />
         )}
       </div>
 

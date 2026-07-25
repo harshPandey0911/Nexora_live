@@ -9,9 +9,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import vendorService from '../../services/vendorService';
 import { publicCatalogService } from '../../../../services/catalogService';
 import { toast } from 'react-hot-toast';
+import Pagination from '../../../../components/common/Pagination';
 
 const MyProducts = () => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [categories, setCategories] = useState([]);
   const [groupedProducts, setGroupedProducts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -233,7 +236,9 @@ const MyProducts = () => {
              <p className="text-xs text-gray-400 mt-1 capitalize tracking-wider font-medium">Create a category to start adding products</p>
           </div>
         ) : (
-          categories.map(cat => (
+          categories
+            .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+            .map(cat => (
             <div key={cat.id || cat._id || cat.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all hover:shadow-md">
               {/* Category Header (Clickable Accordion Trigger) */}
               <div 
@@ -298,12 +303,10 @@ const MyProducts = () => {
                                 disabled={availableProducts.length === 0}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                               >
-                                <option value="">
-                                  {availableProducts.length === 0 ? 'All available products added to portfolio' : 'Select Product...'}
-                                </option>
+                                <option value="">Select Platform Product to Add...</option>
                                 {availableProducts.map(s => (
-                                  <option key={s._id || s.id} value={s._id || s.id}>
-                                    {s.title}
+                                  <option key={s._id} value={s._id}>
+                                    {s.title} (Price: ₹{s.basePrice || 0})
                                   </option>
                                 ))}
                               </select>
@@ -311,21 +314,13 @@ const MyProducts = () => {
                           })()}
                         </div>
 
-                        {selectedProductId && (
-                          <div className="flex items-center justify-between sm:justify-start gap-2 bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100/30 w-full sm:w-auto shrink-0">
-                            <span className="text-[10px] text-blue-500 font-semibold uppercase tracking-wider">Fixed Price:</span>
-                            <span className="text-xs font-bold text-blue-600">
-                              ₹{adminProducts.find(s => (s._id || s.id) === selectedProductId)?.basePrice || 0}
-                            </span>
-                          </div>
-                        )}
-
                         <button 
                           type="submit"
                           disabled={isAdding || !selectedProductId}
-                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all shadow active:scale-95 disabled:opacity-50 shrink-0"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shrink-0"
                         >
-                          {isAdding ? '...' : <><FiPlus className="w-3.5 h-3.5" /> Add Product</>}
+                          <FiPlus className="w-4 h-4" />
+                          <span>Add to Category</span>
                         </button>
                       </form>
 
@@ -378,7 +373,7 @@ const MyProducts = () => {
                                          onClick={() => setShowConfirm(item.id)}
                                          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"
                                        >
-                                         <FiTrash2 className="w-3.5 h-3.5" />
+                                         <FiTrash2 className="w-4 h-4" />
                                        </button>
                                     </div>
                                   </td>
@@ -394,6 +389,22 @@ const MyProducts = () => {
               </AnimatePresence>
             </div>
           ))
+        )}
+
+        {/* Pagination Bar */}
+        {!loading && categories.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(categories.length / pageSize) || 1}
+            totalItems={categories.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            className="mt-4"
+          />
         )}
       </div>
 

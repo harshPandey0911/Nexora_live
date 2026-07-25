@@ -112,7 +112,7 @@ const AssignedJobs = () => {
       job.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesFilter && matchesSearch;
-  });
+  }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
   return (
     <div className="min-h-screen pb-24" style={{ background: themeColors.backgroundGradient }}>

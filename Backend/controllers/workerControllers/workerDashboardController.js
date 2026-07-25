@@ -102,7 +102,7 @@ const getDashboardStats = async (req, res) => {
     // 7. Get Recent Jobs
     const recentJobs = await Booking.find({ workerId: worker._id })
       .sort({ createdAt: -1 })
-      .limit(10)
+      .limit(100)
       .populate('userId', 'name phone')
       .populate('serviceId', 'title categoryName');
 
@@ -126,11 +126,32 @@ const getDashboardStats = async (req, res) => {
 
     const cashCollectedOnField = cashBookingsResult[0]?.total || 0;
 
+    // Calculate pending unpaid salary owed to worker by vendor
+    const unpaidSalaryResult = await Booking.aggregate([
+      {
+        $match: {
+          workerId: worker._id,
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
+          isWorkerPaid: { $ne: true },
+          workerPaymentStatus: { $ne: 'PAID' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$vendorEarnings", "$finalAmount"] } }
+        }
+      }
+    ]);
+
+    const salaryOwed = unpaidSalaryResult[0]?.total || worker.wallet?.balance || 0;
+
     res.status(200).json({
       success: true,
       data: {
         totalEarnings,
-        receivedSalary: worker.wallet?.balance || 0,
+        receivedSalary: salaryOwed,
+        salaryOwed,
         cashCollectedOnField,
         pendingJobs: pendingJobsCount,
         activeJobs: activeJobsCount,

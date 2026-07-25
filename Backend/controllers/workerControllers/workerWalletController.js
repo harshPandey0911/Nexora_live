@@ -34,11 +34,32 @@ const getWallet = async (req, res) => {
 
     const cashCollectedOnField = cashBookingsResult[0]?.total || 0;
 
+    // Calculate pending unpaid salary owed to worker by vendor
+    const unpaidSalaryResult = await Booking.aggregate([
+      {
+        $match: {
+          workerId: worker._id,
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
+          isWorkerPaid: { $ne: true },
+          workerPaymentStatus: { $ne: 'PAID' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $ifNull: ["$finalAmount", "$basePrice"] } }
+        }
+      }
+    ]);
+
+    const salaryOwed = unpaidSalaryResult[0]?.total || worker.wallet?.balance || 0;
+
     res.status(200).json({
       success: true,
       data: {
-        balance: worker.wallet?.balance || 0,
-        receivedSalary: worker.wallet?.balance || 0,
+        balance: salaryOwed,
+        receivedSalary: salaryOwed,
+        salaryOwed,
         cashCollectedOnField
       }
     });

@@ -10,6 +10,7 @@ const VisitVerificationModal = lazy(() => import('../../components/common/VisitV
 const WorkCompletionModal = lazy(() => import('../../components/common/WorkCompletionModal'));
 const OtpVerificationModal = lazy(() => import('../../components/common/OtpVerificationModal'));
 import workerService from '../../../../services/workerService';
+import workerWalletService from '../../../../services/workerWalletService';
 import api from '../../../../services/api';
 import { toast } from 'react-hot-toast';
 import { useAppNotifications } from '../../../../hooks/useAppNotifications';
@@ -315,7 +316,7 @@ const JobDetails = () => {
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
-      <Header title="Job Details" />
+      <Header title="Job Details" onBack={() => navigate('/worker/dashboard', { replace: true })} />
 
       <main className="px-4 py-6">
         {/* View Timeline Button */}
@@ -405,10 +406,46 @@ const JobDetails = () => {
             </div>
           )}
 
-          {job.status === 'completed' && (
-            <div className="bg-green-100 border border-green-500 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-center text-green-700 font-bold text-xs shadow-sm">
-              <FiCheckCircle className="w-5 h-5 shrink-0" />
-              <span>JOB COMPLETED & SETTLED</span>
+          {(job.status === 'completed' || job.status === 'WORK_DONE') && (
+            <div className="space-y-3">
+              <div className={`rounded-xl py-3 px-4 flex items-center justify-between border shadow-sm ${
+                (job.isWorkerPaid || job.workerPaymentStatus === 'PAID' || job.workerPaymentStatus === 'SUCCESS')
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}>
+                <div className="flex items-center gap-2 text-xs font-bold">
+                  {(job.isWorkerPaid || job.workerPaymentStatus === 'PAID' || job.workerPaymentStatus === 'SUCCESS') ? (
+                    <>
+                      <FiCheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span>Salary Paid by Vendor ✓</span>
+                    </>
+                  ) : (
+                    <>
+                      <FiClock className="w-5 h-5 text-amber-600 shrink-0" />
+                      <span>Payout Pending from Vendor</span>
+                    </>
+                  )}
+                </div>
+
+                {!(job.isWorkerPaid || job.workerPaymentStatus === 'PAID' || job.workerPaymentStatus === 'SUCCESS') && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        toast.loading('Sending payout request to vendor...');
+                        await workerWalletService.requestPayout(id);
+                        toast.dismiss();
+                        toast.success('Payout request sent to Vendor!');
+                      } catch (err) {
+                        toast.dismiss();
+                        toast.error(err.message || 'Failed to request payout');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-extrabold shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <FiDollarSign className="w-3.5 h-3.5" /> Ask Vendor
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

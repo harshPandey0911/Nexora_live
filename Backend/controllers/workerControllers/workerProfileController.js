@@ -34,6 +34,13 @@ const getProfile = async (req, res) => {
         completedJobs: worker.completedJobs || 0,
         status: worker.status,
         profilePhoto: worker.profilePhoto || null,
+        bankDetails: worker.bankDetails || {
+          accountNumber: '',
+          ifscCode: '',
+          bankName: '',
+          accountHolderName: '',
+          upiId: ''
+        },
         settings: worker.settings || { notifications: true, language: 'en' },
         isPhoneVerified: worker.isPhoneVerified || false,
         isEmailVerified: worker.isEmailVerified || false,
@@ -65,7 +72,7 @@ const updateProfile = async (req, res) => {
     }
 
     const workerId = req.user.id;
-    const { name, skills, address, status, profilePhoto } = req.body;
+    const { name, skills, address, status, profilePhoto, bankDetails } = req.body;
     // NOTE: serviceCategories is intentionally excluded from destructuring.
     // Categories can ONLY be assigned by the vendor, not the worker themselves.
 
@@ -80,6 +87,16 @@ const updateProfile = async (req, res) => {
 
     // Update fields
     if (name) worker.name = name.trim();
+
+    if (bankDetails) {
+      worker.bankDetails = {
+        accountNumber: bankDetails.accountNumber !== undefined ? bankDetails.accountNumber : worker.bankDetails?.accountNumber || '',
+        ifscCode: bankDetails.ifscCode !== undefined ? bankDetails.ifscCode : worker.bankDetails?.ifscCode || '',
+        bankName: bankDetails.bankName !== undefined ? bankDetails.bankName : worker.bankDetails?.bankName || '',
+        accountHolderName: bankDetails.accountHolderName !== undefined ? bankDetails.accountHolderName : worker.bankDetails?.accountHolderName || '',
+        upiId: bankDetails.upiId !== undefined ? bankDetails.upiId : worker.bankDetails?.upiId || ''
+      };
+    }
 
     // serviceCategories update is intentionally BLOCKED here.
     // Categories are assigned by the vendor via the vendor worker management panel.

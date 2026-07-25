@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiStar, FiUser, FiMessageSquare, FiFilter, FiLoader, FiChevronLeft, FiChevronRight, FiArrowUp, FiArrowDown, FiClock, FiTrendingUp } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { getRatings } from '../../services/bookingService';
+import Pagination from '../../../../components/common/Pagination';
 
 const SORT_OPTIONS = [
   { value: 'newest',  label: 'Newest First',  icon: FiClock },
@@ -357,55 +358,17 @@ const MyRatings = () => {
         )}
 
         {/* ── Pagination Controls ─────────────────────────────────────────── */}
-        {pages > 1 && (
-          <div className="flex items-center justify-between gap-2 pt-2">
-            {/* Info */}
-            <p className="text-[11px] font-bold text-gray-400 hidden sm:block">
-              Page {page} of {pages} · {total} review{total !== 1 ? 's' : ''}
-            </p>
-
-            {/* Controls */}
-            <div className="flex items-center gap-1 mx-auto sm:mx-0">
-              {/* Prev */}
-              <button
-                disabled={page <= 1 || isLoading}
-                onClick={() => setCurrentPage(p => p - 1)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-              >
-                <FiChevronLeft className="w-4 h-4" />
-              </button>
-
-              {/* Page numbers */}
-              {buildPageNumbers().map((p, i) =>
-                p === '…' ? (
-                  <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm font-bold">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    disabled={isLoading}
-                    onClick={() => setCurrentPage(p)}
-                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${
-                      currentPage === p
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-
-              {/* Next */}
-              <button
-                disabled={page >= pages || isLoading}
-                onClick={() => setCurrentPage(p => p + 1)}
-                className="flex items-center justify-center w-8 h-8 rounded-lg border border-gray-200 bg-white text-gray-500 hover:text-blue-600 hover:border-blue-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-sm"
-              >
-                <FiChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+        {/* Pagination Bar */}
+        {!isLoading && total > 0 && (
+          <div className="pt-2">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={pages}
+              totalItems={total}
+              pageSize={LIMIT}
+              onPageChange={(p) => setCurrentPage(p)}
+              className="mt-2"
+            />
           </div>
         )}
       </div>

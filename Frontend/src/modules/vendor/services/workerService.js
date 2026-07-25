@@ -96,6 +96,16 @@ export const deleteWorker = async (workerId) => {
   }
 };
 
+export const payAndResetWorkerSalary = async (workerId, payload = {}) => {
+  try {
+    const response = await api.post(`/vendors/workers/${workerId}/pay-reset`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error settling worker salary:', error);
+    throw error;
+  }
+};
+
 /**
  * Get worker performance statistics
  * @param {string} workerId - Worker ID
@@ -109,4 +119,26 @@ export const getWorkerPerformance = async (workerId) => {
     console.error('Error fetching worker performance:', error);
     throw error;
   }
+};
+
+export const getWorkerPaymentHistory = async (workerId, params = {}) => {
+  try {
+    const response = await api.get(`/vendors/workers/${workerId}/payments`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching worker payment history:', error);
+    throw error;
+  }
+};
+
+export default {
+  getWorkers,
+  getWorkerById,
+  linkWorker,
+  createWorker,
+  updateWorker,
+  deleteWorker,
+  getWorkerPerformance,
+  payAndResetWorkerSalary,
+  getWorkerPaymentHistory
 };

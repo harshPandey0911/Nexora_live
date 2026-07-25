@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiClock, FiCheck, FiX, FiFilter, FiRefreshCw, FiUser, FiTag, FiDollarSign } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import api from '../../../../services/api';
+import Pagination from '../../../../components/common/Pagination';
 
 const statusColors = {
   pending: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -13,6 +14,8 @@ const ServiceRequestsPage = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [pendingCount, setPendingCount] = useState(0);
   const [actionModal, setActionModal] = useState(null); // { id, action }
   const [adminNote, setAdminNote] = useState('');
@@ -34,7 +37,10 @@ const ServiceRequestsPage = () => {
     }
   };
 
-  useEffect(() => { loadRequests(); }, [filterStatus]);
+  useEffect(() => {
+    setCurrentPage(1);
+    loadRequests();
+  }, [filterStatus]);
 
   useEffect(() => {
     if (actionModal) {
@@ -142,21 +148,27 @@ const ServiceRequestsPage = () => {
                     <span className={`ml-auto text-[9px] font-bold px-2.5 py-1 rounded-full border capitalize ${statusColors[req.status]}`}>
                       {req.status}
                     </span>
+                    <span className="text-[11px] font-bold text-gray-400 font-mono">
+                      #{req._id.slice(-6).toUpperCase()}
+                    </span>
                   </div>
 
-                  {/* Request Details */}
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-[8px] text-gray-400 uppercase tracking-widest mb-0.5">Category</p>
-                      <p className="text-xs font-semibold text-gray-800 capitalize">{req.categoryName}</p>
+                  <h3 className="font-bold text-gray-900 text-sm mb-1">{req.serviceName}</h3>
+
+                  <div className="flex flex-wrap gap-4 text-xs text-gray-500 mb-3">
+                    <div className="flex items-center gap-1">
+                      <FiTag className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="font-semibold text-gray-700">{req.categoryName}</span>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-3">
-                      <p className="text-[8px] text-gray-400 uppercase tracking-widest mb-0.5">Service</p>
-                      <p className="text-xs font-semibold text-gray-800 capitalize">{req.serviceName}</p>
-                    </div>
-                    <div className="bg-blue-50 rounded-xl p-3">
-                      <p className="text-[8px] text-blue-400 uppercase tracking-widest mb-0.5">Suggested Price</p>
-                      <p className="text-xs font-bold text-blue-600">₹{req.suggestedPrice?.toLocaleString()}</p>
+                    {req.suggestedPrice && (
+                      <div className="flex items-center gap-1 font-semibold text-emerald-600">
+                        <FiDollarSign className="w-3.5 h-3.5" />
+                        ₹{req.suggestedPrice}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 text-gray-400">
+                      <FiUser className="w-3.5 h-3.5" />
+                      {req.vendorId?.businessName || req.vendorId?.name || 'Vendor'}
                     </div>
                   </div>
 
@@ -198,6 +210,22 @@ const ServiceRequestsPage = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Pagination Bar */}
+      {!loading && requests.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(requests.length / pageSize) || 1}
+          totalItems={requests.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          className="mt-6 border-t pt-4"
+        />
       )}
 
       {/* Action Confirm Modal */}

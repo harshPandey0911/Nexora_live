@@ -12,6 +12,7 @@ import { getDashboardStats } from '../../../../services/adminDashboardService';
 import adminVendorService from '../../../../services/adminVendorService';
 import { CustomDateInput } from '../../../../components/common';
 import Modal from '../UserCategories/components/Modal';
+import Pagination from '../../../../components/common/Pagination';
 
 const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => (
   <div className={`p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
@@ -443,103 +444,14 @@ const AllBookings = () => {
 
         {/* Pagination Footer */}
         {!loading && bookings.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/30 flex-wrap gap-2">
-            {/* Entry count */}
-            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">
-              Showing {((page - 1) * 10) + 1}–{Math.min(page * 10, stats.total)} of {stats.total} entries
-            </p>
-
-            {/* Page pages */}
-            <div className="flex items-center gap-1">
-              {/* First page */}
-              <button
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-                className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
-                title="First page"
-              >
-                «
-              </button>
-
-              {/* Prev */}
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
-              >
-                Prev
-              </button>
-
-              {/* Page number buttons with ellipsis */}
-              {(() => {
-                const pages = [];
-                const delta = 2;
-                const left = Math.max(2, page - delta);
-                const right = Math.min(totalPages - 1, page + delta);
-
-                // Always show page 1
-                pages.push(
-                  <button
-                    key={1}
-                    onClick={() => setPage(1)}
-                    className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === 1 ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
-                  >1</button>
-                );
-
-                // Left ellipsis
-                if (left > 2) {
-                  pages.push(<span key="left-ellipsis" className="px-1 text-gray-400 text-xs">...</span>);
-                }
-
-                // Middle pages
-                for (let i = left; i <= right; i++) {
-                  pages.push(
-                    <button
-                      key={i}
-                      onClick={() => setPage(i)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === i ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
-                    >{i}</button>
-                  );
-                }
-
-                // Right ellipsis
-                if (right < totalPages - 1) {
-                  pages.push(<span key="right-ellipsis" className="px-1 text-gray-400 text-xs">...</span>);
-                }
-
-                // Always show last page if > 1
-                if (totalPages > 1) {
-                  pages.push(
-                    <button
-                      key={totalPages}
-                      onClick={() => setPage(totalPages)}
-                      className={`w-7 h-7 rounded-lg text-xs font-bold border transition-all cursor-pointer ${page === totalPages ? 'bg-green-500 text-white border-green-500 shadow-sm shadow-green-200' : 'border-gray-200 text-gray-600 hover:bg-white'}`}
-                    >{totalPages}</button>
-                  );
-                }
-
-                return pages;
-              })()}
-
-              {/* Next */}
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
-              >
-                Next
-              </button>
-
-              {/* Last page */}
-              <button
-                onClick={() => setPage(totalPages)}
-                disabled={page === totalPages}
-                className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 disabled:opacity-40 hover:bg-white transition-all cursor-pointer"
-                title="Last page"
-              >
-                »
-              </button>
-            </div>
+          <div className="p-3 border-t border-gray-100 bg-gray-50/30">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={stats.total}
+              pageSize={10}
+              onPageChange={(p) => setPage(p)}
+            />
           </div>
         )}
       </div>

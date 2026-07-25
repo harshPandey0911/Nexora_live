@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FiBriefcase, FiCheckCircle, FiClock, FiTrendingUp, 
@@ -16,52 +16,76 @@ import { SkeletonProfileHeader, SkeletonDashboardStats, SkeletonList } from '../
 import { useSocket } from '../../../../context/SocketContext';
 import WorkerJobAlertModal from '../../components/bookings/WorkerJobAlertModal';
 import WorkerRatingsModal from '../../components/ratings/WorkerRatingsModal';
+import Pagination from '../../../../components/common/Pagination';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const socket = useSocket();
 
-  const getStatusBadge = (status) => {
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  const getStatusBadge = (status, job) => {
     const s = String(status || '').toUpperCase();
+
+    // Check if completed job has pending worker payout from vendor
+    if ((s === 'COMPLETED' || s === 'WORK_DONE') && !(job?.rawJob?.isWorkerPaid || job?.rawJob?.workerPaymentStatus === 'PAID' || job?.rawJob?.workerPaymentStatus === 'SUCCESS')) {
+      return { label: 'Payout Pending', bg: 'bg-amber-100 text-amber-900 border-amber-300' };
+    }
+    if ((s === 'COMPLETED' || s === 'WORK_DONE') && (job?.rawJob?.isWorkerPaid || job?.rawJob?.workerPaymentStatus === 'PAID' || job?.rawJob?.workerPaymentStatus === 'SUCCESS')) {
+      return { label: 'Paid by Vendor', bg: 'bg-emerald-100 text-emerald-900 border-emerald-300' };
+    }
+
     const config = {
       'PENDING': { label: 'Pending', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
       'ASSIGNED': { label: 'Assigned', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
       'ACCEPTED': { label: 'Accepted', bg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
       'CONFIRMED': { label: 'Confirmed', bg: 'bg-sky-50 text-sky-700 border-sky-200' },
-      'VISITED': { label: 'Visited', bg: 'bg-purple-50 text-purple-700 border-purple-200' },
-      'IN_PROGRESS': { label: 'In Progress', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
-      'WORK_DONE': { label: 'Work Done', bg: 'bg-teal-50 text-teal-700 border-teal-200' },
+      'JOURNEY_STARTED': { label: 'On The Way', bg: 'bg-sky-50 text-sky-700 border-sky-200' },
+      'VISITED': { label: 'Visited', bg: 'bg-teal-50 text-teal-700 border-teal-200' },
+      'IN_PROGRESS': { label: 'In Progress', bg: 'bg-sky-50 text-sky-700 border-sky-200' },
+      'WORK_DONE': { label: 'Work Done', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
       'COMPLETED': { label: 'Completed', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-      'REJECTED': { label: 'Rejected', bg: 'bg-rose-50 text-rose-700 border-rose-200' }
+      'CANCELLED': { label: 'Cancelled', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
     };
-    return config[s] || { label: status || 'Unknown', bg: 'bg-gray-50 text-gray-700 border-gray-200' };
+    return config[s] || { label: s, bg: 'bg-gray-50 text-gray-700 border-gray-200' };
   };
 
+  // Profile & Stats State
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  const [workerProfile, setWorkerProfile] = useState({
+    name: '',
+    phone: '',
+    photo: null,
+    categories: [],
+    address: ''
+  });
+
   const [stats, setStats] = useState({
+    totalEarnings: 0,
+    receivedSalary: 0,
+    cashCollectedOnField: 0,
     pendingJobs: 0,
     acceptedJobs: 0,
     inProgressJobs: 0,
     completedJobs: 0,
-    totalEarnings: 0,
-    rating: 0,
-  });
-
-  const [workerProfile, setWorkerProfile] = useState({
-    name: 'Worker Partner',
-    phone: '',
-    photo: null,
-    categories: [],
-    address: null,
-    rating: 0,
+    rating: 5.0
   });
 
   const [recentJobs, setRecentJobs] = useState([]);
-  const [activeTab, setActiveTab] = useState('ALL');
-  const [isOnline, setIsOnline] = useState(false);
-  const [statusUpdating, setStatusUpdating] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'PENDING' | 'ACTIVE' | 'COMPLETED'
   const [alertJobId, setAlertJobId] = useState(null);
+
+  // Pagination & Date Filter States
+  const [dateFilter, setDateFilter] = useState('ALL'); // 'ALL' | 'TODAY' | 'YESTERDAY' | 'WEEK' | 'CUSTOM'
+  const [customDate, setCustomDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 5;
+
+  // Ratings Modal
   const [showRatingsModal, setShowRatingsModal] = useState(false);
   const [reviewsList, setReviewsList] = useState([]);
   const [totalReviews, setTotalReviews] = useState(0);
@@ -93,7 +117,7 @@ const Dashboard = () => {
       const [profileRes, statsRes, jobsRes, walletRes] = await Promise.all([
         workerService.getProfile().catch(() => ({ success: false })),
         workerService.getDashboardStats().catch(() => ({ success: false })),
-        workerService.getAssignedJobs({ limit: 15 }).catch(() => ({ success: false })),
+        workerService.getAssignedJobs({ limit: 100 }).catch(() => ({ success: false })),
         workerWalletService.getWallet().catch(() => ({ success: false }))
       ]);
 
@@ -125,6 +149,19 @@ const Dashboard = () => {
         return 'Local Area';
       };
 
+      const formatAssignedTime = (dateStr) => {
+        if (!dateStr) return 'Recently';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return 'Recently';
+        return d.toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      };
+
       let fetchedJobsList = [];
       if (jobsRes.success && Array.isArray(jobsRes.data)) {
         fetchedJobsList = jobsRes.data.map(job => ({
@@ -133,6 +170,7 @@ const Dashboard = () => {
           customerName: typeof job.userId === 'object' ? (job.userId?.name || 'Customer') : 'Authorized Customer',
           location: parseLocation(job.address),
           time: job.scheduledTime || (job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString() : 'Today'),
+          assignedAt: formatAssignedTime(job.createdAt || job.assignedAt || job.rawJob?.createdAt),
           status: (job.status || 'PENDING').toUpperCase(),
           price: job.vendorEarnings || job.finalAmount || 0,
           rawJob: job
@@ -145,6 +183,7 @@ const Dashboard = () => {
           customerName: typeof job.userId === 'object' ? (job.userId?.name || 'Customer') : 'Customer',
           location: parseLocation(job.address),
           time: job.scheduledTime || 'Today',
+          assignedAt: formatAssignedTime(job.createdAt || job.assignedAt || job.rawJob?.createdAt),
           status: (job.status || 'PENDING').toUpperCase(),
           price: job.finalAmount || 0,
           rawJob: job
@@ -291,14 +330,64 @@ const Dashboard = () => {
     };
   }, [isOnline, statusUpdating]);
 
-  // Filter Jobs list
-  const filteredJobs = recentJobs.filter(job => {
-    if (activeTab === 'ALL') return true;
-    if (activeTab === 'PENDING') return ['ASSIGNED', 'PENDING', 'REQUESTED', 'ACCEPTED'].includes(job.status);
-    if (activeTab === 'ACTIVE') return ['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'CONFIRMED'].includes(job.status);
-    if (activeTab === 'COMPLETED') return ['COMPLETED', 'WORK_DONE'].includes(job.status);
-    return true;
-  });
+  // Filter Jobs list by status tab AND date filter
+  const dateFilteredJobs = useMemo(() => {
+    return recentJobs.filter(job => {
+      // 1. Status Tab filter
+      if (activeTab === 'PENDING' && !['ASSIGNED', 'PENDING', 'REQUESTED', 'ACCEPTED'].includes(job.status)) return false;
+      if (activeTab === 'ACTIVE' && !['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'CONFIRMED'].includes(job.status)) return false;
+      if (activeTab === 'COMPLETED' && !['COMPLETED', 'WORK_DONE'].includes(job.status)) return false;
+
+      // 2. Date filter
+      if (dateFilter === 'ALL') return true;
+
+      const rawDateStr = job.rawJob?.createdAt || job.rawJob?.assignedAt || job.createdAt;
+      if (!rawDateStr) return true;
+      const jobDate = new Date(rawDateStr);
+      if (isNaN(jobDate.getTime())) return true;
+
+      const now = new Date();
+      const isSameDay = (d1, d2) => (
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate()
+      );
+
+      if (dateFilter === 'TODAY') return isSameDay(jobDate, now);
+      if (dateFilter === 'YESTERDAY') {
+        const yest = new Date();
+        yest.setDate(now.getDate() - 1);
+        return isSameDay(jobDate, yest);
+      }
+      if (dateFilter === 'WEEK') {
+        const weekAgo = new Date();
+        weekAgo.setDate(now.getDate() - 7);
+        return jobDate >= weekAgo;
+      }
+      if (dateFilter === 'CUSTOM' && customDate) {
+        const target = new Date(customDate);
+        return isSameDay(jobDate, target);
+      }
+
+      return true;
+    }).sort((a, b) => {
+      const timeA = new Date(a.rawJob?.createdAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.rawJob?.createdAt || b.createdAt || 0).getTime();
+      return timeB - timeA; // Newest assigned jobs first
+    });
+  }, [recentJobs, activeTab, dateFilter, customDate]);
+
+  // Reset to page 1 on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, dateFilter, customDate]);
+
+  const totalPages = Math.ceil(dateFilteredJobs.length / pageSize) || 1;
+
+  const paginatedJobs = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return dateFilteredJobs.slice(start, start + pageSize);
+  }, [dateFilteredJobs, currentPage, pageSize]);
 
   if (loading) {
     return (
@@ -398,10 +487,10 @@ const Dashboard = () => {
                 <div>
                   <p className="text-[10px] text-teal-200 font-bold uppercase tracking-widest mb-1 flex items-center gap-1.5">
                     <FiDollarSign className="w-3.5 h-3.5 text-teal-300" />
-                    Salary Received (Vendor)
+                    Pending Salary Owed (By Vendor)
                   </p>
                   <h3 className="text-3xl font-black tracking-tight text-white">
-                    ₹{Number(stats.receivedSalary || 0).toLocaleString('en-IN')}
+                    ₹{Number(stats.salaryOwed !== undefined ? stats.salaryOwed : (stats.receivedSalary || 0)).toLocaleString('en-IN')}
                   </h3>
 
                   <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -521,7 +610,7 @@ const Dashboard = () => {
               </div>
 
               {/* Filter Tabs */}
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-4 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3 mb-3 overflow-x-auto no-scrollbar">
                 {[
                   { id: 'ALL', label: 'All Jobs', count: recentJobs.length },
                   { id: 'PENDING', label: 'Pending', count: stats.pendingJobs },
@@ -545,11 +634,46 @@ const Dashboard = () => {
                 ))}
               </div>
 
+              {/* Date Filter Bar */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-3 mb-4 border-b border-slate-50 text-xs">
+                <span className="text-[10px] font-extrabold uppercase text-slate-400 shrink-0 flex items-center gap-1">
+                  <FiCalendar className="w-3 h-3 text-teal-600" /> Filter Date:
+                </span>
+                {[
+                  { id: 'ALL', label: 'All Time' },
+                  { id: 'TODAY', label: 'Today' },
+                  { id: 'YESTERDAY', label: 'Yesterday' },
+                  { id: 'WEEK', label: 'Last 7 Days' },
+                  { id: 'CUSTOM', label: 'Pick Date' },
+                ].map(df => (
+                  <button
+                    key={df.id}
+                    onClick={() => setDateFilter(df.id)}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase transition-all shrink-0 ${
+                      dateFilter === df.id
+                        ? 'bg-teal-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {df.label}
+                  </button>
+                ))}
+                {dateFilter === 'CUSTOM' && (
+                  <input
+                    type="date"
+                    max={todayStr}
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                    className="px-2 py-0.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 bg-white cursor-pointer"
+                  />
+                )}
+              </div>
+
               {/* Jobs List */}
-              {filteredJobs.length > 0 ? (
+              {paginatedJobs.length > 0 ? (
                 <div className="space-y-3">
-                  {filteredJobs.map((job) => {
-                    const badge = getStatusBadge(job.status);
+                  {paginatedJobs.map((job) => {
+                    const badge = getStatusBadge(job.status, job);
                     return (
                       <div
                         key={job.id}
@@ -566,14 +690,14 @@ const Dashboard = () => {
                               <h4 className="text-sm font-bold text-slate-900 truncate tracking-tight">{job.customerName}</h4>
                               <p className="text-xs font-semibold text-teal-700 mt-0.5">{job.serviceType}</p>
                               
-                              <div className="flex items-center gap-3 mt-2 flex-wrap text-xs text-slate-500 font-medium">
+                              <div className="flex items-center gap-2.5 mt-2 flex-wrap text-xs text-slate-500 font-medium">
                                 <span className="flex items-center gap-1">
                                   <FiMapPin className="w-3.5 h-3.5 text-slate-400" />
                                   {job.location}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <FiCalendar className="w-3.5 h-3.5 text-slate-400" />
-                                  {job.time}
+                                <span className="flex items-center gap-1 text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100/80">
+                                  <FiClock className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                  Assigned: {job.assignedAt}
                                 </span>
                               </div>
                             </div>
@@ -598,6 +722,22 @@ const Dashboard = () => {
                       </div>
                     );
                   })}
+
+                  {/* Pagination Controls */}
+                  {dateFilteredJobs.length > 0 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={dateFilteredJobs.length}
+                      pageSize={pageSize}
+                      onPageChange={(p) => setCurrentPage(p)}
+                      onPageSizeChange={(newSize) => {
+                        setPageSize(newSize);
+                        setCurrentPage(1);
+                      }}
+                      className="mt-4 border-t border-slate-100 pt-4"
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="py-16 px-4 text-center rounded-2xl bg-slate-50 border border-dashed border-slate-200">
@@ -607,7 +747,7 @@ const Dashboard = () => {
                   <h4 className="text-sm font-bold text-slate-800">No Jobs Found</h4>
                   <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto font-medium">
                     {activeTab === 'ALL' 
-                      ? 'No tasks assigned to you yet. Stay online to receive new job alerts!' 
+                      ? 'No tasks assigned matching your filters. Stay online to receive new job alerts!' 
                       : `No ${activeTab.toLowerCase()} jobs at the moment.`}
                   </p>
                   
@@ -619,10 +759,14 @@ const Dashboard = () => {
                       View All Jobs
                     </button>
                     <button
-                      onClick={() => fetchDashboardData(true)}
+                      onClick={() => {
+                        setDateFilter('ALL');
+                        setActiveTab('ALL');
+                        fetchDashboardData(true);
+                      }}
                       className="px-4 py-2 bg-teal-50 text-teal-800 border border-teal-200 rounded-xl text-xs font-bold hover:bg-teal-100 transition-all active:scale-95"
                     >
-                      Check Updates
+                      Reset Filters
                     </button>
                   </div>
                 </div>

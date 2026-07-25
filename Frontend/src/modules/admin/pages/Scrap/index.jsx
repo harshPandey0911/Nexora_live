@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { FiTrash2, FiSearch, FiFilter } from 'react-icons/fi';
 import api from '../../../../services/api';
 import { toast } from 'react-hot-toast';
+import Pagination from '../../../../components/common/Pagination';
 
 const AdminScrapPage = () => {
   const [scraps, setScraps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     fetchScrap();
@@ -110,81 +113,93 @@ const AdminScrapPage = () => {
               ) : (
                 filteredScraps.map((item) => (
                   <tr key={item._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {item.images && item.images[0] && (
-                          <img src={item.images[0]} alt="" className="w-8 h-8 rounded object-cover border border-gray-100" />
-                        )}
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">{item.title}</p>
-                          <p className="text-[10px] text-gray-500">{item.category} • {item.quantity} • ₹{item.expectedPrice || 0}</p>
+                scraps
+                  .filter(item => filter === 'all' || item.status === filter)
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((item) => (
+                    <tr key={item._id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          {item.images && item.images[0] && (
+                            <img src={item.images[0]} alt="" className="w-8 h-8 rounded object-cover border border-gray-100" />
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">{item.title}</p>
+                            <p className="text-[10px] text-gray-500">{item.category} • {item.quantity} • ₹{item.expectedPrice || 0}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-xs font-bold text-gray-900">{item.userId?.name}</p>
-                      <p className="text-[10px] text-gray-500">{item.userId?.phone}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      {item.vendorId ? (
-                        <div>
-                          <p className="text-xs font-bold text-gray-900">{item.vendorId?.name}</p>
-                          <p className="text-[10px] text-gray-500">{item.vendorId?.phone}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-xs font-bold text-gray-900">{item.userId?.name}</p>
+                        <p className="text-[10px] text-gray-500">{item.userId?.phone}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        {item.vendorId ? (
+                          <div>
+                            <p className="text-xs font-bold text-gray-900">{item.vendorId?.name}</p>
+                            <p className="text-[10px] text-gray-500">{item.vendorId?.phone}</p>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider
+                          ${item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : ''}
+                          ${item.status === 'accepted' ? 'bg-green-100 text-green-700' : ''}
+                          ${item.status === 'completed' ? 'bg-gray-100 text-gray-700' : ''}
+                        `}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-[10px] text-gray-500 font-medium max-w-[150px] line-clamp-2">
+                          {item.address?.addressLine1}, {item.address?.city}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-[10px] text-gray-500 font-medium">
+                        {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          {item.status === 'pending' && (
+                            <button
+                              onClick={() => handleAccept(item._id)}
+                              className="px-2 py-1 bg-blue-600 text-white text-[9px] font-bold rounded uppercase tracking-wider hover:bg-blue-700 transition-colors"
+                            >
+                              Confirm Pickup / Buy
+                            </button>
+                          )}
+                          {item.status === 'accepted' && (
+                            <button
+                              onClick={() => handleComplete(item._id)}
+                              className="px-2 py-1 bg-green-600 text-white text-[9px] font-bold rounded uppercase tracking-wider hover:bg-green-700 transition-colors"
+                            >
+                              Complete Pickup
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(item._id)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                            title="Delete Scrap"
+                          >
+                            <FiTrash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
-                      ) : (
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight italic">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex px-2 py-0.5 text-[9px] font-bold rounded-full uppercase tracking-wider
-                        ${item.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : ''}
-                        ${item.status === 'accepted' ? 'bg-green-100 text-green-700' : ''}
-                        ${item.status === 'completed' ? 'bg-gray-100 text-gray-700' : ''}
-                      `}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-[10px] text-gray-500 font-medium max-w-[150px] line-clamp-2">
-                        {item.address?.addressLine1}, {item.address?.city}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-[10px] text-gray-500 font-medium">
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {item.status === 'pending' && (
-                          <button
-                            onClick={() => handleAccept(item._id)}
-                            className="px-2 py-1 bg-blue-600 text-white text-[9px] font-bold rounded uppercase tracking-wider hover:bg-blue-700 transition-colors"
-                          >
-                            Confirm Pickup / Buy
-                          </button>
-                        )}
-                        {item.status === 'accepted' && (
-                          <button
-                            onClick={() => handleComplete(item._id)}
-                            className="px-2 py-1 bg-green-600 text-white text-[9px] font-bold rounded uppercase tracking-wider hover:bg-green-700 transition-colors"
-                          >
-                            Complete Pickup
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
-                          title="Delete Scrap"
-                        >
-                          <FiTrash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  ))
               )}
             </tbody>
           </table>
         </div>
+        {!loading && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(scraps.filter(item => filter === 'all' || item.status === filter).length / pageSize) || 1}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        )}
       </div>
     </div>
   );

@@ -7,9 +7,12 @@ import {
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { getBookings, updateBookingStatus } from '../../services/bookingService';
+import Pagination from '../../../../components/common/Pagination';
 
 const ProductOrders = memo(() => {
   const navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -163,8 +166,14 @@ const ProductOrders = memo(() => {
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-gray-50/50 transition-colors group cursor-pointer" onClick={() => navigate(`/vendor/booking/${order.id}`)}>
+                filteredOrders
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((order) => (
+                  <tr 
+                    key={order.id} 
+                    onClick={() => navigate(`/vendor/booking/${order.id}`)}
+                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  >
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-blue-600 mb-0.5">#{order.id.slice(-8).toUpperCase()}</span>
@@ -239,6 +248,22 @@ const ProductOrders = memo(() => {
           </table>
         </div>
       </div>
+
+      {/* Pagination Bar */}
+      {!loading && filteredOrders.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={Math.ceil(filteredOrders.length / pageSize) || 1}
+          totalItems={filteredOrders.length}
+          pageSize={pageSize}
+          onPageChange={(p) => setCurrentPage(p)}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+          className="mt-4"
+        />
+      )}
     </div>
   );
 });

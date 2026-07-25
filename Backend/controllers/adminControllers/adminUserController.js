@@ -12,6 +12,8 @@ const getAllUsers = async (req, res) => {
       isActive,
       isPhoneVerified,
       isEmailVerified,
+      startDate,
+      endDate,
       page = 1,
       limit = 20
     } = req.query;
@@ -27,6 +29,16 @@ const getAllUsers = async (req, res) => {
     }
     if (isEmailVerified !== undefined) {
       query.isEmailVerified = isEmailVerified === 'true';
+    }
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
     }
 
     // Search by name, phone, or email
@@ -294,26 +306,46 @@ const getUserWalletTransactions = async (req, res) => {
  */
 const getAllUserBookings = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20, search } = req.query;
+    const { status, page = 1, limit = 20, search, startDate, endDate, sortBy = 'newest' } = req.query;
 
     const query = {};
 
-    if (status) {
+    if (status && status !== 'all') {
       query.status = status;
     }
 
-    // Search by user name or phone
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+
+    // Search by user name, phone, email, booking number or service name
     if (search) {
       const users = await User.find({
         $or: [
           { name: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } }
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
         ]
       }).select('_id');
-      
+
       const userIds = users.map(u => u._id);
-      query.userId = { $in: userIds };
+      query.$or = [
+        { userId: { $in: userIds } },
+        { bookingNumber: { $regex: search, $options: 'i' } },
+        { serviceName: { $regex: search, $options: 'i' } }
+      ];
     }
+
+    let sortOption = { createdAt: -1 };
+    if (sortBy === 'oldest') sortOption = { createdAt: 1 };
+    else if (sortBy === 'price_high') sortOption = { finalAmount: -1, basePrice: -1 };
+    else if (sortBy === 'price_low') sortOption = { finalAmount: 1, basePrice: 1 };
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -321,7 +353,7 @@ const getAllUserBookings = async (req, res) => {
       .populate('userId', 'name phone email')
       .populate('workerId', 'name phone')
       .populate('serviceId', 'title')
-      .sort({ createdAt: -1 })
+      .sort(sortOption)
       .skip(skip)
       .limit(parseInt(limit));
 

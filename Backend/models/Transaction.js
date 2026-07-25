@@ -37,7 +37,7 @@ const transactionSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['wallet', 'razorpay', 'cash', 'bank_transfer', 'system', 'other', 'hand_to_hand', 'online', 'cash collected', 'Qr online'],
+    enum: ['wallet', 'razorpay', 'cash', 'bank_transfer', 'upi', 'system', 'other', 'hand_to_hand', 'online', 'cash collected', 'Qr online'],
     default: 'wallet'
   },
   description: {

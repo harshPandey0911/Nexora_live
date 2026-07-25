@@ -323,15 +323,24 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking: initialBooking, on
                 </div>
               ) : (
                 <>
-                  {/* Online Pay - CONDITIONALLY RRENDERED ONLY WHEN BILL IS FINALIZED */}
+                  {/* Online Pay - CONDITIONALLY RENDERED ONLY WHEN BILL IS FINALIZED */}
                   {(() => {
-                    const isBillFinalized = Boolean((bill && bill.isFinalized === true && bill.status !== 'draft') || booking.customerConfirmationOTP || booking.paymentOtp);
+                    const isEditing = Boolean(
+                      booking.isFinalized === false ||
+                      (bill && (bill.isFinalized === false || bill.status === 'draft'))
+                    );
+
+                    const isBillFinalized = !isEditing && Boolean(
+                      (bill && bill.isFinalized === true && bill.status !== 'draft') ||
+                      booking.isFinalized === true ||
+                      (booking.customerConfirmationOTP || booking.paymentOtp)
+                    );
 
                     if (!isBillFinalized) {
                       return (
-                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center animate-in fade-in">
                           <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-2 text-amber-700">
-                            <FiInfo className="w-5 h-5" />
+                            <FiInfo className="w-5 h-5 animate-pulse" />
                           </div>
                           <p className="text-sm font-bold text-amber-900">Professional is Preparing Your Invoice</p>
                           <p className="text-xs text-amber-700 mt-1 leading-relaxed">
@@ -365,8 +374,8 @@ const PaymentVerificationModal = ({ isOpen, onClose, booking: initialBooking, on
                     return null;
                   })()}
 
-                  {/* Cash Code - ONLY SHOWN WHEN BILL IS FINALIZED */}
-                  {!isPaymentComplete && Boolean((bill && bill.isFinalized === true) || booking.customerConfirmationOTP || booking.paymentOtp) && (
+                  {/* Cash Code - ONLY SHOWN WHEN BILL IS FINALIZED AND NOT EDITING */}
+                  {!isPaymentComplete && !(booking.isFinalized === false || (bill && (bill.isFinalized === false || bill.status === 'draft'))) && (Boolean((bill && bill.isFinalized === true && bill.status !== 'draft') || booking.isFinalized === true || booking.customerConfirmationOTP || booking.paymentOtp)) && (
                     <>
                       <div className="relative py-2 text-center">
                         <span className="bg-white px-2 text-[10px] font-bold text-slate-400 relative z-10 uppercase tracking-wider">OR</span>

@@ -5,12 +5,15 @@ import { toast } from 'react-hot-toast';
 import CardShell from '../UserCategories/components/CardShell';
 import Modal from '../UserCategories/components/Modal';
 import adminWorkerService from '../../../../services/adminWorkerService';
+import Pagination from '../../../../components/common/Pagination';
 
 const AllWorkers = () => {
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -102,17 +105,63 @@ const AllWorkers = () => {
     }
   };
 
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'active', 'inactive'
+  const [vendorTypeFilter, setVendorTypeFilter] = useState('all'); // 'all', 'direct', 'vendor'
+
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const filteredWorkers = useMemo(() => {
     return workers.filter(worker => {
-      const matchesStatus = filterStatus === 'all' || worker.approvalStatus === filterStatus;
+      const matchesApproval = filterStatus === 'all' || worker.approvalStatus === filterStatus;
+      const matchesActive = activeFilter === 'all' || (activeFilter === 'active' ? worker.isActive : !worker.isActive);
+      const matchesVendorType = vendorTypeFilter === 'all' || (vendorTypeFilter === 'direct' ? (!worker.vendorObj && worker.vendorName.includes('Direct')) : (worker.vendorObj || !worker.vendorName.includes('Direct')));
+
       const matchesSearch =
         worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         worker.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
         worker.phone.includes(searchQuery) ||
-        worker.serviceCategory.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesStatus && matchesSearch;
+        worker.serviceCategory.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        worker.vendorName.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Date filtering on createdAt
+      let matchesDate = true;
+      if (worker.createdAt) {
+        const workerDate = new Date(worker.createdAt).toISOString().split('T')[0];
+        const today = new Date().toISOString().split('T')[0];
+
+        if (dateFilter === 'today') {
+          matchesDate = workerDate === today;
+        } else if (dateFilter === 'yesterday') {
+          const y = new Date();
+          y.setDate(y.getDate() - 1);
+          matchesDate = workerDate === y.toISOString().split('T')[0];
+        } else if (dateFilter === 'last7') {
+          const l7 = new Date();
+          l7.setDate(l7.getDate() - 7);
+          matchesDate = workerDate >= l7.toISOString().split('T')[0];
+        } else if (dateFilter === 'custom') {
+          if (customStartDate && workerDate < customStartDate) matchesDate = false;
+          if (customEndDate && workerDate > customEndDate) matchesDate = false;
+        }
+      }
+
+      return matchesApproval && matchesActive && matchesVendorType && matchesSearch && matchesDate;
     });
-  }, [workers, filterStatus, searchQuery]);
+  }, [workers, filterStatus, searchQuery, activeFilter, vendorTypeFilter, dateFilter, customStartDate, customEndDate]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery, activeFilter, vendorTypeFilter, dateFilter, customStartDate, customEndDate]);
+
+  const totalPages = Math.ceil(filteredWorkers.length / pageSize) || 1;
+
+  const paginatedWorkers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredWorkers.slice(start, start + pageSize);
+  }, [filteredWorkers, currentPage, pageSize]);
 
   const handleApprove = async (workerId) => {
     try {
@@ -265,32 +314,102 @@ const AllWorkers = () => {
           </div>
         </div>
 
-        {/* Search and Filter */}
+        {/* Search, Status & Type Bar */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search workers..."
+              placeholder="Search workers by name, phone, category or vendor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all text-xs"
             />
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-            {['all', 'pending', 'approved', 'rejected'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status)}
-                className={`px-3 py-2 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap ${filterStatus === status
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+
+          <div className="flex flex-wrap sm:flex-nowrap gap-2">
+            <select
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Active Status</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+
+            <select
+              value={vendorTypeFilter}
+              onChange={(e) => setVendorTypeFilter(e.target.value)}
+              className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-700 focus:outline-none cursor-pointer"
+            >
+              <option value="all">All Worker Types</option>
+              <option value="direct">Direct Workers</option>
+              <option value="vendor">Vendor Assigned Workers</option>
+            </select>
+
+            <div className="flex gap-1 overflow-x-auto">
+              {['all', 'pending', 'approved', 'rejected'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status)}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold capitalize transition-all whitespace-nowrap cursor-pointer ${
+                    filterStatus === status
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Date Filter Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50/70 p-2.5 rounded-xl border border-gray-100 mb-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[11px] font-bold text-gray-500 mr-1">Registration Date:</span>
+            {[
+              { id: 'all', label: 'All Time' },
+              { id: 'today', label: 'Today' },
+              { id: 'yesterday', label: 'Yesterday' },
+              { id: 'last7', label: 'Last 7 Days' },
+              { id: 'custom', label: 'Pick Date' }
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setDateFilter(f.id)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  dateFilter === f.id
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
               >
-                {status}
+                {f.label}
               </button>
             ))}
           </div>
+
+          {dateFilter === 'custom' && (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                max={todayStr}
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none bg-white"
+              />
+              <span className="text-xs text-gray-400 font-bold">to</span>
+              <input
+                type="date"
+                max={todayStr}
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-2 py-1 text-xs border border-gray-200 rounded-md focus:outline-none bg-white"
+              />
+            </div>
+          )}
         </div>
 
         {/* Table */}
@@ -315,7 +434,7 @@ const AllWorkers = () => {
                     <td colSpan="4" className="px-4 py-8 text-center text-xs text-gray-500">No workers found</td>
                   </tr>
                 ) : (
-                  filteredWorkers.map((worker) => (
+                  paginatedWorkers.map((worker) => (
                     <tr key={worker.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
                         <div>
@@ -353,6 +472,20 @@ const AllWorkers = () => {
                             <FiEye className="w-3.5 h-3.5" />
                           </button>
 
+                          {/* Pay Worker Modal Button */}
+                          <button
+                            onClick={() => {
+                              setSelectedWorker(worker);
+                              setPayAmount('');
+                              setPayNotes('');
+                              setIsPayModalOpen(true);
+                            }}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Pay Worker / Log Payment"
+                          >
+                            <FiDollarSign className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Toggle Active Status */}
                           <button
                             onClick={() => handleToggleStatus(worker.id, worker.isActive)}
@@ -361,8 +494,6 @@ const AllWorkers = () => {
                           >
                             <FiPower className={`w-3.5 h-3.5 ${worker.isActive ? 'fill-current' : ''}`} />
                           </button>
-
-
 
                           {/* Approve/Reject (Only for pending) */}
                           {worker.approvalStatus === 'pending' && (
@@ -401,6 +532,22 @@ const AllWorkers = () => {
             </table>
           </div>
         </div>
+
+        {/* Pagination Bar */}
+        {!loading && filteredWorkers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredWorkers.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            className="mt-4"
+          />
+        )}
       </CardShell>
 
       {/* View Worker Details Modal */}

@@ -6,6 +6,7 @@ import { vendorTheme as themeColors } from '../../../../theme';
 import LogoLoader from '../../../../components/common/LogoLoader';
 import vendorWalletService from '../../../../services/vendorWalletService';
 import { toast } from 'react-hot-toast';
+import Pagination from '../../../../components/common/Pagination';
 
 const Wallet = () => {
   const navigate = useNavigate();
@@ -482,54 +483,15 @@ const Wallet = () => {
         )}
 
         {/* Global Proper Pagination */}
-        {totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-6 pt-4 border-t border-gray-100 px-2">
-            <p className="text-xs font-semibold text-gray-500">
-              Showing <span className="font-bold text-gray-900">{startEntry}–{endEntry}</span> of <span className="font-bold text-gray-900">{totalEntries}</span> entries
-            </p>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
-              >
-                Previous
-              </button>
-
-              <div className="flex items-center gap-1 px-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
-                  .map((page, idx, arr) => {
-                    const prevPage = arr[idx - 1];
-                    const showEllipsis = prevPage && page - prevPage > 1;
-                    return (
-                      <React.Fragment key={page}>
-                        {showEllipsis && <span className="px-1 text-xs text-gray-400 font-bold">…</span>}
-                        <button
-                          onClick={() => setCurrentPage(page)}
-                          className={`w-7 h-7 rounded-xl text-xs font-bold transition-all border ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                              : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
-
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-blue-100 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
-              >
-                Next
-              </button>
-            </div>
-          </div>
+        {totalEntries > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalEntries}
+            pageSize={PAGE_SIZE}
+            onPageChange={(p) => setCurrentPage(p)}
+            className="mt-6 border-t border-gray-100 pt-4"
+          />
         )}
       </div>
 

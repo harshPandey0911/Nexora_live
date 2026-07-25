@@ -5,12 +5,15 @@ import { toast } from 'react-hot-toast';
 import CardShell from '../UserCategories/components/CardShell';
 import Modal from '../UserCategories/components/Modal';
 import adminVendorService from '../../../../services/adminVendorService';
+import Pagination from '../../../../components/common/Pagination';
 
 const AllVendors = () => {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
@@ -166,6 +169,17 @@ const AllVendors = () => {
       return matchesStatus && matchesSearch;
     });
   }, [vendors, filterStatus, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery]);
+
+  const totalPages = Math.ceil(filteredVendors.length / pageSize) || 1;
+
+  const paginatedVendors = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVendors.slice(start, start + pageSize);
+  }, [filteredVendors, currentPage, pageSize]);
 
   const handleApprove = async (vendorId) => {
     try {
@@ -362,7 +376,7 @@ const AllVendors = () => {
                     <td colSpan="4" className="px-4 py-8 text-center text-xs text-gray-500">No vendors found</td>
                   </tr>
                 ) : (
-                  filteredVendors.map((vendor) => (
+                  paginatedVendors.map((vendor) => (
                     <tr key={vendor.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-0.5">
@@ -484,7 +498,23 @@ const AllVendors = () => {
             </table>
           </div>
         </div>
-      </CardShell >
+
+        {/* Pagination Bar */}
+        {!loading && filteredVendors.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredVendors.length}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+            className="mt-4"
+          />
+        )}
+      </CardShell>
 
       {/* View Vendor Details Modal */}
       < Modal

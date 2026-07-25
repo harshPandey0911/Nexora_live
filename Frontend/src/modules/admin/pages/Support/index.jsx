@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { FiMessageSquare, FiEye, FiSearch, FiFilter, FiCheckCircle } from 'react-icons/fi';
 import { supportService } from '../../services/supportService';
 import toast from 'react-hot-toast';
+import Pagination from '../../../../components/common/Pagination';
 
 const AdminSupport = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [replyMessage, setReplyMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    setCurrentPage(1);
     fetchTickets();
   }, [filter]);
 
@@ -120,7 +124,7 @@ const AdminSupport = () => {
               <div className="text-center py-10 text-gray-500">No tickets found</div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {tickets.map(ticket => (
+                {tickets.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(ticket => (
                   <div 
                     key={ticket._id} 
                     onClick={() => handleViewTicket(ticket._id)}
@@ -140,6 +144,23 @@ const AdminSupport = () => {
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          {!loading && tickets.length > 0 && (
+            <div className="p-3 border-t border-gray-100 bg-gray-50/50">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(tickets.length / pageSize) || 1}
+                totalItems={tickets.length}
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Ticket Chat Details (Right Column) */}
