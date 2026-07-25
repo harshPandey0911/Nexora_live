@@ -471,6 +471,25 @@ exports.confirmCashCollection = async (req, res) => {
         cashCollected: true,
         message: 'Payment recorded and booking completed!'
       });
+
+      if (booking.workerId) {
+        io.to(`worker_${booking.workerId}`).emit('booking_updated', {
+          bookingId: booking._id,
+          status: booking.status,
+          cashCollected: true
+        });
+        io.to(`worker_${booking.workerId}`).emit('job_status_updated', {
+          bookingId: booking._id,
+          status: booking.status
+        });
+        io.to(`worker_${booking.workerId}`).emit('wallet_updated', {
+          bookingId: booking._id
+        });
+        io.to(`worker_${booking.workerId}`).emit('cash_collected', {
+          bookingId: booking._id,
+          amount: collectionAmount
+        });
+      }
     }
 
     // Push Notification

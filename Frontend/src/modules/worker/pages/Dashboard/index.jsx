@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { workerTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
 import workerService from '../../../../services/workerService';
+import workerWalletService from '../../../../services/workerWalletService';
 import { registerFCMToken } from '../../../../services/pushNotificationService';
 import { SkeletonProfileHeader, SkeletonDashboardStats, SkeletonList } from '../../../../components/common/SkeletonLoaders';
 import { useSocket } from '../../../../context/SocketContext';
@@ -89,10 +90,11 @@ const Dashboard = () => {
       if (!isSilent) setLoading(true);
       else setIsRefreshing(true);
 
-      const [profileRes, statsRes, jobsRes] = await Promise.all([
+      const [profileRes, statsRes, jobsRes, walletRes] = await Promise.all([
         workerService.getProfile().catch(() => ({ success: false })),
         workerService.getDashboardStats().catch(() => ({ success: false })),
-        workerService.getAssignedJobs({ limit: 15 }).catch(() => ({ success: false }))
+        workerService.getAssignedJobs({ limit: 15 }).catch(() => ({ success: false })),
+        workerWalletService.getWallet().catch(() => ({ success: false }))
       ]);
 
       if (profileRes.success && profileRes.worker) {
@@ -151,26 +153,41 @@ const Dashboard = () => {
       }
 
       if (statsRes.success && statsRes.data) {
-        const { totalEarnings, rating } = statsRes.data;
-        
-        // Compute real job counts from fetchedJobsList
-        const pending = fetchedJobsList.filter(j => ['ASSIGNED', 'PENDING', 'REQUESTED'].includes(j.status)).length;
-        const accepted = fetchedJobsList.filter(j => ['ACCEPTED', 'CONFIRMED'].includes(j.status)).length;
-        const inProgress = fetchedJobsList.filter(j => ['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED'].includes(j.status)).length;
-        const completed = fetchedJobsList.filter(j => ['COMPLETED', 'WORK_DONE'].includes(j.status)).length;
+        const { totalEarnings } = statsRes.data;
+
+        // Use database totals from stats API, fallback to current 15-job slice counts
+        const pending = (typeof statsRes.data.pendingJobs === 'number')
+          ? statsRes.data.pendingJobs
+          : fetchedJobsList.filter(j => ['ASSIGNED', 'PENDING', 'REQUESTED'].includes(j.status)).length;
+
+        const active = (typeof statsRes.data.activeJobs === 'number')
+          ? statsRes.data.activeJobs
+          : fetchedJobsList.filter(j => ['ACCEPTED', 'CONFIRMED', 'VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED'].includes(j.status)).length;
+
+        const completed = (typeof statsRes.data.completedJobs === 'number')
+          ? statsRes.data.completedJobs
+          : fetchedJobsList.filter(j => ['COMPLETED', 'WORK_DONE'].includes(j.status)).length;
 
         const fetchedRating = (typeof statsRes.data?.rating === 'number')
           ? statsRes.data.rating
           : (typeof profileRes.worker?.rating === 'number' ? profileRes.worker.rating : 0);
 
+        const receivedSalary = (walletRes.success && walletRes.data)
+          ? (walletRes.data.receivedSalary ?? walletRes.data.balance ?? 0)
+          : (statsRes.data?.receivedSalary ?? profileRes.worker?.wallet?.balance ?? 0);
+
+        const cashCollectedOnField = (walletRes.success && walletRes.data)
+          ? (walletRes.data.cashCollectedOnField ?? 0)
+          : (statsRes.data?.cashCollectedOnField ?? 0);
+
         setStats({
           totalEarnings: totalEarnings || 0,
-          receivedSalary: statsRes.data?.receivedSalary ?? profileRes.worker?.wallet?.balance ?? 0,
-          cashCollectedOnField: statsRes.data?.cashCollectedOnField || 0,
+          receivedSalary,
+          cashCollectedOnField,
           pendingJobs: pending,
-          acceptedJobs: accepted,
-          inProgressJobs: inProgress,
-          completedJobs: typeof statsRes.data?.completedJobs === 'number' ? statsRes.data.completedJobs : completed,
+          acceptedJobs: 0,
+          inProgressJobs: active,
+          completedJobs: completed,
           rating: fetchedRating
         });
 
@@ -189,7 +206,7 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Initial Load + Auto Polling (Every 15s)
+  // Initial Load + Auto Polling (Every 10s)
   useEffect(() => {
     fetchDashboardData();
 
@@ -197,14 +214,18 @@ const Dashboard = () => {
 
     const interval = setInterval(() => {
       fetchDashboardData(true);
-    }, 15000);
+    }, 10000);
 
     const handleUpdate = () => fetchDashboardData(true);
     window.addEventListener('workerJobsUpdated', handleUpdate);
+    window.addEventListener('workerWalletUpdated', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('workerJobsUpdated', handleUpdate);
+      window.removeEventListener('workerWalletUpdated', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
     };
   }, [fetchDashboardData]);
 
@@ -222,11 +243,17 @@ const Dashboard = () => {
     socket.on('notification', handleNotification);
     socket.on('job_status_updated', () => fetchDashboardData(true));
     socket.on('booking_updated', () => fetchDashboardData(true));
+    socket.on('payment_received', () => fetchDashboardData(true));
+    socket.on('wallet_updated', () => fetchDashboardData(true));
+    socket.on('cash_collected', () => fetchDashboardData(true));
 
     return () => {
       socket.off('notification', handleNotification);
       socket.off('job_status_updated');
       socket.off('booking_updated');
+      socket.off('payment_received');
+      socket.off('wallet_updated');
+      socket.off('cash_collected');
     };
   }, [socket, fetchDashboardData]);
 

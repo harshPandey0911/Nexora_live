@@ -19,7 +19,7 @@ const getWallet = async (req, res) => {
       {
         $match: {
           workerId: worker._id,
-          status: { $in: ['completed', 'WORK_DONE'] },
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
           isWorkerPaid: { $ne: true },
           workerPaymentStatus: { $ne: 'PAID' }
         }

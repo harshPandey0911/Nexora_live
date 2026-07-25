@@ -25,7 +25,7 @@ const getDashboardStats = async (req, res) => {
       {
         $match: {
           workerId: worker._id,
-          status: { $in: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.WORK_DONE] }
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] }
         }
       },
       {
@@ -43,9 +43,9 @@ const getDashboardStats = async (req, res) => {
       workerId: worker._id,
       status: {
         $in: [
-          BOOKING_STATUS.ASSIGNED,
-          BOOKING_STATUS.PENDING,
-          'REQUESTED'
+          'assigned', 'ASSIGNED',
+          'pending', 'PENDING',
+          'requested', 'REQUESTED'
         ]
       }
     });
@@ -55,11 +55,11 @@ const getDashboardStats = async (req, res) => {
       workerId: worker._id,
       status: {
         $in: [
-          BOOKING_STATUS.ACCEPTED,
-          BOOKING_STATUS.CONFIRMED,
-          BOOKING_STATUS.VISITED,
-          BOOKING_STATUS.IN_PROGRESS,
-          'JOURNEY_STARTED'
+          'accepted', 'ACCEPTED',
+          'confirmed', 'CONFIRMED',
+          'visited', 'VISITED',
+          'in_progress', 'IN_PROGRESS',
+          'journey_started', 'JOURNEY_STARTED'
         ]
       }
     });
@@ -67,7 +67,7 @@ const getDashboardStats = async (req, res) => {
     // 5. Count Completed Jobs
     const completedJobsCount = await Booking.countDocuments({
       workerId: worker._id,
-      status: { $in: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.WORK_DONE] }
+      status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] }
     });
 
     // 6. Calculate Average Rating dynamically from Review model
@@ -111,7 +111,7 @@ const getDashboardStats = async (req, res) => {
       {
         $match: {
           workerId: worker._id,
-          status: { $in: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.WORK_DONE] },
+          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
           isWorkerPaid: { $ne: true },
           workerPaymentStatus: { $ne: 'PAID' }
         }

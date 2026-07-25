@@ -855,6 +855,23 @@ const payWorker = async (req, res) => {
       }
     });
 
+    // Emit real-time socket event to worker
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`worker_${worker._id}`).emit('payment_received', {
+        amount: parseFloat(amount),
+        bookingId: booking._id,
+        balance: worker.wallet?.balance || 0
+      });
+      io.to(`worker_${worker._id}`).emit('wallet_updated', {
+        balance: worker.wallet?.balance || 0
+      });
+      io.to(`worker_${worker._id}`).emit('booking_updated', {
+        bookingId: booking._id,
+        status: booking.status
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: `Payment of ₹${amount} recorded for ${worker.name}`,
