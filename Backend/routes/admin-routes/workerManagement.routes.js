@@ -15,7 +15,12 @@ const {
   getAllWorkerJobs,
   getWorkerPaymentsSummary,
   toggleWorkerStatus,
-  deleteWorker
+  deleteWorker,
+  getWorkerSalaryLedgers,
+  adjustWorkerSalary,
+  getWorkerDisputes,
+  resolveWorkerDispute,
+  moderateWorkerRating
 } = require('../../controllers/adminControllers/adminWorkerController');
 
 // Validation rules
@@ -31,6 +36,11 @@ const payWorkerValidation = [
 
 // Routes
 router.get('/workers', authenticate, isAdmin, getAllWorkers);
+router.get('/workers/payouts', authenticate, isAdmin, getWorkerSalaryLedgers);
+router.post('/workers/:id/adjust-salary', authenticate, isAdmin, adjustWorkerSalary);
+router.get('/workers/disputes', authenticate, isAdmin, getWorkerDisputes);
+router.post('/workers/disputes/:disputeId/resolve', authenticate, isAdmin, resolveWorkerDispute);
+router.post('/workers/reviews/:reviewId/moderate', authenticate, isAdmin, moderateWorkerRating);
 router.get('/workers/jobs', authenticate, isAdmin, getAllWorkerJobs);
 router.get('/workers/payments', authenticate, isAdmin, getWorkerPaymentsSummary);
 router.get('/workers/:id', authenticate, isAdmin, getWorkerDetails);
@@ -38,8 +48,8 @@ router.post('/workers/:id/approve', authenticate, isAdmin, approveWorker);
 router.post('/workers/:id/reject', authenticate, isAdmin, rejectWorkerValidation, rejectWorker);
 router.post('/workers/:id/suspend', authenticate, isAdmin, suspendWorker);
 router.post('/workers/:id/pay', authenticate, isAdmin, payWorkerValidation, payWorker);
-router.patch('/workers/:id/status', authenticate, isAdmin, toggleWorkerStatus); // New
-router.delete('/workers/:id', authenticate, isAdmin, deleteWorker); // New
+router.patch('/workers/:id/status', authenticate, isAdmin, toggleWorkerStatus);
+router.delete('/workers/:id', authenticate, isAdmin, deleteWorker);
 router.get('/workers/:id/jobs', authenticate, isAdmin, getWorkerJobs);
 router.get('/workers/:id/earnings', authenticate, isAdmin, getWorkerEarnings);
 

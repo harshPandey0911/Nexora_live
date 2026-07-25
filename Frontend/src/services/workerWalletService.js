@@ -10,6 +10,15 @@ const workerWalletService = {
     }
   },
 
+  getWalletInfo: async () => {
+    try {
+      const response = await api.get('/workers/wallet');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   getTransactions: async (params) => {
     try {
       const response = await api.get('/workers/wallet/transactions', { params });

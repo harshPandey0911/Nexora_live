@@ -1300,10 +1300,6 @@ const SettlementManagement = () => {
               )}
             </div>
           )}
-
-          <div className="flex justify-end pt-2">
-            <Button variant="ghost" onClick={closeModals}>Close Ledger</Button>
-          </div>
         </div>
       </Modal>
 

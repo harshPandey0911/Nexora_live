@@ -61,22 +61,21 @@ const Wallet = () => {
   const fetchWalletData = async () => {
     try {
       setLoading(true);
-      const [walletRes, txnsRes] = await Promise.all([
+      const [walletResult, txnsResult] = await Promise.allSettled([
         workerWalletService.getWalletInfo(),
         workerWalletService.getTransactions()
       ]);
 
-      if (walletRes.success) {
-        setWallet(walletRes.data);
-        localStorage.setItem('workerWalletData', JSON.stringify(walletRes.data));
+      if (walletResult.status === 'fulfilled' && walletResult.value?.success) {
+        setWallet(walletResult.value.data);
+        localStorage.setItem('workerWalletData', JSON.stringify(walletResult.value.data));
       }
 
-      if (txnsRes.success) {
-        setTransactions(txnsRes.data || []);
+      if (txnsResult.status === 'fulfilled' && txnsResult.value?.success) {
+        setTransactions(txnsResult.value.data || []);
       }
     } catch (error) {
       console.error('Error fetching wallet data:', error);
-      toast.error('Failed to load wallet information');
     } finally {
       setLoading(false);
     }

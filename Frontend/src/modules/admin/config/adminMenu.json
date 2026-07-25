@@ -44,7 +44,9 @@
     "children": [
       "All Workers",
       "Worker Jobs",
-      "Worker Analytics"
+      "Worker Analytics",
+      "Salary Ledgers",
+      "Worker Disputes"
     ]
   },
 

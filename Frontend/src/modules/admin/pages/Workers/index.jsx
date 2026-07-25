@@ -8,6 +8,8 @@ import { FiUsers, FiClock, FiActivity, FiDollarSign } from 'react-icons/fi';
 import AllWorkers from './AllWorkers';
 import WorkerJobs from './WorkerJobs';
 import WorkerAnalytics from './WorkerAnalytics';
+import WorkerSalaryLedger from './WorkerSalaryLedger';
+import WorkerDisputes from './WorkerDisputes';
 
 const Workers = () => {
   const location = useLocation();
@@ -16,6 +18,8 @@ const Workers = () => {
     { name: 'All Workers', path: '/admin/workers/all', icon: FiUsers },
     { name: 'Worker Jobs', path: '/admin/workers/jobs', icon: FiClock },
     { name: 'Worker Analytics', path: '/admin/workers/analytics', icon: FiActivity },
+    { name: 'Salary Ledgers', path: '/admin/workers/payouts', icon: FiDollarSign },
+    { name: 'Worker Disputes', path: '/admin/workers/disputes', icon: FiUsers },
   ];
 
   const getPageTitle = () => {
@@ -37,6 +41,8 @@ const Workers = () => {
           <Route path="all" element={<AllWorkers />} />
           <Route path="jobs" element={<WorkerJobs />} />
           <Route path="analytics" element={<WorkerAnalytics />} />
+          <Route path="payouts" element={<WorkerSalaryLedger />} />
+          <Route path="disputes" element={<WorkerDisputes />} />
         </Routes>
       </motion.div>
     </div>

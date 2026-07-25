@@ -14,8 +14,16 @@ import { CustomDateInput } from '../../../../components/common';
 import Modal from '../UserCategories/components/Modal';
 import Pagination from '../../../../components/common/Pagination';
 
-const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass }) => (
-  <div className={`p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between ${bgClass}`}>
+const BookingStatsCard = ({ title, count, icon: Icon, colorClass, bgClass, onClick, isActive }) => (
+  <div 
+    onClick={onClick}
+    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${bgClass} ${
+      isActive 
+        ? 'border-blue-600 ring-2 ring-blue-500/30 shadow-md scale-[1.02]' 
+        : 'border-gray-100 shadow-sm'
+    }`}
+    title={`Click to filter by ${title}`}
+  >
     <div>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${colorClass.replace('text-', 'bg-').replace('600', '100')}`}>
         <Icon className={`w-4 h-4 ${colorClass}`} />
@@ -125,8 +133,14 @@ const AllBookings = () => {
         startDate,
         endDate
       };
-      if (statusFilter !== 'All Status') {
-        params.status = statusFilter.toUpperCase().replace(' ', '_');
+      if (statusFilter && statusFilter !== 'All Status') {
+        if (statusFilter.toLowerCase() === 'awaiting' || statusFilter.toLowerCase() === 'pending') {
+          params.status = 'PENDING';
+        } else if (statusFilter.toLowerCase() === 'in progress' || statusFilter.toLowerCase() === 'in_progress') {
+          params.status = 'IN_PROGRESS';
+        } else {
+          params.status = statusFilter.toUpperCase().replace(/ /g, '_');
+        }
       }
 
       const res = await adminBookingService.getAllBookings(params);
@@ -232,14 +246,102 @@ const AllBookings = () => {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <BookingStatsCard title="Awaiting" count={stats.pending} icon={FiClock} bgClass="bg-yellow-50" colorClass="text-yellow-600" />
-        <BookingStatsCard title="Confirmed" count={stats.pending} icon={FiCheckCircle} bgClass="bg-blue-50" colorClass="text-blue-600" />
-        <BookingStatsCard title="In Progress" count={stats.inProgress} icon={FiBox} bgClass="bg-purple-50" colorClass="text-purple-600" />
-        <BookingStatsCard title="Completed" count={stats.completed} icon={FiTruck} bgClass="bg-green-50" colorClass="text-green-600" />
-        <BookingStatsCard title="Delivered" count={stats.completed} icon={FiCheckCircle} bgClass="bg-emerald-50" colorClass="text-emerald-600" />
-        <BookingStatsCard title="Cancelled" count={stats.cancelled} icon={FiXCircle} bgClass="bg-red-50" colorClass="text-red-600" />
-        <BookingStatsCard title="Returned" count={0} icon={FiRefreshCw} bgClass="bg-orange-50" colorClass="text-orange-600" />
-        <BookingStatsCard title="Total Orders" count={stats.total} icon={FiShoppingBag} bgClass="bg-gray-50" colorClass="text-gray-600" />
+        <BookingStatsCard
+          title="Awaiting"
+          count={stats.pending}
+          icon={FiClock}
+          bgClass="bg-yellow-50"
+          colorClass="text-yellow-600"
+          isActive={statusFilter.toLowerCase() === 'awaiting' || statusFilter.toLowerCase() === 'pending'}
+          onClick={() => {
+            setStatusFilter('Awaiting');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Confirmed"
+          count={stats.confirmed || stats.pending}
+          icon={FiCheckCircle}
+          bgClass="bg-blue-50"
+          colorClass="text-blue-600"
+          isActive={statusFilter.toLowerCase() === 'confirmed'}
+          onClick={() => {
+            setStatusFilter('Confirmed');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="In Progress"
+          count={stats.inProgress}
+          icon={FiBox}
+          bgClass="bg-purple-50"
+          colorClass="text-purple-600"
+          isActive={statusFilter.toLowerCase() === 'in progress' || statusFilter.toLowerCase() === 'in_progress'}
+          onClick={() => {
+            setStatusFilter('In Progress');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Completed"
+          count={stats.completed}
+          icon={FiTruck}
+          bgClass="bg-green-50"
+          colorClass="text-green-600"
+          isActive={statusFilter.toLowerCase() === 'completed'}
+          onClick={() => {
+            setStatusFilter('Completed');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Delivered"
+          count={stats.completed}
+          icon={FiCheckCircle}
+          bgClass="bg-emerald-50"
+          colorClass="text-emerald-600"
+          isActive={statusFilter.toLowerCase() === 'delivered'}
+          onClick={() => {
+            setStatusFilter('Delivered');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Cancelled"
+          count={stats.cancelled}
+          icon={FiXCircle}
+          bgClass="bg-red-50"
+          colorClass="text-red-600"
+          isActive={statusFilter.toLowerCase() === 'cancelled'}
+          onClick={() => {
+            setStatusFilter('Cancelled');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Returned"
+          count={0}
+          icon={FiRefreshCw}
+          bgClass="bg-orange-50"
+          colorClass="text-orange-600"
+          isActive={statusFilter.toLowerCase() === 'returned'}
+          onClick={() => {
+            setStatusFilter('Returned');
+            setPage(1);
+          }}
+        />
+        <BookingStatsCard
+          title="Total Orders"
+          count={stats.total}
+          icon={FiShoppingBag}
+          bgClass="bg-gray-50"
+          colorClass="text-gray-600"
+          isActive={statusFilter === 'All Status'}
+          onClick={() => {
+            setStatusFilter('All Status');
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Filter Bar */}
@@ -258,16 +360,21 @@ const AllBookings = () => {
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:border-green-500 cursor-pointer"
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-xs text-gray-600 focus:outline-none focus:border-green-500 cursor-pointer font-medium"
           >
-            <option>All Status</option>
-            <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="escalated">Escalated</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
+            <option value="All Status">All Status</option>
+            <option value="Awaiting">Awaiting / Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Cancelled">Cancelled</option>
+            <option value="Returned">Returned</option>
+            <option value="Escalated">Escalated</option>
           </select>
 
           <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">
