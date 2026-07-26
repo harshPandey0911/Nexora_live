@@ -297,6 +297,7 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
           },
           pushData: {
             type: 'new_booking',
+            priority: 'high',
             dataOnly: false,
             link: `/vendor/bookings/${booking._id}`
           }

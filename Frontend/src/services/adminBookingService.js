@@ -42,12 +42,22 @@ export const adminBookingService = {
   },
 
   // Assign vendor manually
-  assignVendor: async (id, vendorId) => {
+  assignVendor: async (id, vendorId, forceAssign = false) => {
     try {
-      const response = await api.post(`/admin/bookings/${id}/assign`, { vendorId });
+      const response = await api.post(`/admin/bookings/${id}/assign`, { vendorId, forceAssign });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to assign vendor' };
+    }
+  },
+
+  // Get categorized eligible vendors
+  getEligibleVendors: async (id) => {
+    try {
+      const response = await api.get(`/admin/bookings/${id}/eligible-vendors`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to fetch eligible vendors' };
     }
   }
 };

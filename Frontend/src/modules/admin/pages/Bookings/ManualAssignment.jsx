@@ -212,9 +212,10 @@ const ManualAssignment = () => {
   const [vendors, setVendors] = useState([]);
   const [vendorsLoading, setVendorsLoading] = useState(false);
   const [viewingVendorId, setViewingVendorId] = useState(null);
+  const [confirmVendorModal, setConfirmVendorModal] = useState(null);
 
   // Lock background scroll when assign or vendor profile modal is active
-  useScrollLock(showAssignModal || !!viewingVendorId);
+  useScrollLock(showAssignModal || !!viewingVendorId || !!confirmVendorModal);
 
   const fetchEscalatedBookings = useCallback(async (silent = false) => {
     try {
@@ -265,8 +266,14 @@ const ManualAssignment = () => {
     setShowAssignModal(true);
     setVendorsLoading(true);
     try {
-      const res = await adminVendorService.getAllVendors({ status: 'approved' });
-      if (res.success) setVendors(res.data || []);
+      const res = await adminBookingService.getEligibleVendors(booking._id);
+      if (res.success && res.data?.vendors) {
+        const { tier1_fullyQualified = [], tier2_categoryQualified = [] } = res.data.vendors;
+        setVendors([...tier1_fullyQualified, ...tier2_categoryQualified]);
+      } else {
+        const fallbackRes = await adminVendorService.getAllVendors({ status: 'approved' });
+        if (fallbackRes.success) setVendors(fallbackRes.data || []);
+      }
     } catch (e) {
       toast.error('Failed to load vendors');
     } finally {
@@ -274,16 +281,22 @@ const ManualAssignment = () => {
     }
   };
 
-  const handleAssignVendor = async (vendorId) => {
+  const handleAssignVendor = async (vendorId, forceAssign = false) => {
     try {
-      const res = await adminBookingService.assignVendor(selectedBooking._id, vendorId);
+      const res = await adminBookingService.assignVendor(selectedBooking._id, vendorId, forceAssign);
       if (res.success) {
         toast.success('Vendor assigned! They have 30 minutes to accept.');
         setShowAssignModal(false);
+        setConfirmVendorModal(null);
         fetchEscalatedBookings();
       }
     } catch (e) {
-      toast.error(e.message || 'Failed to assign vendor');
+      if (e.requireConfirmation || e.response?.data?.requireConfirmation) {
+        const msg = e.message || e.response?.data?.message || 'Vendor does not hold an active subscription for this service. Set forceAssign=true to confirm override.';
+        setConfirmVendorModal({ vendorId, message: msg });
+      } else {
+        toast.error(e.message || 'Failed to assign vendor');
+      }
     }
   };
 
@@ -642,11 +655,11 @@ const ManualAssignment = () => {
                     <div
                       key={vendor._id}
                       className={`p-3 border rounded-xl flex items-center justify-between transition-colors group ${
-                        hasDeclined ? 'bg-rose-50/40 border-rose-200' : 'border-gray-100 hover:bg-gray-50'
+                        hasDeclined ? 'bg-rose-50/40 border-rose-200' : vendor.tier === 3 ? 'bg-amber-50/20 border-amber-200/60' : 'border-gray-100 hover:bg-gray-50'
                       }`}
                     >
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <button
                             type="button"
                             onClick={() => setViewingVendorId(vendor._id)}
@@ -659,22 +672,44 @@ const ManualAssignment = () => {
                               Declined
                             </span>
                           )}
+                          {vendor.tier === 1 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              🟢 Fully Qualified
+                            </span>
+                          )}
+                          {vendor.tier === 2 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              🟡 Category Match
+                            </span>
+                          )}
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{vendor.email} • {vendor.phone}</p>
-                        <div className="flex items-center gap-1.5 mt-1">
+
+                        <p className="text-[10px] text-gray-400">{vendor.email} • {vendor.phone}</p>
+
+                        {/* Capability Note */}
+                        {vendor.tier === 3 && (
+                          <div className="text-[9.5px] font-medium text-rose-600 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-100 inline-block">
+                            ⚠️ Missing subscription for "{selectedBooking?.serviceName}"
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-1.5">
                           <span className={`w-1.5 h-1.5 rounded-full ${vendor.isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
                           <span className="text-[10px] text-gray-400">{vendor.isOnline ? 'Online' : 'Offline'} • {vendor.availability || 'N/A'}</span>
                         </div>
                       </div>
+
                       <button
-                        onClick={() => handleAssignVendor(vendor._id)}
-                        className={`px-3 py-1.5 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer ${
+                        onClick={() => handleAssignVendor(vendor._id, vendor.tier === 3)}
+                        className={`px-3 py-1.5 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer shrink-0 ml-3 ${
                           hasDeclined 
-                            ? 'bg-rose-600 hover:bg-rose-700' 
-                            : 'bg-blue-600 group-hover:bg-blue-700'
+                            ? 'bg-rose-600 hover:bg-rose-700 shadow-sm shadow-rose-200' 
+                            : vendor.tier === 3
+                            ? 'bg-amber-600 hover:bg-amber-700 shadow-sm shadow-amber-200'
+                            : 'bg-blue-600 group-hover:bg-blue-700 shadow-sm shadow-blue-200'
                         }`}
                       >
-                        <FiUserCheck className="w-3 h-3" /> {hasDeclined ? 'Re-Assign' : 'Assign'}
+                        <FiUserCheck className="w-3 h-3" /> {hasDeclined ? 'Re-Assign' : vendor.tier === 3 ? 'Force Assign' : 'Assign'}
                       </button>
                     </div>
                   );
@@ -691,6 +726,37 @@ const ManualAssignment = () => {
         isOpen={!!viewingVendorId}
         onClose={() => setViewingVendorId(null)}
       />
+
+      {/* Capability Mismatch Confirmation Warning Modal */}
+      {confirmVendorModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl shadow-2xl p-5 max-w-sm w-full space-y-4 text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl font-bold">
+              ⚠️
+            </div>
+            <h4 className="font-bold text-gray-900 text-sm">Capability Mismatch Warning</h4>
+            <p className="text-xs text-gray-600 leading-relaxed">{confirmVendorModal.message}</p>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setConfirmVendorModal(null)}
+                className="flex-1 py-2 px-3 border border-gray-200 rounded-lg text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleAssignVendor(confirmVendorModal.vendorId, true)}
+                className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold shadow-md shadow-amber-200 transition-colors"
+              >
+                Force Assign
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };

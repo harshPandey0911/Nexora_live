@@ -167,9 +167,9 @@ const AdminLayout = () => {
     }
   };
 
-  const handleAssignVendor = async (vendorId) => {
+  const handleAssignVendor = async (vendorId, forceAssign = false) => {
     try {
-      const res = await adminBookingService.assignVendor(activeAlert._id, vendorId);
+      const res = await adminBookingService.assignVendor(activeAlert._id, vendorId, forceAssign);
       if (res.success) {
         toast.success('Vendor assigned successfully!');
         stopAlarm();
@@ -179,7 +179,14 @@ const AdminLayout = () => {
         window.dispatchEvent(new Event('adminBookingAssigned'));
       }
     } catch (e) {
-      toast.error(e.message || 'Failed to assign vendor');
+      if (e.requireConfirmation || e.response?.data?.requireConfirmation) {
+        const msg = e.message || e.response?.data?.message || 'Vendor does not hold active subscription. Force assign anyway?';
+        if (window.confirm(`${msg}\n\nClick OK to Force Assign.`)) {
+          handleAssignVendor(vendorId, true);
+        }
+      } else {
+        toast.error(e.message || 'Failed to assign vendor');
+      }
     }
   };
 

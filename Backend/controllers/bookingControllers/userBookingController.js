@@ -137,40 +137,85 @@ const createBooking = async (req, res) => {
     let nearbyVendors = [];
     let subscribedVendorIds = [];
     
-    // IF VENDOR ID IS PROVIDED BY FRONTEND OR SERVICE HAS A VENDOR ID, ONLY NOTIFY THAT VENDOR (EXCLUSIVE)
-    let targetVendorId = vendorId || service.vendorId;
+    // EXCLUSIVE lock: ONLY apply if the frontend explicitly requested direct single-vendor booking.
+    const isDirectBooking = (bookingType || '').toUpperCase() === 'DIRECT' || req.body.isDirectVendorBooking === true;
+    let targetVendorId = (isDirectBooking && vendorId) ? vendorId : null;
 
     if (targetVendorId) {
-      console.log(`[CreateBooking] targetVendorId found: ${targetVendorId}`);
+      console.log(`[CreateBooking] Direct single-vendor booking requested for vendorId: ${targetVendorId}`);
       const ownerVendor = await Vendor.findById(targetVendorId);
       if (ownerVendor) {
-        console.log(`[CreateBooking] Selected vendor: ${ownerVendor.businessName} (${ownerVendor._id})`);
-        // Mock a nearby vendor object for the downstream logic
+        console.log(`[CreateBooking] Exclusively routing to vendor: ${ownerVendor.businessName} (${ownerVendor._id})`);
         nearbyVendors = [{
           _id: ownerVendor._id,
-          distance: 0, // Explicitly selected
+          distance: 0,
           businessName: ownerVendor.businessName,
           phone: ownerVendor.phone
         }];
         subscribedVendorIds = [ownerVendor._id.toString()];
       } else {
-        console.log(`[CreateBooking] Target vendor NOT found for id: ${targetVendorId}`);
+        console.log(`[CreateBooking] Target vendor NOT found for id: ${targetVendorId} — falling back to wave system`);
+        targetVendorId = null;
       }
-    } else {
+    }
+
+    if (!targetVendorId) {
       console.log(`[LocationService] Searching vendors with: center=${JSON.stringify(bookingLocation)}, radius=10km, filters=${JSON.stringify(vendorFilters)}`);
       const rawNearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
 
-      // Find all vendors who have subscribed to this service
+      // Multi-Item Cart Capability Intersection:
+      // Collect all service titles from bookedItems (or main service title)
       const ServiceModel = require('../../models/UserService');
-      const subscriptions = await ServiceModel.find({
-        title: service.title,
-        vendorId: { $ne: null },
-        status: 'active'
-      }).select('vendorId').lean();
-      subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
-      console.log(`[CreateBooking] Vendors subscribed to "${service.title}":`, subscribedVendorIds);
+      const CategoryModel = require('../../models/Category');
+      
+      const requiredTitles = [];
+      if (Array.isArray(req.body.bookedItems) && req.body.bookedItems.length > 0) {
+        req.body.bookedItems.forEach(item => {
+          const itemTitle = item.card?.title || item.title || item.serviceName;
+          if (itemTitle && itemTitle.trim() && !requiredTitles.includes(itemTitle.trim())) {
+            requiredTitles.push(itemTitle.trim());
+          }
+        });
+      }
+      if (requiredTitles.length === 0 && service.title) {
+        requiredTitles.push(service.title.trim());
+      }
 
-      // Filter nearby vendors to only those who are subscribed
+      console.log(`[CreateBooking] Required services for full cart fulfillment:`, requiredTitles);
+
+      // For each required service title, find vendors with active subscriptions
+      const vendorIdSets = await Promise.all(
+        requiredTitles.map(async (title) => {
+          const titleRegex = new RegExp(title.replace(/\s+/g, '\\s*'), 'i');
+          const subs = await ServiceModel.find({
+            title: titleRegex,
+            status: 'active'
+          }).select('vendorId').lean();
+          return new Set(subs.map(s => s.vendorId?.toString()).filter(Boolean));
+        })
+      );
+
+      // Perform INTERSECTION (ALL items required) across vendor ID sets
+      let fullyQualifiedVendorIds = [];
+      if (vendorIdSets.length > 0) {
+        const firstSet = vendorIdSets[0];
+        fullyQualifiedVendorIds = Array.from(firstSet).filter(vId =>
+          vendorIdSets.every(set => set.has(vId))
+        );
+      }
+
+      // Fallback: If no single vendor offers ALL items in the cart, fall back to union of active subscribers
+      if (fullyQualifiedVendorIds.length === 0 && vendorIdSets.length > 0) {
+        console.log(`[CreateBooking] No single vendor offers ALL cart items. Falling back to union of qualified vendors...`);
+        const unionSet = new Set();
+        vendorIdSets.forEach(set => set.forEach(vId => unionSet.add(vId)));
+        fullyQualifiedVendorIds = Array.from(unionSet);
+      }
+
+      subscribedVendorIds = fullyQualifiedVendorIds;
+      console.log(`[CreateBooking] Fully qualified vendors offering all items in cart:`, subscribedVendorIds);
+
+      // STRICT Filtering: ONLY include nearby vendors who are fully qualified
       nearbyVendors = rawNearbyVendors.filter(v => subscribedVendorIds.includes(v._id.toString()));
     }
     console.log(`[CreateBooking] Final nearbyVendors count: ${nearbyVendors.length}`);
@@ -465,6 +510,15 @@ const createBooking = async (req, res) => {
           // Just set the notified vendors to the assigned vendor
           bookingForBackground.notifiedVendors = [targetVendorId];
           await bookingForBackground.save();
+
+          // Create BookingRequest record for database consistency
+          const BookingRequest = require('../../models/BookingRequest');
+          await BookingRequest.create({
+            bookingId: bookingForBackground._id,
+            vendorId: targetVendorId,
+            status: 'ACCEPTED',
+            sentAt: new Date()
+          });
 
           // Emit socket only to this vendor
           const { getIO } = require('../../sockets');

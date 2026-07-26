@@ -111,7 +111,8 @@ async function registerFCMToken(userType = 'user', forceUpdate = false) {
     // Request permission
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      throw new Error('Notification permission denied by browser. Please enable notifications in your browser address bar/settings.');
+      console.warn('[FCM] Notification permission denied by browser settings (e.g. Incognito Mode). Web push notifications are disabled.');
+      return null;
     }
 
     // Get token

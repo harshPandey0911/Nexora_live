@@ -619,9 +619,8 @@ const rejectBooking = async (req, res) => {
       ? req.user.businessName
       : (req.user?.name || req.user?.phone || 'Vendor');
 
-    // Capture original vendorId before nullifying it
+    // Capture original vendorId before updating it
     const originalVendorId = (booking.vendorId?._id || booking.vendorId)?.toString();
-    const wasAssignedToThisVendor = originalVendorId && originalVendorId === vendorId.toString();
 
     // Update BookingRequest record for this vendor (if exists)
     const BookingRequest = require('../../models/BookingRequest');
@@ -639,14 +638,10 @@ const rejectBooking = async (req, res) => {
       v => v.toString() !== vendorId.toString()
     );
     booking.potentialVendors = (booking.potentialVendors || []).filter(
-      v => v.vendorId?.toString() !== vendorId.toString()
+      v => (v.vendorId?._id || v.vendorId || v).toString() !== vendorId.toString()
     );
 
-    // Escalate to admin in all cases
     booking.rejectedAt = now;
-    booking.status = BOOKING_STATUS.ESCALATED;
-    booking.isEscalatedToAdmin = true;
-    booking.adminAssignmentStatus = 'DECLINED';
     booking.vendorId = null;
 
     booking.activityLog.push({
@@ -661,67 +656,178 @@ const rejectBooking = async (req, res) => {
       }
     });
 
-    await booking.save();
-
-    // Notify user that their booking is being escalated
     const io = req.app.get('io');
     if (io) {
-      io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
+      // Dismiss ringing modal for the rejecting vendor
+      io.to(`vendor_${vendorId}`).emit('booking_dismissed_vendor', {
         bookingId: booking._id,
-        bookingNumber: booking.bookingNumber,
-        message: 'Our admin team is manually assigning a professional for your service.'
+        bookingNumber: booking.bookingNumber
       });
     }
 
-    // Create persistent DB notification for all active admins
-    try {
-      const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
-      if (activeAdmins.length > 0) {
-        await Promise.all(
-          activeAdmins.map(admin =>
-            createNotification({
-              adminId: admin._id,
-              type: 'general',
-              title: 'Vendor Rejected Booking',
-              message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}. Needs reassignment.`,
-              relatedId: booking._id,
-              relatedType: 'booking',
-              data: {
-                bookingId: booking._id.toString(),
-                bookingNumber: booking.bookingNumber,
-                vendorId: vendorId.toString(),
-                reason: reason || ''
-              }
-            })
-          )
+    // CHECK IF REMAINING VENDORS EXIST IN POTENTIAL VENDORS POOL
+    if (booking.potentialVendors && booking.potentialVendors.length > 0) {
+      console.log(`[RejectBooking] ${booking.bookingNumber} rejected by vendor ${vendorId}. ${booking.potentialVendors.length} potential vendor(s) remaining. Cascading...`);
+
+      // Keep booking status active so other vendors or scheduler can process it
+      booking.status = BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE;
+      await booking.save();
+
+      // Find next candidate in potentialVendors that has NOT been notified yet
+      const nextCandidate = booking.potentialVendors.find(
+        pv => !booking.notifiedVendors.some(nv => nv.toString() === (pv.vendorId?._id || pv.vendorId || pv).toString())
+      );
+
+      if (nextCandidate) {
+        const nextVendorId = (nextCandidate.vendorId?._id || nextCandidate.vendorId || nextCandidate).toString();
+        console.log(`[RejectBooking] Immediately alerting next candidate vendor: ${nextVendorId}`);
+
+        booking.notifiedVendors.push(nextVendorId);
+        await booking.save();
+
+        // Create BookingRequest entry for next vendor
+        await BookingRequest.findOneAndUpdate(
+          { bookingId: id, vendorId: nextVendorId },
+          {
+            status: 'PENDING',
+            wave: booking.currentWave || 1,
+            distance: nextCandidate.distance || null,
+            sentAt: now,
+            expiresAt: new Date(Date.now() + 60 * 1000)
+          },
+          { upsert: true }
         );
+
+        // Notify next vendor via Socket.IO
+        if (io) {
+          io.to(`vendor_${nextVendorId}`).emit('new_booking_request', {
+            bookingId: booking._id,
+            bookingNumber: booking.bookingNumber,
+            serviceName: booking.serviceName,
+            customerName: booking.userId?.name || 'Customer',
+            customerPhone: booking.userId?.phone,
+            scheduledDate: booking.scheduledDate,
+            scheduledTime: booking.scheduledTime,
+            price: booking.finalAmount,
+            address: booking.address,
+            distance: nextCandidate.distance,
+            serviceCategory: booking.serviceCategory,
+            brandName: booking.brandName,
+            brandIcon: booking.brandIcon,
+            categoryIcon: booking.categoryIcon,
+            createdAt: booking.createdAt || new Date(),
+            expiresAt: new Date(new Date(booking.createdAt || Date.now()).getTime() + (2 * 60 * 1000)).toISOString(),
+            playSound: true,
+            status: booking.status,
+            message: `New booking request within ${nextCandidate.distance?.toFixed(1) || '?'}km!`
+          });
+        }
+
+        // Notify next vendor via Push Notification
+        try {
+          await createNotification({
+            vendorId: nextVendorId,
+            type: 'booking_request',
+            title: 'New Booking Request',
+            message: `New service request for ${booking.serviceName} from ${booking.userId?.name || 'Customer'}`,
+            relatedId: booking._id,
+            relatedType: 'booking',
+            data: {
+              bookingId: booking._id.toString(),
+              serviceName: booking.serviceName,
+              customerName: booking.userId?.name,
+              customerPhone: booking.userId?.phone,
+              scheduledDate: booking.scheduledDate,
+              scheduledTime: booking.scheduledTime,
+              location: booking.address,
+              price: booking.finalAmount,
+              distance: nextCandidate.distance
+            },
+            pushData: {
+              type: 'new_booking',
+              priority: 'high',
+              dataOnly: false,
+              link: `/vendor/bookings/${booking._id}`
+            }
+          });
+        } catch (notifErr) {
+          console.error('[RejectBooking] Cascade notification error:', notifErr.message);
+        }
       }
-    } catch (adminNotifErr) {
-      console.error('[RejectBooking] Admin DB notification error:', adminNotifErr.message);
-    }
 
-    // Emit real-time socket alerts to admin
-    if (io) {
-      const rejectPayload = {
-        bookingId: booking._id,
-        bookingNumber: booking.bookingNumber,
-        vendorId: vendorId,
-        vendorName: vendorName,
-        reason: reason || 'Rejected by vendor',
-        status: booking.status,
-        message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}`
-      };
-      console.log(`[RejectBooking] Emitting vendor_rejected_booking & adminBookingDecline for #${booking.bookingNumber} by ${vendorName}`);
-      io.emit('adminBookingDecline', rejectPayload);
-      io.emit('adminBookingEscalated', rejectPayload);
-      io.to('admin_room').emit('vendor_rejected_booking', rejectPayload);
-    }
+      return res.status(200).json({
+        success: true,
+        message: 'Booking request declined. System is routing to next available vendor.',
+        data: { bookingId: id }
+      });
 
-    res.status(200).json({
-      success: true,
-      message: 'Booking rejected successfully. Admin has been notified for reassignment.',
-      data: { bookingId: id }
-    });
+    } else {
+      // EXHAUSTED ALL VENDORS -> NOW ESCALATE TO ADMIN
+      console.log(`[RejectBooking] ${booking.bookingNumber} rejected by vendor ${vendorId}. Potential vendors pool exhausted. Escalating to admin...`);
+
+      booking.status = BOOKING_STATUS.ESCALATED;
+      booking.isEscalatedToAdmin = true;
+      booking.adminAssignmentStatus = 'DECLINED';
+      await booking.save();
+
+      // Notify user that their booking is being escalated
+      if (io) {
+        io.to(`user_${booking.userId}`).emit('booking_escalated_to_admin', {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          message: 'Our admin team is manually assigning a professional for your service.'
+        });
+      }
+
+      // Create persistent DB notification for all active admins
+      try {
+        const activeAdmins = await Admin.find({ isActive: true }).select('_id').lean();
+        if (activeAdmins.length > 0) {
+          await Promise.all(
+            activeAdmins.map(admin =>
+              createNotification({
+                adminId: admin._id,
+                type: 'general',
+                title: 'Vendor Rejected Booking',
+                message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}. All vendors exhausted. Needs manual assignment.`,
+                relatedId: booking._id,
+                relatedType: 'booking',
+                data: {
+                  bookingId: booking._id.toString(),
+                  bookingNumber: booking.bookingNumber,
+                  vendorId: vendorId.toString(),
+                  reason: reason || ''
+                }
+              })
+            )
+          );
+        }
+      } catch (adminNotifErr) {
+        console.error('[RejectBooking] Admin DB notification error:', adminNotifErr.message);
+      }
+
+      // Emit real-time socket alerts to admin
+      if (io) {
+        const rejectPayload = {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          vendorId: vendorId,
+          vendorName: vendorName,
+          reason: reason || 'Rejected by vendor',
+          status: booking.status,
+          message: `Vendor ${vendorName} rejected booking #${booking.bookingNumber}. Pool exhausted.`
+        };
+        io.emit('adminBookingDecline', rejectPayload);
+        io.emit('adminBookingEscalated', rejectPayload);
+        io.to('admin_room').emit('vendor_rejected_booking', rejectPayload);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Booking rejected. All nearby vendors exhausted; order escalated to admin for manual assignment.',
+        data: { bookingId: id }
+      });
+    }
   } catch (error) {
     console.error('Reject booking error:', error);
     res.status(500).json({
@@ -1161,6 +1267,14 @@ const updateBookingStatus = async (req, res) => {
         bookingId: booking._id,
         status: booking.status,
         message: `Booking status updated to ${booking.status}`
+      });
+
+      // Real-time broadcast to Admin Dashboard & Manual Assignment
+      io.emit('adminBookingStatusChanged', {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        status: booking.status,
+        vendorId: vendorId
       });
 
       if (status === BOOKING_STATUS.CANCELLED) {

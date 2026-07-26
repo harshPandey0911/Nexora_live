@@ -194,16 +194,32 @@ const addVendorCategory = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Master service not found' });
       }
 
+      const targetCatId = categoryId || masterService.categoryId;
+      let catTitle = masterService.category;
+      if (!catTitle && targetCatId) {
+        const catDoc = await Category.findById(targetCatId).select('title').lean();
+        if (catDoc) catTitle = catDoc.title;
+      }
+
       const existing = await Service.findOne({ title: masterService.title, vendorId });
       if (existing) {
+        if (existing.status === 'inactive') {
+          existing.status = 'active';
+          if (basePrice) existing.basePrice = basePrice;
+          existing.categoryId = targetCatId;
+          if (catTitle) existing.category = catTitle;
+          await existing.save();
+          return res.status(200).json({ success: true, message: 'Service reactivated in your portfolio', data: existing });
+        }
         return res.status(400).json({ success: false, message: 'Service already exists in your portfolio' });
       }
 
       const service = await Service.create({
         title: masterService.title,
+        category: catTitle,
         description: masterService.description,
         basePrice: masterService.basePrice, // Fixed price set by Admin
-        categoryId: categoryId || masterService.categoryId,
+        categoryId: targetCatId,
         vendorId,
         iconUrl: masterService.iconUrl,
         detailedDescription: masterService.detailedDescription,
@@ -254,6 +270,19 @@ const addVendorCategory = async (req, res) => {
         });
       }
       finalCategoryId = vendorCat._id;
+    }
+
+    const existingCustom = await Service.findOne({ title: new RegExp(`^${title.trim()}$`, 'i'), vendorId });
+    if (existingCustom) {
+      if (existingCustom.status === 'inactive') {
+        existingCustom.status = 'active';
+        existingCustom.basePrice = basePrice;
+        existingCustom.categoryId = finalCategoryId;
+        if (description) existingCustom.description = description;
+        await existingCustom.save();
+        return res.status(200).json({ success: true, message: 'Service reactivated in your portfolio', data: existingCustom });
+      }
+      return res.status(400).json({ success: false, message: 'Service already exists in your portfolio' });
     }
 
     const service = await Service.create({

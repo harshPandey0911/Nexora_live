@@ -143,9 +143,11 @@ class BookingScheduler {
       }
 
       // --- CIRCUIT BREAKER: Fast query to detect if any work is needed ---
+      // NOTE: Must include WAITING_FOR_VENDOR_RESPONSE — vendorMatchingService sets this status
+      // after Wave 1. Without it, Wave 2, 3, 4 never fire because the scheduler can't find them.
       const activeBookings = await Booking.find(
         {
-          status: BOOKING_STATUS.SEARCHING,
+          status: { $in: [BOOKING_STATUS.SEARCHING, BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE] },
           waveStartedAt: { $ne: null },
           potentialVendors: { $exists: true, $not: { $size: 0 } }
         },
@@ -175,9 +177,9 @@ class BookingScheduler {
 
             // --- EXPIRY CHECK ---
             if (totalElapsed > MAX_SEARCH_TIME_MS) {
-              // Try atomic update to ESCALATED
+              // Try atomic update to ESCALATED — match both active search statuses
               const updateResult = await Booking.updateOne(
-                { _id: booking._id, status: BOOKING_STATUS.SEARCHING },
+                { _id: booking._id, status: { $in: [BOOKING_STATUS.SEARCHING, BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE] } },
                 {
                   $set: {
                     status: BOOKING_STATUS.ESCALATED,

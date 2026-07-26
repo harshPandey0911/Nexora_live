@@ -353,12 +353,127 @@ const getBookingAnalytics = async (req, res) => {
 };
 
 /**
+ * Get category-restricted eligible vendors for manual assignment by Admin
+ */
+const getEligibleVendorsForAssignment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const booking = await Booking.findById(id).lean();
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    const Vendor = require('../../models/Vendor');
+    const UserService = require('../../models/UserService');
+    const Category = require('../../models/Category');
+
+    // Extract booking category
+    const bookingCategory = (booking.serviceCategory || '').trim();
+    const categoryRegex = new RegExp(bookingCategory, 'i');
+
+    // Find all category IDs matching booking category name
+    const matchedCats = await Category.find({ title: categoryRegex }).select('_id').lean();
+    const matchedCatIds = matchedCats.map(c => c._id);
+
+    // Find all vendors with active UserService subscriptions in this category or title
+    const categorySubscriptions = await UserService.find({
+      $or: [
+        { categoryId: { $in: matchedCatIds } },
+        { category: categoryRegex },
+        { title: categoryRegex },
+        { title: { $regex: new RegExp(bookingCategory.replace(/\s+/g, '\\s*'), 'i') } }
+      ],
+      status: 'active'
+    }).select('vendorId title').lean();
+
+    const categoryVendorIds = Array.from(new Set(categorySubscriptions.map(s => s.vendorId?.toString()).filter(Boolean)));
+
+    // Extract all required service titles from bookedItems (or serviceName)
+    const requiredTitles = [];
+    if (Array.isArray(booking.bookedItems) && booking.bookedItems.length > 0) {
+      booking.bookedItems.forEach(item => {
+        const title = item.card?.title || item.title || item.serviceName;
+        if (title && title.trim() && !requiredTitles.includes(title.trim())) {
+          requiredTitles.push(title.trim());
+        }
+      });
+    }
+    if (requiredTitles.length === 0 && booking.serviceName) {
+      requiredTitles.push(booking.serviceName.trim());
+    }
+
+    const city = booking.address?.city;
+    const query = {
+      _id: { $in: categoryVendorIds },
+      approvalStatus: 'approved',
+      isActive: true
+    };
+    if (city) {
+      query['address.city'] = { $regex: new RegExp(city.trim(), 'i') };
+    }
+
+    const categoryVendors = await Vendor.find(query)
+      .select('name businessName email phone address profilePhoto rating level isOnline availability')
+      .lean();
+
+    // Separate into Fully Qualified (All Items) vs Category Qualified
+    const vendorIdSets = await Promise.all(
+      requiredTitles.map(async (title) => {
+        const titleRegex = new RegExp(title.replace(/\s+/g, '\\s*'), 'i');
+        const subs = await UserService.find({
+          vendorId: { $in: categoryVendorIds },
+          title: titleRegex,
+          status: 'active'
+        }).select('vendorId').lean();
+        return new Set(subs.map(s => s.vendorId?.toString()).filter(Boolean));
+      })
+    );
+
+    const tier1Set = new Set(
+      vendorIdSets.length > 0
+        ? Array.from(vendorIdSets[0]).filter(vId => vendorIdSets.every(set => set.has(vId)))
+        : []
+    );
+
+    const tier1 = [];
+    const tier2 = [];
+
+    categoryVendors.forEach(v => {
+      const vId = v._id.toString();
+      if (tier1Set.has(vId)) {
+        tier1.push({ ...v, tier: 1, qualification: 'Fully Qualified (All Items)' });
+      } else {
+        tier2.push({ ...v, tier: 2, qualification: 'Category Qualified' });
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        bookingId: booking._id,
+        bookingNumber: booking.bookingNumber,
+        requiredTitles,
+        serviceCategory: booking.serviceCategory,
+        vendors: {
+          tier1_fullyQualified: tier1,
+          tier2_categoryQualified: tier2,
+          categoryVendorsCount: categoryVendors.length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('getEligibleVendorsForAssignment error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch eligible vendors' });
+  }
+};
+
+/**
  * Manually assign a vendor to an escalated/searching booking
  */
 const assignVendor = async (req, res) => {
   try {
     const { id } = req.params;
-    const { vendorId } = req.body;
+    const { vendorId, forceAssign, confirmMismatch } = req.body;
 
     if (!vendorId) {
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
@@ -367,6 +482,49 @@ const assignVendor = async (req, res) => {
     const booking = await Booking.findById(id);
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Capability Check Safeguard:
+    if (!forceAssign && !confirmMismatch) {
+      const UserService = require('../../models/UserService');
+      const requiredTitles = [];
+      if (Array.isArray(booking.bookedItems) && booking.bookedItems.length > 0) {
+        booking.bookedItems.forEach(item => {
+          const title = item.card?.title || item.title || item.serviceName;
+          if (title && title.trim() && !requiredTitles.includes(title.trim())) {
+            requiredTitles.push(title.trim());
+          }
+        });
+      }
+      if (requiredTitles.length === 0 && booking.serviceName) {
+        requiredTitles.push(booking.serviceName.trim());
+      }
+
+      // Check if assigned vendor has subscriptions
+      const vendorSubs = await UserService.find({
+        vendorId,
+        status: 'active'
+      }).select('title category').lean();
+
+      const vendorSubTitles = vendorSubs.map(s => s.title?.toLowerCase().replace(/\s+/g, ''));
+      const vendorSubCats = vendorSubs.map(s => s.category?.toLowerCase());
+      const bookingCat = (booking.serviceCategory || '').toLowerCase();
+
+      const hasAllTitles = requiredTitles.every(t =>
+        vendorSubTitles.includes(t.toLowerCase().replace(/\s+/g, ''))
+      );
+      const hasCategory = vendorSubCats.includes(bookingCat) || vendorSubTitles.some(t => t.includes(bookingCat));
+
+      if (!hasAllTitles && !hasCategory) {
+        const Vendor = require('../../models/Vendor');
+        const vDoc = await Vendor.findById(vendorId).select('name businessName').lean();
+        const vName = vDoc?.businessName || vDoc?.name || 'Selected Vendor';
+        return res.status(400).json({
+          success: false,
+          requireConfirmation: true,
+          message: `Warning: ${vName} does not hold an active subscription for "${booking.serviceName}". Set forceAssign=true in payload to confirm override.`
+        });
+      }
     }
 
     // Assign vendor and update statuses
@@ -486,6 +644,7 @@ module.exports = {
   getBookingById,
   cancelBooking,
   getBookingAnalytics,
-  assignVendor
+  assignVendor,
+  getEligibleVendorsForAssignment
 };
 

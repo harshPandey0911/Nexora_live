@@ -60,8 +60,9 @@ const geocodeAddress = async (address) => {
   }
 };
 
-const _buildVendorQuery = (filters = {}) => {
+const _buildVendorQuery = async (filters = {}) => {
   const { VENDOR_STATUS } = require('../utils/constants');
+  const UserService = require('../models/UserService');
   
   const checkCashLimit = filters.checkCashLimit;
   const serviceCategory = filters.service;
@@ -82,10 +83,30 @@ const _buildVendorQuery = (filters = {}) => {
     baseQuery['address.city'] = { $regex: new RegExp(filters.city, 'i') };
   }
 
-  if (serviceCategory) {
+  if (serviceCategory && serviceCategory.trim() !== '') {
+    const CategoryModel = require('../models/Category');
+    const categoryRegex = new RegExp(serviceCategory.trim(), 'i');
+
+    const matchedCats = await CategoryModel.find({ title: categoryRegex }).select('_id').lean();
+    const matchedCatIds = matchedCats.map(c => c._id);
+
+    // Find all vendors who have active UserService subscriptions matching categoryId, category, or title
+    const subscribedDocs = await UserService.find({
+      $or: [
+        { categoryId: { $in: matchedCatIds } },
+        { category: categoryRegex },
+        { title: categoryRegex },
+        { title: { $regex: new RegExp(serviceCategory.trim().replace(/\s+/g, '\\s*'), 'i') } }
+      ],
+      status: 'active'
+    }).select('vendorId').lean();
+
+    const subscribedVendorIds = subscribedDocs.map(s => s.vendorId).filter(Boolean);
+
     baseQuery.$or = [
-      { categories: { $in: [serviceCategory] } },
-      { service: { $in: [serviceCategory] } }
+      { categories: categoryRegex },
+      { service: categoryRegex },
+      { _id: { $in: subscribedVendorIds } }
     ];
   }
 
@@ -119,8 +140,9 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
       if (globalSettings?.searchRadius) radiusKm = globalSettings.searchRadius;
     }
 
-    const baseQuery = _buildVendorQuery(filters);
-    const totalApprovedVendors = await Vendor.countDocuments({ approvalStatus: 'APPROVED', isActive: true });
+    const baseQuery = await _buildVendorQuery(filters);
+    const { VENDOR_STATUS } = require('../utils/constants');
+    const totalApprovedVendors = await Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED, isActive: true });
     console.log(`[LocationService] Total Approved/Active Vendors in DB: ${totalApprovedVendors}`);
     console.log(`[LocationService] Searching with query: ${JSON.stringify(baseQuery)}`);
 
@@ -195,7 +217,9 @@ const findNearbyVendors = async (centerLocation, radiusKm = 10, filters = {}) =>
         });
 
         // Filter by individual vendor range
+        // Allow vendors with null distance (city-matched, no GPS) to pass through
         nearbyVendors = nearbyVendors.filter(v => {
+          if (v.distance === null || v.distance === undefined) return true;
           const vRange = v.settings?.serviceRange || radiusKm;
           return v.distance <= vRange;
         });
@@ -327,7 +351,7 @@ const getDistanceMatrix = async (origins, destinations) => {
 const findVendorsByCity = async (city, filters = {}) => {
   try {
     const Vendor = require('../models/Vendor');
-    const baseQuery = _buildVendorQuery({ ...filters, city });
+    const baseQuery = await _buildVendorQuery({ ...filters, city });
 
     console.log(`[LocationService] City search query: ${JSON.stringify(baseQuery)}`);
     const vendors = await Vendor.find(baseQuery)
