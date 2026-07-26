@@ -337,7 +337,28 @@ const register = async (req, res) => {
       console.error('Error calculating initial level from MCQ:', err);
     }
 
-    // Step 3: Create Vendor Record
+    // Step 3: Create Vendor Record with Address & GeoJSON Location
+    const inputAddress = req.body.address || {};
+    const inputLocation = req.body.location || {};
+
+    const city = inputAddress.city || req.body.city || '';
+    const fullAddress = inputAddress.fullAddress || req.body.fullAddress || city;
+    const lat = inputAddress.lat || inputLocation.coordinates?.[1] || req.body.lat;
+    const lng = inputAddress.lng || inputLocation.coordinates?.[0] || req.body.lng;
+
+    const vendorAddress = {
+      fullAddress: fullAddress || '',
+      city: city || '',
+      state: inputAddress.state || req.body.state || '',
+      pincode: inputAddress.pincode || req.body.pincode || '',
+      lat: lat ? Number(lat) : undefined,
+      lng: lng ? Number(lng) : undefined
+    };
+
+    const vendorLocation = (lat && lng)
+      ? { type: 'Point', coordinates: [Number(lng), Number(lat)] }
+      : undefined;
+
     const vendor = await Vendor.create({
       name,
       businessName: businessName || name,
@@ -353,6 +374,8 @@ const register = async (req, res) => {
         number: pan, 
         document: panUrl 
       },
+      address: vendorAddress,
+      ...(vendorLocation ? { location: vendorLocation } : {}),
       otherDocuments: processedOtherDocs,
       trainingScore: trainingScore,
       performanceScore: initialPerformanceScore,

@@ -78,6 +78,24 @@ const VendorSignup = () => {
     } catch (e) {}
   }, [formData]);
 
+  // Automatically attempt location capture for seamless vendor onboarding
+  useEffect(() => {
+    if (navigator.geolocation && !formData.lat) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setFormData(prev => ({
+            ...prev,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            city: prev.city || 'Indore'
+          }));
+        },
+        () => {},
+        { timeout: 5000 }
+      );
+    }
+  }, []);
+
   useEffect(() => {
     sessionStorage.setItem('vendor_signup_agreeToTerms', String(agreeToTerms));
   }, [agreeToTerms]);
@@ -258,7 +276,14 @@ const VendorSignup = () => {
         aadharDocument: aadharDoc,
         aadharBackDocument: aadharBackDoc,
         panDocument: panDoc,
-        otherDocuments: otherDocs
+        otherDocuments: otherDocs,
+        city: formData.city || 'Indore',
+        address: {
+          city: formData.city || 'Indore',
+          fullAddress: formData.fullAddress || formData.city || 'Indore',
+          lat: formData.lat,
+          lng: formData.lng
+        }
       };
 
       // Store registration details in sessionStorage (fallback)

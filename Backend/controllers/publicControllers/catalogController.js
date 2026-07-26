@@ -452,11 +452,21 @@ const getPublicServices = async (req, res) => {
       .sort({ createdAt: 1 })
       .lean();
 
-    const finalServices = services.filter(svc => {
+    const validServices = services.filter(svc => {
       if (svc.categoryId && svc.categoryId.status === 'inactive') return false;
       if (svc.brandId && (svc.brandId.status === 'deleted' || svc.brandId.status === 'inactive')) return false;
       return true;
     });
+
+    // Senior SDE Title Deduplication: Guarantee 1 clean card per service title in public catalog & search
+    const uniqueTitleMap = new Map();
+    validServices.forEach(svc => {
+      const titleKey = (svc.title || '').trim().toLowerCase();
+      if (!uniqueTitleMap.has(titleKey)) {
+        uniqueTitleMap.set(titleKey, svc);
+      }
+    });
+    const finalServices = Array.from(uniqueTitleMap.values());
 
     const finalServiceIds = finalServices.map(svc => svc._id);
 
