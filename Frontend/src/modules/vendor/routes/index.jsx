@@ -247,6 +247,7 @@ const VendorRoutes = () => {
                       <Route path="/product/edit/:id" element={<AddCustomContent />} />
                       <Route path="/workers" element={<WorkersList />} />
                       <Route path="/workers/new" element={<AddEditWorker />} />
+                      <Route path="/workers/add" element={<AddEditWorker />} />
                       <Route path="/workers/edit/:id" element={<AddEditWorker />} />
                       <Route path="/support" element={<SupportList />} />
                       <Route path="/support/:id" element={<TicketDetails />} />

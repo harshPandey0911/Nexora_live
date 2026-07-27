@@ -71,7 +71,7 @@ const MyProducts = () => {
         // Group by categoryId or title (since platform categories might have different IDs but same names)
         const grouped = {};
         productsOnly.forEach(p => {
-          const catId = p.categoryId?._id || p.categoryId || 'uncategorized';
+          const catId = p.categoryId?._id || p.categoryId?.id || p.categoryId || 'uncategorized';
           if (!grouped[catId]) grouped[catId] = [];
           grouped[catId].push(p);
         });
@@ -286,11 +286,11 @@ const MyProducts = () => {
                       >
                         <div className="flex-1 w-full">
                           {(() => {
+                            const activeCatId = cat.id || cat._id || '';
                             const availableProducts = adminProducts.filter(s => {
-                              const sCatId = s.categoryId?._id || s.categoryId || '';
-                              const activeCatId = cat.id || cat._id || '';
+                              const sCatId = s.categoryId?._id || s.categoryId?.id || s.categoryId || '';
                               const matchesCat = sCatId.toString() === activeCatId.toString();
-                              const isAlreadyAdded = (groupedProducts[cat.id] || []).some(
+                              const isAlreadyAdded = (groupedProducts[activeCatId] || []).some(
                                 existing => existing.title?.toLowerCase().trim() === s.title?.toLowerCase().trim()
                               );
                               return matchesCat && !isAlreadyAdded;
@@ -303,12 +303,17 @@ const MyProducts = () => {
                                 disabled={availableProducts.length === 0}
                                 className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-normal text-gray-700 focus:bg-white focus:border-blue-500/30 outline-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                               >
-                                <option value="">Select Platform Product to Add...</option>
-                                {availableProducts.map(s => (
-                                  <option key={s._id} value={s._id}>
-                                    {s.title} (Price: ₹{s.basePrice || 0})
-                                  </option>
-                                ))}
+                                <option value="">
+                                  {availableProducts.length === 0 ? 'No platform products available in this category' : 'Select Platform Product to Add...'}
+                                </option>
+                                {availableProducts.map(s => {
+                                  const pId = s._id || s.id;
+                                  return (
+                                    <option key={pId} value={pId}>
+                                      {s.title} (Price: ₹{s.basePrice || 0})
+                                    </option>
+                                  );
+                                })}
                               </select>
                             );
                           })()}

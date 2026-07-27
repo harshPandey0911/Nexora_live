@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
 import { vendorAuthService } from '../../../../services/authService';
+import vendorService from '../../../../services/vendorService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
 import ConfirmDialog from '../../../../components/common/ConfirmDialog';
 
@@ -17,26 +18,54 @@ const Settings = () => {
     language: 'en',
   });
 
-
   useEffect(() => {
-    const loadSettings = () => {
+    const loadSettings = async () => {
+      // 1. Instant load from local storage
       try {
         const savedSettings = JSON.parse(localStorage.getItem('vendorSettings') || '{}');
         if (Object.keys(savedSettings).length > 0) {
           setSettings(prev => ({ ...prev, ...savedSettings }));
         }
       } catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('Error loading local settings:', error);
+      }
+
+      // 2. Fetch latest settings from backend API
+      try {
+        const res = await vendorService.getSettings();
+        if (res?.success && res?.data?.settings) {
+          const apiSettings = res.data.settings;
+          setSettings(prev => {
+            const merged = { ...prev, ...apiSettings };
+            localStorage.setItem('vendorSettings', JSON.stringify(merged));
+            const vendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+            localStorage.setItem('vendorData', JSON.stringify({ ...vendorData, settings: merged }));
+            return merged;
+          });
+        }
+      } catch (error) {
+        console.error('Error loading server settings:', error);
       }
     };
 
     loadSettings();
   }, []);
 
+  const updateDBSettings = async (newSettings) => {
+    try {
+      localStorage.setItem('vendorSettings', JSON.stringify(newSettings));
+      const vendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
+      localStorage.setItem('vendorData', JSON.stringify({ ...vendorData, settings: newSettings }));
+      await vendorService.updateSettings(newSettings);
+    } catch (error) {
+      console.error('Error syncing vendor settings to server:', error);
+    }
+  };
+
   const handleToggle = async (key) => {
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
-    localStorage.setItem('vendorSettings', JSON.stringify(updated));
+    await updateDBSettings(updated);
 
     // Handle FCM Token registration/removal if notifications toggled
     if (key === 'notifications') {
@@ -48,7 +77,6 @@ const Settings = () => {
         } catch (error) {
           console.error('Error enabling notifications:', error);
           toast.error('Failed to enable notifications');
-          // Revert toggle if failed? For now, we keep UI in sync with intent.
         }
       } else {
         // Turning OFF
@@ -62,10 +90,10 @@ const Settings = () => {
     }
   };
 
-  const handleLanguageChange = (lang) => {
+  const handleLanguageChange = async (lang) => {
     const updated = { ...settings, language: lang };
     setSettings(updated);
-    localStorage.setItem('vendorSettings', JSON.stringify(updated));
+    await updateDBSettings(updated);
   };
 
   const handleLogout = () => {

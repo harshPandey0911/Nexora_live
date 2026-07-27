@@ -203,7 +203,7 @@ const AssignWorker = () => {
               <p className="text-sm font-medium text-gray-900 capitalize tracking-widest mb-1">No Available Workers</p>
               <p className="text-[10px] font-normal text-gray-400 capitalize tracking-tighter mb-6">All workers are currently assigned or offline</p>
               <button
-                onClick={() => navigate('/vendor/workers/add')}
+                onClick={() => navigate('/vendor/workers/new')}
                 className="px-6 py-3 rounded-xl font-medium text-white text-[10px] capitalize tracking-widest bg-black shadow-lg shadow-gray-200 active:scale-95 transition-all"
               >
                 Add New Worker

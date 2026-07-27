@@ -195,15 +195,39 @@ export const stopAlertRing = () => {
 // Check if sound is enabled in settings
 export const isSoundEnabled = (userType = 'vendor') => {
   let storageKey = 'vendorData';
-  if (userType === 'user') storageKey = 'userData';
-  else if (userType === 'worker') storageKey = 'workerData';
-  else if (userType === 'admin') storageKey = 'adminData';
+  let settingsKey = 'vendorSettings';
+  if (userType === 'user') {
+    storageKey = 'userData';
+    settingsKey = 'userSettings';
+  } else if (userType === 'worker') {
+    storageKey = 'workerData';
+    settingsKey = 'workerSettings';
+  } else if (userType === 'admin') {
+    storageKey = 'adminData';
+    settingsKey = 'adminSettings';
+  }
 
+  // 1. Check settings saved from Settings page
+  const settingsString = localStorage.getItem(settingsKey);
+  if (settingsString) {
+    try {
+      const settingsObj = JSON.parse(settingsString);
+      if (typeof settingsObj.soundAlerts === 'boolean') {
+        return settingsObj.soundAlerts;
+      }
+    } catch (error) {
+      // Fallback
+    }
+  }
+
+  // 2. Fallback to check profile data object
   const dataString = localStorage.getItem(storageKey);
   if (dataString) {
     try {
       const data = JSON.parse(dataString);
-      return data.settings?.soundAlerts !== false; // Default true
+      if (typeof data.settings?.soundAlerts === 'boolean') {
+        return data.settings.soundAlerts;
+      }
     } catch (error) {
       return true;
     }

@@ -168,7 +168,7 @@ const WorkersList = () => {
         </div>
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => navigate('/vendor/workers/add')}
+          onClick={() => navigate('/vendor/workers/new')}
           className="w-full md:w-auto px-6 py-3.5 bg-[#2874F0] text-white font-normal text-xs capitalize tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95"
         >
           <FiPlus className="w-4 h-4" />

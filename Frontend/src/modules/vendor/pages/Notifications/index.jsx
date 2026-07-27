@@ -156,19 +156,19 @@ const Notifications = () => {
     const type = (notif.type || '').toLowerCase();
 
     if (filter === 'payments') {
-      return ['payment', 'payout', 'wallet', 'refund', 'withdrawal', 'cash_limit'].some(keyword => type.includes(keyword));
+      return ['payment', 'payout', 'wallet', 'refund', 'withdrawal', 'cash_limit', 'earnings', 'credit', 'debit'].some(keyword => type.includes(keyword));
     }
 
     if (filter === 'jobs') {
-      // Exclude financial requests that happen to have 'vendor' prefix
-      if (['withdrawal', 'cash_limit'].some(keyword => type.includes(keyword))) {
+      // Exclude financial alerts
+      if (['withdrawal', 'cash_limit', 'payout', 'wallet', 'payment', 'refund'].some(keyword => type.includes(keyword))) {
         return false;
       }
-      return ['booking', 'job', 'worker', 'visit', 'work', 'reached', 'journey', 'vendor', 'scrap'].some(keyword => type.includes(keyword));
+      return ['booking', 'job', 'worker', 'visit', 'work', 'reached', 'journey', 'assignment', 'scrap'].some(keyword => type.includes(keyword));
     }
 
     if (filter === 'alerts') {
-      return ['approved', 'rejected', 'registration', 'review', 'general', 'alert', 'security', 'account'].some(keyword => type.includes(keyword));
+      return ['approved', 'rejected', 'registration', 'review', 'general', 'alert', 'security', 'account', 'system', 'admin', 'vendor'].some(keyword => type.includes(keyword));
     }
 
     return type === filter;
@@ -211,10 +211,11 @@ const Notifications = () => {
             <motion.button 
               whileTap={{ scale: 0.9 }}
               onClick={handleMarkAllRead}
-              className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-[9px] font-normal capitalize tracking-widest text-gray-600 hover:bg-gray-100 transition-all"
+              className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-[9px] font-normal capitalize tracking-widest text-gray-600 hover:bg-gray-100 transition-all flex items-center gap-1.5"
               title="Mark all as read"
             >
-              Clear All
+              <FiCheck className="w-3.5 h-3.5 text-blue-600" />
+              Mark All Read
             </motion.button>
           )}
           <div className="w-12 h-12 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner">
@@ -253,9 +254,10 @@ const Notifications = () => {
             {notifications.some(n => !n.read) && (
               <button
                 onClick={handleMarkAllRead}
-                className="md:hidden px-3 py-1.5 text-[9px] font-normal text-gray-600 bg-gray-50 border border-gray-100 rounded-lg capitalize tracking-widest hover:bg-gray-100 transition-all"
+                className="md:hidden px-3 py-1.5 text-[9px] font-normal text-gray-600 bg-gray-50 border border-gray-100 rounded-lg capitalize tracking-widest hover:bg-gray-100 transition-all flex items-center gap-1"
               >
-                Clear All
+                <FiCheck className="w-3 h-3 text-blue-600" />
+                Mark All Read
               </button>
             )}
             <button

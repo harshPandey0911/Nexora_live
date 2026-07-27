@@ -34,7 +34,20 @@ const vendorService = {
   getRevenueAnalytics: async (period) => {
     const response = await api.get(`/vendors/dashboard/revenue?period=${period}`);
     return response.data;
+  },
+
+  // Get vendor settings
+  getSettings: async () => {
+    const response = await api.get('/vendors/settings');
+    return response.data;
+  },
+
+  // Update vendor settings
+  updateSettings: async (settingsData) => {
+    const response = await api.put('/vendors/settings', settingsData);
+    return response.data;
   }
 };
 
 export default vendorService;
+
