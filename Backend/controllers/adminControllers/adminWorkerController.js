@@ -150,18 +150,19 @@ const approveWorker = async (req, res) => {
     worker.isActive = true;
     await worker.save();
 
-    // Send notification to worker
-    /*
-    // Note: Assuming notification system supports 'worker' type or we treat them as users for now
-    await createNotification({
-      userId: worker._id, // Use userId for workers too? or need separate workerId field in notification
-      type: 'worker_approved',
-      title: 'Worker Registration Approved',
-      message: 'Your worker registration has been approved.',
-      relatedId: worker._id,
-      relatedType: 'worker'
-    });
-    */
+    // Send real-time notification to worker
+    try {
+      await createNotification({
+        workerId: worker._id,
+        type: 'worker_approved',
+        title: 'Registration Approved 🎉',
+        message: 'Your worker account has been approved by admin. You can now go online and receive job requests!',
+        relatedId: worker._id,
+        relatedType: 'worker'
+      });
+    } catch (nErr) {
+      console.warn('Worker approval notification warning:', nErr.message);
+    }
 
     res.status(200).json({
       success: true,
@@ -196,8 +197,20 @@ const rejectWorker = async (req, res) => {
 
     worker.approvalStatus = 'rejected';
     worker.isActive = false;
-    // worker.rejectedReason = reason; // If we want to store reason
     await worker.save();
+
+    try {
+      await createNotification({
+        workerId: worker._id,
+        type: 'worker_rejected',
+        title: 'Registration Update',
+        message: reason ? `Registration rejected: ${reason}` : 'Your worker registration has been rejected by admin.',
+        relatedId: worker._id,
+        relatedType: 'worker'
+      });
+    } catch (nErr) {
+      console.warn('Worker rejection notification warning:', nErr.message);
+    }
 
     res.status(200).json({
       success: true,

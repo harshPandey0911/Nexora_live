@@ -41,11 +41,13 @@ const BottomNav = memo(() => {
 
     window.addEventListener('storage', updatePendingCount);
     window.addEventListener('workerJobsUpdated', updatePendingCount);
+    window.addEventListener('workerNotificationsUpdated', fetchUnreadCount);
     const interval = setInterval(fetchUnreadCount, 60000);
 
     return () => {
       window.removeEventListener('storage', updatePendingCount);
       window.removeEventListener('workerJobsUpdated', updatePendingCount);
+      window.removeEventListener('workerNotificationsUpdated', fetchUnreadCount);
       clearInterval(interval);
     };
   }, []);

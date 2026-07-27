@@ -249,9 +249,26 @@ const createQRCode = async (amount, bookingNumber, notes = {}) => {
     console.warn('Razorpay QR exception, using Smart UPI Fallback:', error.message);
   }
 
-  // Smart Dynamic UPI Fallback for Test / Dev Mode (guarantees QR is always generated)
-  const upiUri = `upi://pay?pa=nexora.pay@upi&pn=Nexora+Go&am=${amount.toFixed(2)}&cu=INR&tn=Booking+${bookingNumber}`;
+  // Dynamic UPI QR Generation using Admin UPI VPA from Settings DB
+  let adminUpiId = 'nexora.settle@okicici';
+  let companyName = 'Nexora';
+
+  try {
+    const settingsDoc = await Settings.findOne({ type: 'global' }).select('adminUpiId companyName adminAccountName').lean();
+    if (settingsDoc?.adminUpiId) adminUpiId = settingsDoc.adminUpiId.trim();
+    if (settingsDoc?.companyName || settingsDoc?.adminAccountName) {
+      companyName = settingsDoc.companyName || settingsDoc.adminAccountName;
+    }
+  } catch (sErr) {
+    console.error('[RazorpayService] Settings fetch error for Admin UPI QR:', sErr.message);
+  }
+
+  const encodedUpiId = adminUpiId;
+  const encodedName = encodeURIComponent(companyName);
+  const upiUri = `upi://pay?pa=${encodedUpiId}&pn=${encodedName}&am=${amount.toFixed(2)}&cu=INR&tn=Booking+${bookingNumber}`;
   const fallbackQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUri)}`;
+
+  console.log(`[RazorpayService] Generated Digital Pay QR for Admin UPI: ${adminUpiId} (Amount: ₹${amount})`);
 
   return {
     success: true,

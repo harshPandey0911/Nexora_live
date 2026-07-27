@@ -499,44 +499,66 @@ const rejectBooking = async (req, res) => {
 
       // Find other vendors offering this product
       const { findNearbyVendors } = require('../../services/locationService');
-      const bookingLocation = booking.address.lat && booking.address.lng
+      const bookingLocation = booking.address?.lat && booking.address?.lng
         ? { lat: booking.address.lat, lng: booking.address.lng }
         : null;
 
+      // 1. Find all active vendors subscribed to this product or category
+      const titleRegex = new RegExp((booking.serviceName || '').replace(/\s+/g, '\\s*'), 'i');
+      const subscriptions = await UserService.find({
+        $or: [
+          { title: titleRegex },
+          ...(booking.serviceId ? [{ _id: booking.serviceId }, { serviceId: booking.serviceId }] : []),
+          ...(booking.categoryId ? [{ categoryId: booking.categoryId }] : [])
+        ],
+        vendorId: { $ne: null },
+        status: 'active'
+      }).select('vendorId').lean();
+      const subscribedVendorIds = subscriptions.map(s => s.vendorId?.toString()).filter(Boolean);
+
+      // 2. Get already rejected vendor IDs for this booking
+      const rejectedRequests = await BookingRequest.find({
+        bookingId: id,
+        status: 'REJECTED'
+      }).select('vendorId').lean();
+      const rejectedVendorIds = rejectedRequests.map(r => r.vendorId?.toString()).filter(Boolean);
+
+      // 3. Find candidate vendor IDs who have opted into this product and have NOT rejected yet
+      const candidateVendorIds = subscribedVendorIds.filter(vId => !rejectedVendorIds.includes(vId) && vId !== vendorId.toString());
+
       let nextVendor = null;
-      if (bookingLocation) {
-        // Find category details for filtering
-        const categoryObj = await Category.findById(booking.categoryId).select('title');
-        const vendorFilters = {
-          ...(categoryObj ? { service: categoryObj.title } : {}),
-          city: booking.address.city,
-          checkCashLimit: booking.paymentMethod === 'cash'
-        };
 
-        const rawNearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+      if (candidateVendorIds.length > 0) {
+        // Try nearby location-filtered vendors first
+        if (bookingLocation) {
+          const categoryObj = await Category.findById(booking.categoryId).select('title');
+          const vendorFilters = {
+            ...(categoryObj ? { service: categoryObj.title } : {}),
+            city: booking.address?.city,
+            checkCashLimit: booking.paymentMethod === 'cash'
+          };
 
-        // Subscribed vendors
-        const subscriptions = await UserService.find({
-          title: booking.serviceName,
-          vendorId: { $ne: null },
-          status: 'active'
-        }).select('vendorId').lean();
-        const subscribedVendorIds = subscriptions.map(s => s.vendorId.toString());
+          const rawNearbyVendors = await findNearbyVendors(bookingLocation, 10, vendorFilters);
+          const nearbyAvailable = rawNearbyVendors
+            .filter(v => candidateVendorIds.includes(v._id.toString()))
+            .sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
-        // Get already rejected vendor IDs for this booking
-        const rejectedRequests = await BookingRequest.find({
-          bookingId: id,
-          status: 'REJECTED'
-        }).select('vendorId').lean();
-        const rejectedVendorIds = rejectedRequests.map(r => r.vendorId.toString());
+          if (nearbyAvailable.length > 0) {
+            nextVendor = nearbyAvailable[0];
+          }
+        }
 
-        // Filter and sort to find next available vendor
-        const availableVendors = rawNearbyVendors
-          .filter(v => subscribedVendorIds.includes(v._id.toString()) && !rejectedVendorIds.includes(v._id.toString()))
-          .sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        // Fallback: If no nearby vendor found by GPS, pick next candidate vendor who is approved and active
+        if (!nextVendor) {
+          const nextOptedVendor = await Vendor.findOne({
+            _id: { $in: candidateVendorIds },
+            approvalStatus: 'approved',
+            isActive: { $ne: false }
+          }).select('_id name businessName phone address').lean();
 
-        if (availableVendors.length > 0) {
-          nextVendor = availableVendors[0];
+          if (nextOptedVendor) {
+            nextVendor = nextOptedVendor;
+          }
         }
       }
 
@@ -544,37 +566,50 @@ const rejectBooking = async (req, res) => {
         console.log(`[RejectBooking] Found next vendor for product: ${nextVendor._id}. Reassigning...`);
         booking.vendorId = nextVendor._id;
         booking.status = BOOKING_STATUS.CONFIRMED;
-        booking.notifiedVendors = [nextVendor._id];
+        booking.notifiedVendors = [...(booking.notifiedVendors || []), nextVendor._id];
         await booking.save();
+
+        const fullSocketPayload = {
+          bookingId: booking._id,
+          bookingNumber: booking.bookingNumber,
+          serviceName: booking.serviceName,
+          customerName: booking.userId?.name || 'Customer',
+          customerPhone: booking.userId?.phone || '',
+          scheduledDate: booking.scheduledDate,
+          scheduledTime: booking.scheduledTime,
+          price: booking.finalAmount,
+          address: booking.address,
+          distance: nextVendor.distance || 0,
+          serviceCategory: booking.serviceCategory || 'Product',
+          brandName: booking.brandName,
+          brandIcon: booking.brandIcon,
+          categoryIcon: booking.categoryIcon,
+          createdAt: booking.createdAt || new Date().toISOString(),
+          expiresAt: new Date(Date.now() + (5 * 60 * 1000)).toISOString(),
+          playSound: true,
+          status: booking.status,
+          offeringType: 'PRODUCT',
+          message: `Re-routed product order for ${booking.serviceName}!`
+        };
 
         // Emit Socket.IO and Notification to next vendor
         const io = req.app.get('io');
         if (io) {
-          io.to(`vendor_${nextVendor._id}`).emit('new_booking_request', {
-            bookingId: booking._id,
-            serviceName: booking.serviceName,
-            customerName: booking.userId?.name || 'Customer',
-            price: booking.finalAmount,
-            offeringType: 'PRODUCT'
-          });
+          io.to(`vendor_${nextVendor._id}`).emit('new_booking_request', fullSocketPayload);
         }
 
         try {
           await createNotification({
             vendorId: nextVendor._id,
             type: 'booking_request',
-            title: 'New Product Order',
-            message: `New product order for ${booking.serviceName} from customer`,
+            title: 'New Product Order 📦',
+            message: `Re-routed product order for ${booking.serviceName} from customer`,
             relatedId: booking._id,
             relatedType: 'booking',
-            data: {
-              bookingId: booking._id.toString(),
-              serviceName: booking.serviceName,
-              price: booking.finalAmount,
-              offeringType: 'PRODUCT'
-            },
+            data: fullSocketPayload,
             pushData: {
               type: 'new_booking',
+              priority: 'high',
               dataOnly: false,
               link: `/vendor/bookings/${booking._id}`
             }

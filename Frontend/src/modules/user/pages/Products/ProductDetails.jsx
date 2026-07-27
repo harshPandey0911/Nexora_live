@@ -14,7 +14,8 @@ import {
   FiPlus,
   FiMinus,
   FiShare2,
-  FiHeart
+  FiHeart,
+  FiCheck
 } from 'react-icons/fi';
 import { publicCatalogService } from '../../../../services/catalogService';
 import Header from '../../components/layout/Header';
@@ -24,7 +25,7 @@ import { toast } from 'react-hot-toast';
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,19 @@ const ProductDetailsPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [homeContent, setHomeContent] = useState(null);
+
+  const isProductInCart = Boolean(
+    cartItems && cartItems.some(item => {
+      const itemSvcId = item.serviceId?._id || item.serviceId?.id || item.serviceId || item.id || item._id;
+      const itemTitle = item.serviceName || item.title || item.serviceId?.title;
+      const targetId = product?.id || product?._id || id;
+      const targetTitle = product?.title;
+      return (
+        (targetId && itemSvcId && String(itemSvcId) === String(targetId)) ||
+        (targetTitle && itemTitle && itemTitle.toLowerCase().trim() === targetTitle.toLowerCase().trim())
+      );
+    })
+  );
 
   const toAssetUrl = (url) => {
     if (!url) return '';
@@ -247,12 +261,25 @@ const ProductDetailsPage = () => {
 
                 <div className="flex gap-4">
                   <button 
-                    onClick={handleAddToCart}
+                    onClick={() => {
+                      if (isProductInCart) {
+                        navigate('/user/cart');
+                      } else {
+                        handleAddToCart();
+                      }
+                    }}
                     disabled={addingToCart}
-                    className="flex-[2] bg-[#00246b] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl shadow-blue-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
+                    className={`flex-[2] text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 ${
+                      isProductInCart ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20' : 'bg-[#00246b] hover:bg-blue-900 shadow-blue-900/20'
+                    }`}
                   >
                     {addingToCart ? (
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : isProductInCart ? (
+                      <>
+                        <FiCheck className="w-5 h-5 text-emerald-400" />
+                        Added to Cart
+                      </>
                     ) : (
                       <>
                         <FiShoppingCart className="w-5 h-5" />

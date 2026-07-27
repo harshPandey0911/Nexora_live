@@ -137,13 +137,14 @@ const createBooking = async (req, res) => {
     let nearbyVendors = [];
     let subscribedVendorIds = [];
     
-    let isProduct = (service.offeringType || offeringType) === 'PRODUCT';
-    let targetVendorId = vendorId || service.vendorId || null;
+    // EXCLUSIVE lock: ONLY apply if the frontend explicitly requested direct single-vendor booking.
+    const isDirectBooking = (bookingType || '').toUpperCase() === 'DIRECT' || req.body.isDirectVendorBooking === true;
+    let targetVendorId = (isDirectBooking && vendorId) ? vendorId : null;
 
     if (targetVendorId) {
-      console.log(`[CreateBooking] Direct vendor booking target requested for vendorId: ${targetVendorId}`);
-      const ownerVendor = await Vendor.findById(targetVendorId).select('_id name businessName phone address isOnline approvalStatus isActive').lean();
-      if (ownerVendor && ownerVendor.approvalStatus === 'approved' && ownerVendor.isActive !== false) {
+      console.log(`[CreateBooking] Direct single-vendor booking requested for vendorId: ${targetVendorId}`);
+      const ownerVendor = await Vendor.findById(targetVendorId);
+      if (ownerVendor) {
         console.log(`[CreateBooking] Exclusively routing to vendor: ${ownerVendor.businessName} (${ownerVendor._id})`);
         nearbyVendors = [{
           _id: ownerVendor._id,
@@ -153,7 +154,7 @@ const createBooking = async (req, res) => {
         }];
         subscribedVendorIds = [ownerVendor._id.toString()];
       } else {
-        console.log(`[CreateBooking] Target vendor NOT found or inactive for id: ${targetVendorId} — falling back to wave system`);
+        console.log(`[CreateBooking] Target vendor NOT found for id: ${targetVendorId} — falling back to wave system`);
         targetVendorId = null;
       }
     }
@@ -187,7 +188,11 @@ const createBooking = async (req, res) => {
         requiredTitles.map(async (title) => {
           const titleRegex = new RegExp(title.replace(/\s+/g, '\\s*'), 'i');
           const subs = await ServiceModel.find({
-            title: titleRegex,
+            $or: [
+              { title: titleRegex },
+              ...(serviceId ? [{ _id: serviceId }, { serviceId: serviceId }] : []),
+              ...(categoryId ? [{ categoryId: categoryId }] : [])
+            ],
             status: 'active'
           }).select('vendorId').lean();
           return new Set(subs.map(s => s.vendorId?.toString()).filter(Boolean));
@@ -235,7 +240,7 @@ const createBooking = async (req, res) => {
       console.log('[CreateBooking] No nearby vendors found. Trying global online subscriber fallback...');
       const globalOnlineVendors = await Vendor.find({
         approvalStatus: 'approved',
-        isActive: true,
+        isActive: { $ne: false },
         isOnline: true
       }).select('_id name businessName phone address').lean();
 
@@ -243,41 +248,15 @@ const createBooking = async (req, res) => {
       console.log(`[CreateBooking] Global online subscriber fallback matched: ${nearbyVendors.length} vendors`);
     }
 
-    // Product Order Fallback: If product order has no online vendor, match any subscribed active vendor offering this product
-    if (isProduct && nearbyVendors.length === 0) {
-      console.log(`[CreateBooking] Product order fallback: Searching any active vendor subscribed to ${service.title}`);
-      const ServiceModel = require('../../models/UserService');
-      const titleRegex = new RegExp(service.title.replace(/\s+/g, '\\s*'), 'i');
-      const productSubs = await ServiceModel.find({
-        $or: [
-          { _id: service._id },
-          { title: titleRegex }
-        ],
-        vendorId: { $ne: null },
-        status: 'active'
-      }).select('vendorId').lean();
-
-      const candidateVendorIds = productSubs.map(s => s.vendorId?.toString()).filter(Boolean);
-
-      if (candidateVendorIds.length > 0) {
-        const candidateVendors = await Vendor.find({
-          _id: { $in: candidateVendorIds },
-          approvalStatus: 'approved',
-          isActive: true
-        }).select('_id name businessName phone address').lean();
-
-        if (candidateVendors.length > 0) {
-          nearbyVendors = candidateVendors.map(v => ({
-            _id: v._id,
-            distance: 0,
-            businessName: v.businessName,
-            phone: v.phone
-          }));
-          targetVendorId = candidateVendors[0]._id;
-          subscribedVendorIds = candidateVendorIds;
-          console.log(`[CreateBooking] Matched product vendor(s): ${candidateVendors.map(v => v._id).join(', ')}`);
-        }
-      }
+    // Product Fallback: Match any active approved vendor who opted into this product
+    if (nearbyVendors.length === 0 && subscribedVendorIds.length > 0) {
+      console.log('[CreateBooking] Product fallback: Fetching all active approved vendors who opted into this product...');
+      const optedVendors = await Vendor.find({
+        _id: { $in: subscribedVendorIds },
+        approvalStatus: 'approved',
+        isActive: { $ne: false }
+      }).select('_id name businessName phone address').lean();
+      nearbyVendors = optedVendors;
     }
 
     if (nearbyVendors.length === 0) {
@@ -289,6 +268,7 @@ const createBooking = async (req, res) => {
     }
 
     // Auto-assign product vendor if not provided (assign closest vendor selling this product)
+    let isProduct = (service.offeringType || offeringType) === 'PRODUCT';
     if (isProduct && !targetVendorId && nearbyVendors.length > 0) {
       targetVendorId = nearbyVendors[0]._id;
       console.log(`[CreateBooking] Auto-assigning product vendor: ${targetVendorId}`);
@@ -541,62 +521,84 @@ const createBooking = async (req, res) => {
           const { matchAndNotifyVendors } = require('../../services/vendorMatchingService');
           await matchAndNotifyVendors(booking._id, nearbyVendors);
         } else {
-          console.log(`[CreateBooking][bg] Product order - skipping vendor matching as vendor ${targetVendorId} is already assigned.`);
-          // Just set the notified vendors to the assigned vendor
-          bookingForBackground.notifiedVendors = [targetVendorId];
+          console.log(`[CreateBooking][bg] Product order - notifying opted product vendors...`);
+
+          const vendorsToNotify = (nearbyVendors && nearbyVendors.length > 0)
+            ? nearbyVendors
+            : (targetVendorId ? [{ _id: targetVendorId }] : []);
+
+          const targetVendorIds = vendorsToNotify.map(v => (v._id || v).toString());
+
+          bookingForBackground.notifiedVendors = targetVendorIds;
           await bookingForBackground.save();
 
-          // Create BookingRequest record for database consistency
+          // Create BookingRequest records for each opted vendor
           const BookingRequest = require('../../models/BookingRequest');
-          await BookingRequest.create({
-            bookingId: bookingForBackground._id,
-            vendorId: targetVendorId,
-            status: 'ACCEPTED',
-            sentAt: new Date()
-          });
+          await Promise.all(targetVendorIds.map(vId =>
+            BookingRequest.create({
+              bookingId: bookingForBackground._id,
+              vendorId: vId,
+              status: 'ACCEPTED',
+              sentAt: new Date()
+            }).catch(() => null)
+          ));
 
-          // Emit socket only to this vendor
           const { getIO } = require('../../sockets');
           const io = getIO();
-          if (io) {
-             io.to(`vendor_${targetVendorId}`).emit('new_booking_request', {
-                bookingId: bookingForBackground._id,
-                serviceName: serviceForBackground.title,
-                customerName: userForBackground.name,
-                price: finalAmount,
-                offeringType: 'PRODUCT'
-             });
-          }
 
-          // Create persistent notification and Firebase Push notification for this vendor
-          try {
-            await createNotification({
-              vendorId: targetVendorId,
-              type: 'booking_request',
-              title: 'New Product Order',
-              message: `New product order for ${serviceForBackground.title} from ${userForBackground.name}`,
-              relatedId: bookingForBackground._id,
-              relatedType: 'booking',
-              data: {
-                bookingId: bookingForBackground._id.toString(),
-                serviceName: serviceForBackground.title,
-                customerName: userForBackground.name,
-                customerPhone: userForBackground.phone,
-                scheduledDate: scheduledDate,
-                scheduledTime: scheduledTime,
-                location: address,
-                price: finalAmount,
-                offeringType: 'PRODUCT'
-              },
-              pushData: {
-                type: 'new_booking',
-                dataOnly: false,
-                link: `/vendor/bookings/${bookingForBackground._id}`
-              }
-            });
-          } catch (notifError) {
-            console.error('[CreateBooking][bg] Product notification error:', notifError.message);
-          }
+          // Emit complete socket event + create persistent notifications for each opted vendor
+          await Promise.all(vendorsToNotify.map(async (vendorObj) => {
+            const vIdStr = (vendorObj._id || vendorObj).toString();
+            const vendorRoom = `vendor_${vIdStr}`;
+
+            const fullSocketPayload = {
+              bookingId: bookingForBackground._id,
+              bookingNumber: bookingForBackground.bookingNumber,
+              serviceName: serviceForBackground.title || bookingForBackground.serviceName,
+              customerName: userForBackground.name || 'Customer',
+              customerPhone: userForBackground.phone || '',
+              scheduledDate: bookingForBackground.scheduledDate,
+              scheduledTime: bookingForBackground.scheduledTime,
+              price: finalAmount,
+              address: bookingForBackground.address,
+              distance: vendorObj.distance || 0,
+              serviceCategory: bookingForBackground.serviceCategory || 'Product',
+              brandName: bookingForBackground.brandName,
+              brandIcon: bookingForBackground.brandIcon,
+              categoryIcon: bookingForBackground.categoryIcon,
+              createdAt: bookingForBackground.createdAt || new Date().toISOString(),
+              expiresAt: new Date(Date.now() + (5 * 60 * 1000)).toISOString(),
+              playSound: true,
+              status: bookingForBackground.status,
+              offeringType: 'PRODUCT',
+              message: `New product order for ${serviceForBackground.title || bookingForBackground.serviceName}!`
+            };
+
+            if (io) {
+              console.log(`[CreateBooking][bg] Emitting new_booking_request socket alert to ${vendorRoom}`);
+              io.to(vendorRoom).emit('new_booking_request', fullSocketPayload);
+            }
+
+            try {
+              await createNotification({
+                vendorId: vIdStr,
+                type: 'booking_request',
+                title: 'New Product Order 📦',
+                message: `New product order for ${serviceForBackground.title || bookingForBackground.serviceName} from ${userForBackground.name || 'Customer'}`,
+                relatedId: bookingForBackground._id,
+                relatedType: 'booking',
+                data: fullSocketPayload,
+                pushData: {
+                  type: 'new_booking',
+                  priority: 'high',
+                  dataOnly: false,
+                  link: `/vendor/bookings/${bookingForBackground._id}`
+                }
+              });
+            } catch (notifErr) {
+              console.error(`[CreateBooking][bg] Product notification error for vendor ${vIdStr}:`, notifErr.message);
+            }
+          }));
         }
 
         // NOTIFY USER: Send actionable notification so they can track status

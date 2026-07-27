@@ -18,7 +18,8 @@ import {
   FiRotateCcw, 
   FiGift,
   FiMapPin,
-  FiStar
+  FiStar,
+  FiCheck
 } from 'react-icons/fi';
 import { publicCatalogService } from '../../../../services/catalogService';
 import Header from '../../components/layout/Header';
@@ -31,9 +32,9 @@ import productHeroImg from '../../../../assets/images/productbanner.png';
 
 const ProductsPage = () => {
   const navigate = useNavigate();
-  const { addToCart, cartCount } = useCart();
-  const { currentCity } = useCity();
   const [searchParams] = useSearchParams();
+  const { currentCity } = useCity();
+  const { addToCart, cartCount, cartItems } = useCart();
   const categoryIdParam = searchParams.get('categoryId');
   
   const [categories, setCategories] = useState([]);
@@ -309,18 +310,44 @@ const ProductsPage = () => {
                       <div className="flex items-center justify-between gap-2 mt-auto">
                         <span className="text-sm sm:text-lg font-bold text-emerald-600">₹{svc.basePrice}</span>
                         
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddToCart(svc);
-                          }}
-                          disabled={addingToCart === (svc.id || svc._id)}
-                          className="h-7 sm:h-9 px-2 sm:px-4 bg-emerald-600 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-widest shadow-lg shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1"
-                        >
-                          {addingToCart === (svc.id || svc._id) ? '...' : (
-                            <><FiShoppingBag className="w-3 h-3 hidden xs:block" /> Add</>
-                          )}
-                        </button>
+                        {(() => {
+                          const isSvcInCart = Boolean(
+                            cartItems && cartItems.some(item => {
+                              const itemSvcId = item.serviceId?._id || item.serviceId?.id || item.serviceId || item.id || item._id;
+                              const itemTitle = item.serviceName || item.title || item.serviceId?.title;
+                              const targetId = svc.id || svc._id;
+                              const targetTitle = svc.title;
+                              return (
+                                (targetId && itemSvcId && String(itemSvcId) === String(targetId)) ||
+                                (targetTitle && itemTitle && itemTitle.toLowerCase().trim() === targetTitle.toLowerCase().trim())
+                              );
+                            })
+                          );
+                          return (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isSvcInCart) {
+                                  navigate('/user/cart');
+                                } else {
+                                  handleAddToCart(svc);
+                                }
+                              }}
+                              disabled={addingToCart === (svc.id || svc._id)}
+                              className={`h-7 sm:h-9 px-2 sm:px-4 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-widest active:scale-95 transition-all flex items-center gap-1 ${
+                                isSvcInCart 
+                                  ? 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200' 
+                                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200'
+                              }`}
+                            >
+                              {addingToCart === (svc.id || svc._id) ? '...' : isSvcInCart ? (
+                                <><FiCheck className="w-3.5 h-3.5 text-emerald-400" /> Added to Cart</>
+                              ) : (
+                                <><FiShoppingBag className="w-3 h-3 hidden xs:block" /> Add to Cart</>
+                              )}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </motion.div>

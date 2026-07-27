@@ -56,8 +56,12 @@ const Header = ({
 
     if (showNotifications) {
       fetchUnreadCount();
+      window.addEventListener('workerNotificationsUpdated', fetchUnreadCount);
       const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
-      return () => clearInterval(interval);
+      return () => {
+        window.removeEventListener('workerNotificationsUpdated', fetchUnreadCount);
+        clearInterval(interval);
+      };
     }
   }, [showNotifications]);
 
@@ -149,7 +153,7 @@ const Header = ({
                 { label: 'Home', path: '/worker/dashboard', icon: FiHome },
                 { label: 'Jobs', path: '/worker/jobs', icon: FiBriefcase },
                 { label: 'Wallet', path: '/worker/wallet', icon: FiDollarSign },
-                { label: 'Alerts', path: '/worker/notifications', icon: FiBell },
+                { label: 'Alerts', path: '/worker/notifications', icon: FiBell, badge: count },
                 { label: 'Profile', path: '/worker/profile', icon: FiUser },
               ].map(item => {
                 const active = isActiveRoute(item.path);
@@ -158,7 +162,7 @@ const Header = ({
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    className={`relative px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                       active
                         ? 'bg-white text-teal-800 shadow-sm border border-slate-200/80'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -166,6 +170,11 @@ const Header = ({
                   >
                     <Icon className={`w-3.5 h-3.5 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
                     <span>{item.label}</span>
+                    {Boolean(item.badge > 0) && (
+                      <span className="bg-rose-500 text-white text-[9px] font-black rounded-full px-1.5 py-0.2 min-w-[16px] h-[16px] flex items-center justify-center shadow-sm ml-0.5">
+                        {item.badge > 9 ? '9+' : item.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}

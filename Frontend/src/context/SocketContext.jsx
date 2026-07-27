@@ -317,7 +317,10 @@ export const SocketProvider = ({ children }) => {
       });
 
       // Dispatch update events to refresh UI components
-      if (userType === 'worker') window.dispatchEvent(new Event('workerJobsUpdated'));
+      if (userType === 'worker') {
+        window.dispatchEvent(new Event('workerJobsUpdated'));
+        window.dispatchEvent(new Event('workerNotificationsUpdated'));
+      }
       if (userType === 'vendor') {
         window.dispatchEvent(new Event('vendorJobsUpdated'));
         window.dispatchEvent(new Event('vendorNotificationsUpdated'));

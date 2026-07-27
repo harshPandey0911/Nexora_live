@@ -18,7 +18,7 @@ const toAssetUrl = (url) => {
 
 const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCount, currentCity }) => {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, cartItems } = useCart();
   const [isClosing, setIsClosing] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -270,12 +270,41 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
                                     </div>
                                     
                                     <div className="flex items-center gap-1.5">
-                                      <button
-                                        onClick={() => handleServiceClick(svc)}
-                                        className="h-8 px-3 bg-teal-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1 hover:bg-teal-700 shadow-lg shadow-teal-100 active:scale-90 transition-all"
-                                      >
-                                        <FiPlus className="w-3 h-3" /> Add
-                                      </button>
+                                      {(() => {
+                                        const isSvcInCart = Boolean(
+                                          cartItems && cartItems.some(item => {
+                                            const itemSvcId = item.serviceId?._id || item.serviceId?.id || item.serviceId || item.id || item._id;
+                                            const itemTitle = item.serviceName || item.title || item.serviceId?.title;
+                                            const targetId = svc.id || svc._id;
+                                            const targetTitle = svc.title;
+                                            return (
+                                              (targetId && itemSvcId && String(itemSvcId) === String(targetId)) ||
+                                              (targetTitle && itemTitle && itemTitle.toLowerCase().trim() === targetTitle.toLowerCase().trim())
+                                            );
+                                          })
+                                        );
+                                        return (
+                                          <button
+                                            onClick={() => {
+                                              if (isSvcInCart) {
+                                                navigate('/user/cart');
+                                                onClose();
+                                              } else {
+                                                handleServiceClick(svc);
+                                              }
+                                            }}
+                                            className={`h-8 px-3 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1 active:scale-90 transition-all ${
+                                              isSvcInCart ? 'bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-200' : 'bg-teal-600 hover:bg-teal-700 shadow-lg shadow-teal-100'
+                                            }`}
+                                          >
+                                            {isSvcInCart ? (
+                                              <><FiCheck className="w-3 h-3 text-emerald-400" /> Added to Cart</>
+                                            ) : (
+                                              <><FiPlus className="w-3 h-3" /> Add</>
+                                            )}
+                                          </button>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 </div>
