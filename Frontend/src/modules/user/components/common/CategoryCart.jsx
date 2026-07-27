@@ -59,7 +59,13 @@ const CategoryCart = ({
   };
 
   const handleCheckout = () => {
-    navigate('/user/checkout', { state: { category: category } });
+    const hasProducts = categoryItems.some(item => {
+      const offType = item.offeringType || item.serviceId?.offeringType;
+      if (offType === 'PRODUCT') return true;
+      const cat = String(item.category || item.categoryTitle || '').toLowerCase().trim();
+      return ['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => cat.includes(k));
+    });
+    navigate(hasProducts ? '/user/product-checkout' : '/user/checkout', { state: { category: category } });
   };
 
   const handleCartClick = () => {

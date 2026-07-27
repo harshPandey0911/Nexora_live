@@ -201,6 +201,7 @@ const addToCart = async (req, res) => {
         vendorId: vendorId || null,
         sectionTitle: sectionTitle || '',
         sectionIcon: sectionIcon || null,
+        offeringType: req.body.offeringType || service?.offeringType || (['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => String(category || '').toLowerCase().includes(k)) ? 'PRODUCT' : 'SERVICE'),
         card: card || null,
         gstPercentage: gstPercentage !== undefined ? gstPercentage : (service?.gstPercentage !== undefined ? service.gstPercentage : 18)
       };

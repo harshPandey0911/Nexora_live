@@ -93,22 +93,22 @@ const acceptProductOrder = async (req, res) => {
       });
     }
 
-    // Recalculate financial breakdown if vendor has custom deliveryCharge
-    const vendorDeliveryCharge = vendor.settings?.deliverySettings?.deliveryCharge || 0;
+    // Financial breakdown with Admin-configured delivery charge
+    const deliveryCharge = order.financialBreakdown.deliveryCharge || 49;
     const subtotal = order.financialBreakdown.subtotal;
     const tax = order.financialBreakdown.tax;
     const platformFee = order.financialBreakdown.platformFee;
     const commissionRate = vendor.commissionRate || 15;
     const platformCommission = Math.round(subtotal * (commissionRate / 100));
 
-    // Vendor receives 100% of their set delivery charge + net item price
-    const vendorEarnings = (subtotal - platformCommission) + vendorDeliveryCharge;
-    const totalAmount = Math.round(subtotal + vendorDeliveryCharge + tax + platformFee);
+    // Vendor receives 100% of the Admin delivery charge + net item price
+    const vendorEarnings = (subtotal - platformCommission) + deliveryCharge;
+    const totalAmount = Math.round(subtotal + deliveryCharge + tax + platformFee);
 
     order.vendorId = vendorId;
     order.status = 'ACCEPTED';
     order.acceptedAt = new Date();
-    order.financialBreakdown.deliveryCharge = vendorDeliveryCharge;
+    order.financialBreakdown.deliveryCharge = deliveryCharge;
     order.financialBreakdown.totalAmount = totalAmount;
     order.financialBreakdown.vendorEarnings = vendorEarnings;
 

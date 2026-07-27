@@ -201,6 +201,22 @@ const Checkout = () => {
     fetchData();
   }, [category, plan]);
 
+  // Automatically redirect to product-checkout if items in cart are products (e.g. Food / Momos / Products)
+  useEffect(() => {
+    if (!loading && cartItems && cartItems.length > 0 && !plan) {
+      const hasProducts = cartItems.some(item => {
+        const offType = item.offeringType || item.serviceId?.offeringType;
+        if (offType === 'PRODUCT') return true;
+        const cat = String(item.category || item.categoryTitle || '').toLowerCase().trim();
+        return ['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => cat.includes(k));
+      });
+
+      if (hasProducts) {
+        navigate('/user/product-checkout', { replace: true, state: location.state });
+      }
+    }
+  }, [cartItems, loading, plan, navigate, location.state]);
+
   // Keep Checkout cart items in sync with global CartContext ONLY when on the initial 'details' step
   useEffect(() => {
     if (!plan && isCartInitialized && Array.isArray(globalCartItems) && currentStep === 'details' && !bookingRequest) {

@@ -39,6 +39,11 @@ const cartItemSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  offeringType: {
+    type: String,
+    enum: ['SERVICE', 'PRODUCT'],
+    default: 'SERVICE'
+  },
   price: {
     type: Number,
     required: true,

@@ -11,6 +11,11 @@ const settingsSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  productDeliveryCharge: {
+    type: Number,
+    default: 49,
+    min: 0
+  },
   serviceGstPercentage: {
     type: Number,
     default: 18,

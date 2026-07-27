@@ -29,6 +29,7 @@ exports.updateSettings = async (req, res, next) => {
   try {
     const {
       visitedCharges,
+      productDeliveryCharge,
       serviceGstPercentage,
       partsGstPercentage,
       servicePayoutPercentage,
@@ -71,6 +72,7 @@ exports.updateSettings = async (req, res, next) => {
 
     // Update fields if provided
     if (visitedCharges !== undefined) settings.visitedCharges = visitedCharges;
+    if (productDeliveryCharge !== undefined) settings.productDeliveryCharge = productDeliveryCharge;
     if (serviceGstPercentage !== undefined) settings.serviceGstPercentage = serviceGstPercentage;
     if (partsGstPercentage !== undefined) settings.partsGstPercentage = partsGstPercentage;
     if (servicePayoutPercentage !== undefined) settings.servicePayoutPercentage = servicePayoutPercentage;

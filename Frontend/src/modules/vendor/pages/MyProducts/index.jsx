@@ -222,9 +222,6 @@ const MyProducts = () => {
         </button>
       </div>
 
-      {/* Delivery & COD Charge Settings Card */}
-      <DeliverySettingsCard />
-
       {/* Main Content */}
       <div className="space-y-6">
         {loading ? (
@@ -591,117 +588,6 @@ const MyProducts = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
-  );
-};
-
-const DeliverySettingsCard = () => {
-  const [deliverySettings, setDeliverySettings] = useState({
-    deliveryCharge: 49,
-    isDeliveryAvailable: true,
-    codEnabled: true,
-    freeDeliveryThreshold: ''
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        setLoading(true);
-        const res = await vendorService.getDeliverySettings();
-        if (res.success && res.data) {
-          setDeliverySettings({
-            deliveryCharge: res.data.deliveryCharge ?? 49,
-            isDeliveryAvailable: res.data.isDeliveryAvailable ?? true,
-            codEnabled: res.data.codEnabled ?? true,
-            freeDeliveryThreshold: res.data.freeDeliveryThreshold || ''
-          });
-        }
-      } catch (e) {
-        console.error('Failed to load vendor delivery settings', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, []);
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const res = await vendorService.updateDeliverySettings(deliverySettings);
-      if (res.success) {
-        toast.success('Delivery charges & COD settings updated! You get 100% of the delivery fee.');
-      } else {
-        toast.error(res.message || 'Failed to update settings');
-      }
-    } catch (e) {
-      toast.error('Error saving delivery settings');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) return null;
-
-  return (
-    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-            <span>🚚</span> Product Delivery & COD Charge Settings
-          </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Set your delivery charge for product orders. <strong className="text-emerald-600">100% of this delivery charge goes directly to you.</strong>
-          </p>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-emerald-700 active:scale-95 transition-all shadow-md shadow-emerald-100"
-        >
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-        <div>
-          <label className="text-[10px] font-bold text-gray-500 uppercase">COD / Standard Delivery Fee (₹)</label>
-          <input
-            type="number"
-            min="0"
-            value={deliverySettings.deliveryCharge}
-            onChange={(e) => setDeliverySettings(prev => ({ ...prev, deliveryCharge: e.target.value }))}
-            className="w-full mt-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            placeholder="e.g. 49"
-          />
-        </div>
-
-        <div>
-          <label className="text-[10px] font-bold text-gray-500 uppercase">Delivery Availability</label>
-          <select
-            value={deliverySettings.isDeliveryAvailable ? 'yes' : 'no'}
-            onChange={(e) => setDeliverySettings(prev => ({ ...prev, isDeliveryAvailable: e.target.value === 'yes' }))}
-            className="w-full mt-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="yes">Available for Product Delivery</option>
-            <option value="no">Self Pickup Only</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-[10px] font-bold text-gray-500 uppercase">COD Enabled</label>
-          <select
-            value={deliverySettings.codEnabled ? 'yes' : 'no'}
-            onChange={(e) => setDeliverySettings(prev => ({ ...prev, codEnabled: e.target.value === 'yes' }))}
-            className="w-full mt-1 p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="yes">Accept Cash on Delivery (COD)</option>
-            <option value="no">Pay Online Only</option>
-          </select>
-        </div>
-      </div>
     </div>
   );
 };

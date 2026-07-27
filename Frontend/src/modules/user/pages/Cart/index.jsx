@@ -405,7 +405,12 @@ const Cart = () => {
                     } catch (e) {
                       console.error('Flush error:', e);
                     } finally {
-                      const hasProducts = cartItems.some(item => item.serviceId?.offeringType === 'PRODUCT' || item.offeringType === 'PRODUCT' || item.category === 'Food' || item.category === 'Products');
+                      const hasProducts = cartItems.some(item => {
+                        const offType = item.offeringType || item.serviceId?.offeringType;
+                        if (offType === 'PRODUCT') return true;
+                        const cat = String(item.category || item.categoryTitle || '').toLowerCase().trim();
+                        return ['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => cat.includes(k));
+                      });
                       navigate(hasProducts ? '/user/product-checkout' : '/user/checkout');
                     }
                   }}

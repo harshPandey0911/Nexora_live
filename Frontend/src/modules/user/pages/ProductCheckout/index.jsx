@@ -60,6 +60,7 @@ const ProductCheckout = () => {
   const [acceptedVendor, setAcceptedVendor] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [vendorDeliveryCharge, setVendorDeliveryCharge] = useState(49); // Default estimated COD delivery charge
+  const [adminPlatformFee, setAdminPlatformFee] = useState(null);
 
   // Load Razorpay SDK lazily
   useEffect(() => {
@@ -76,7 +77,12 @@ const ProductCheckout = () => {
   // Filter cart items for products only
   useEffect(() => {
     if (isInitialized && Array.isArray(globalCartItems)) {
-      const productItems = globalCartItems.filter(item => item.serviceId?.offeringType === 'PRODUCT' || item.offeringType === 'PRODUCT' || item.category === 'Food' || item.category === 'Products');
+      const productItems = globalCartItems.filter(item => {
+        const offType = item.offeringType || item.serviceId?.offeringType;
+        if (offType === 'PRODUCT') return true;
+        const cat = String(item.category || item.categoryTitle || '').toLowerCase().trim();
+        return ['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => cat.includes(k));
+      });
       setCartItems(productItems.length > 0 ? productItems : globalCartItems);
     }
   }, [globalCartItems, isInitialized]);
@@ -87,26 +93,34 @@ const ProductCheckout = () => {
       try {
         setLoading(true);
         const response = await userAuthService.getCheckoutData();
-        if (response.success && response.user) {
-          setContactDetails({
-            name: response.user.name || '',
-            phone: response.user.phone || ''
-          });
-
-          if (response.user.addresses && response.user.addresses.length > 0) {
-            setSavedAddresses(response.user.addresses);
-            const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
-            setAddress(defaultAddr.addressLine1);
-            setHouseNumber(defaultAddr.addressLine2 || '');
-            setAddressDetails({
-              address: defaultAddr.addressLine1,
-              lat: defaultAddr.lat,
-              lng: defaultAddr.lng,
-              type: defaultAddr.type,
-              city: defaultAddr.city,
-              state: defaultAddr.state,
-              pincode: defaultAddr.pincode
+        if (response.success) {
+          if (response.settings?.productDeliveryCharge !== undefined) {
+            setVendorDeliveryCharge(response.settings.productDeliveryCharge);
+          }
+          if (response.settings?.visitedCharges !== undefined) {
+            setAdminPlatformFee(response.settings.visitedCharges);
+          }
+          if (response.user) {
+            setContactDetails({
+              name: response.user.name || '',
+              phone: response.user.phone || ''
             });
+
+            if (response.user.addresses && response.user.addresses.length > 0) {
+              setSavedAddresses(response.user.addresses);
+              const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
+              setAddress(defaultAddr.addressLine1);
+              setHouseNumber(defaultAddr.addressLine2 || '');
+              setAddressDetails({
+                address: defaultAddr.addressLine1,
+                lat: defaultAddr.lat,
+                lng: defaultAddr.lng,
+                type: defaultAddr.type,
+                city: defaultAddr.city,
+                state: defaultAddr.state,
+                pincode: defaultAddr.pincode
+              });
+            }
           }
         }
       } catch (error) {
@@ -158,7 +172,7 @@ const ProductCheckout = () => {
       return sum + ((item.price || 0) * (itemGst / 100));
     }, 0)
   );
-  const platformFee = subtotal > 0 ? (platformFeeRate || 19) : 0;
+  const platformFee = subtotal > 0 ? (adminPlatformFee !== null ? adminPlatformFee : (platformFeeRate || 19)) : 0;
   const deliveryCharge = subtotal > 0 ? vendorDeliveryCharge : 0;
   const totalPayable = subtotal + deliveryCharge + totalTax + platformFee;
 

@@ -9,6 +9,8 @@ const razorpayService = require('../../services/razorpayService');
 const { getIO } = require('../../sockets');
 const { sendNotificationToVendor } = require('../../services/firebaseAdmin');
 
+const Settings = require('../../models/Settings');
+
 /**
  * Generate unique Product Order ID
  */
@@ -158,26 +160,20 @@ const createProductOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid payment method' });
     }
 
-    // Determine vendor delivery charge
-    let deliveryCharge = 0;
+    // Fetch Admin-configured delivery charge from global settings
+    const globalSettings = await Settings.findOne({ type: 'global' }).lean();
+    const deliveryCharge = globalSettings?.productDeliveryCharge !== undefined ? globalSettings.productDeliveryCharge : 49;
     let selectedVendor = null;
 
     if (vendorId) {
       selectedVendor = await Vendor.findById(vendorId);
-      if (selectedVendor && selectedVendor.settings?.deliverySettings) {
-        deliveryCharge = selectedVendor.settings.deliverySettings.deliveryCharge || 0;
-      }
     } else {
-      // Find candidate vendors to calculate average/default vendor delivery charge
       const firstProduct = items[0];
       const pId = firstProduct.productId || firstProduct.serviceId;
       if (pId) {
         const prod = await UserService.findById(pId);
         if (prod && prod.vendorId) {
           selectedVendor = await Vendor.findById(prod.vendorId);
-          if (selectedVendor?.settings?.deliverySettings) {
-            deliveryCharge = selectedVendor.settings.deliverySettings.deliveryCharge || 0;
-          }
         }
       }
     }

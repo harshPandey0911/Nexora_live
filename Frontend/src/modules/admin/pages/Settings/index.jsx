@@ -15,6 +15,7 @@ const AdminSettings = () => {
 
   const [financialSettings, setFinancialSettings] = useState({
     visitedCharges: 0,
+    productDeliveryCharge: 49,
     serviceGstPercentage: 18,
     partsGstPercentage: 18,
     servicePayoutPercentage: 90,
@@ -172,6 +173,7 @@ const AdminSettings = () => {
         if (res.success && res.settings) {
           setFinancialSettings({
             visitedCharges: res.settings.visitedCharges || 0,
+            productDeliveryCharge: res.settings.productDeliveryCharge !== undefined ? res.settings.productDeliveryCharge : 49,
             serviceGstPercentage: res.settings.serviceGstPercentage ?? 18,
             partsGstPercentage: res.settings.partsGstPercentage ?? 18,
             servicePayoutPercentage: res.settings.servicePayoutPercentage ?? 90,
@@ -883,10 +885,18 @@ const AdminSettings = () => {
                 <form onSubmit={handleFinancialSave} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Visit Charges (₹)</label>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Platform / Convenience Fee (₹)</label>
                       <input type="number" name="visitedCharges" value={financialSettings.visitedCharges} onChange={handleFinancialChange}
                         min="0"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                      <p className="text-[10px] text-gray-400 mt-1">Platform fee charged to users at checkout (e.g. ₹19). Set 0 for free.</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Product Delivery Charge (₹)</label>
+                      <input type="number" name="productDeliveryCharge" value={financialSettings.productDeliveryCharge} onChange={handleFinancialChange}
+                        min="0"
+                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
+                      <p className="text-[10px] text-gray-400 mt-1">Platform delivery charge for product orders (100% credited to vendor)</p>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Vendor Cash Limit (₹)</label>
