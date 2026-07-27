@@ -405,7 +405,8 @@ const Cart = () => {
                     } catch (e) {
                       console.error('Flush error:', e);
                     } finally {
-                      navigate('/user/checkout');
+                      const hasProducts = cartItems.some(item => item.serviceId?.offeringType === 'PRODUCT' || item.offeringType === 'PRODUCT' || item.category === 'Food' || item.category === 'Products');
+                      navigate(hasProducts ? '/user/product-checkout' : '/user/checkout');
                     }
                   }}
                   className="w-full bg-[#00246b] text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs shadow-lg shadow-blue-900/10 active:scale-95 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:grayscale"

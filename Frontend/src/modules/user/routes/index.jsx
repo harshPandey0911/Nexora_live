@@ -78,6 +78,8 @@ const Account = lazyLoad(() => import('../pages/Account'));
 const Native = lazyLoad(() => import('../pages/Native'));
 const Cart = lazyLoad(() => import('../pages/Cart'));
 const Checkout = lazyLoad(() => import('../pages/Checkout'));
+const ProductCheckout = lazyLoad(() => import('../pages/ProductCheckout'));
+const ProductOrderConfirmation = lazyLoad(() => import('../pages/ProductOrderConfirmation'));
 const MyBookings = lazyLoad(() => import('../pages/MyBookings'));
 const BookingDetails = lazyLoad(() => import('../pages/BookingDetails'));
 const BookingTrack = lazyLoad(() => import('../pages/BookingTrack'));
@@ -180,6 +182,8 @@ const UserRoutes = () => {
                 <Route path="/account" element={<ProtectedRoute userType="user"><Account /></ProtectedRoute>} />
                 <Route path="/cart" element={<ProtectedRoute userType="user"><Cart /></ProtectedRoute>} />
                 <Route path="/checkout" element={<ProtectedRoute userType="user"><Checkout /></ProtectedRoute>} />
+                <Route path="/product-checkout" element={<ProtectedRoute userType="user"><ProductCheckout /></ProtectedRoute>} />
+                <Route path="/product-order-confirmation/:orderId" element={<ProtectedRoute userType="user"><ProductOrderConfirmation /></ProtectedRoute>} />
                 <Route path="/my-bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
                 <Route path="/bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
                 <Route path="/booking/:id" element={<ProtectedRoute userType="user"><BookingDetails /></ProtectedRoute>} />

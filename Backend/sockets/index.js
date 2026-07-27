@@ -38,7 +38,7 @@ const initializeSocket = (server) => {
       const decoded = verifyAccessToken(token);
 
       socket.userId = decoded.userId;
-      socket.userRole = decoded.role;
+      socket.userRole = (decoded.role || '').toUpperCase();
 
       next();
     } catch (error) {
@@ -49,18 +49,20 @@ const initializeSocket = (server) => {
   io.on('connection', (socket) => {
     console.log(`Socket connected: ${socket.id} (User: ${socket.userId}, Role: ${socket.userRole})`);
 
+    const role = (socket.userRole || '').toUpperCase();
+
     // Join user-specific room for notifications
-    if (socket.userRole === 'USER') {
+    if (role === 'USER') {
       socket.join(`user_${socket.userId.toString()}`);
-    } else if (socket.userRole === 'VENDOR') {
+    } else if (role === 'VENDOR') {
       socket.join(`vendor_${socket.userId.toString()}`);
       // Update vendor online status
       updateVendorOnlineStatus(socket.userId, true, socket.id);
-    } else if (socket.userRole === 'WORKER') {
+    } else if (role === 'WORKER') {
       socket.join(`worker_${socket.userId.toString()}`);
       // Update worker online status
       updateWorkerOnlineStatus(socket.userId, true, socket.id);
-    } else if (socket.userRole === 'ADMIN') {
+    } else if (role === 'ADMIN') {
       socket.join(`admin_${socket.userId.toString()}`);
     }
 

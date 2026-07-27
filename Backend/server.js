@@ -172,6 +172,7 @@ app.use('/api/users', require('./routes/user-routes/profile.routes'));
 app.use('/api/user/wallet', require('./routes/user-routes/userWallet.routes'));
 app.use('/api/users/bookings', require('./routes/user-routes/booking.routes'));
 app.use('/api/users', require('./routes/user-routes/cart.routes'));
+app.use('/api/users', require('./routes/user-routes/productOrder.routes'));
 app.use('/api/users/fcm-tokens', require('./routes/user-routes/fcmToken.routes'));
 
 // Scrap routes
@@ -182,6 +183,7 @@ app.use('/api/scrap', scrapRoutes);
 app.use('/api/vendors/auth', require('./routes/vendor-routes/auth.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/profile.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/settings.routes'));
+app.use('/api/vendors', require('./routes/vendor-routes/productOrder.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/wallet.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/dashboard.routes'));
 app.use('/api/vendors', require('./routes/vendor-routes/service.routes'));

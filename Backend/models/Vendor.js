@@ -177,6 +177,12 @@ const vendorSchema = new mongoose.Schema({
       type: Number,
       default: 10, // Default 10km service range for the vendor
       min: 1
+    },
+    deliverySettings: {
+      isDeliveryAvailable: { type: Boolean, default: true },
+      deliveryCharge: { type: Number, default: 0, min: 0 },
+      freeDeliveryThreshold: { type: Number, default: null },
+      codEnabled: { type: Boolean, default: true }
     }
   },
   // Real-time Location

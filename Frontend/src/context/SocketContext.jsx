@@ -339,16 +339,25 @@ export const SocketProvider = ({ children }) => {
       if (userType === 'worker') window.dispatchEvent(new Event('workerJobsUpdated'));
     });
 
-    // Listen for special Vendor Booking Requests
+    // Listen for special Vendor Booking Requests & Product Orders
     if (userType === 'vendor') {
-      newSocket.on('new_booking_request', (data) => {
-        console.log('🚨 New Booking Request Alert Received on Socket:', data);
+      const handleVendorAlert = (data) => {
+        console.log('🚨 New Vendor Request Alert Received on Socket:', data);
 
         // Acknowledge receipt to server
-        newSocket.emit('booking_alert_received', { bookingId: data.bookingId });
+        newSocket.emit('booking_alert_received', { bookingId: data.bookingId || data.orderId });
 
         // Play urgent alert ring
         playAlertRing();
+
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        window.dispatchEvent(new Event('vendorNotificationsUpdated'));
+      };
+
+      newSocket.on('new_product_order_alert', handleVendorAlert);
+
+      newSocket.on('new_booking_request', (data) => {
+        handleVendorAlert(data);
 
         // Save to localStorage for the Alert screen and Dashboard to read
         // Note: Even though we are moving to backend, keeping this for immediate UI responsiveness before potential refresh lag
