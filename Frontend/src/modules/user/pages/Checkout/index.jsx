@@ -389,6 +389,8 @@ const Checkout = () => {
         categoryIcon: firstItem.categoryIcon || firstItem.icon || null,
         brandName: firstItem.sectionTitle || firstItem.brand || '',
         brandIcon: firstItem.sectionIcon || null,
+        vendorId: firstItem.vendorId || (typeof firstItem.serviceId === 'object' ? firstItem.serviceId.vendorId : null),
+        offeringType: firstItem.offeringType || (typeof firstItem.serviceId === 'object' ? firstItem.serviceId.offeringType : null),
 
         contactDetails: {
           name: contactDetails.name,

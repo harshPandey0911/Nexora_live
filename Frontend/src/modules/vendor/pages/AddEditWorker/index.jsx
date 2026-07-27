@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiSave, FiX, FiLink, FiUserPlus, FiSearch, FiChevronDown, FiCamera, FiUpload, FiMapPin, FiPlusCircle, FiCheck, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiSave, FiX, FiChevronDown, FiCamera, FiUpload, FiMapPin, FiPlusCircle, FiCheck, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import AddressSelectionModal from '../../../user/pages/Checkout/components/AddressSelectionModal';
 import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
-import { createWorker, updateWorker, getWorkerById, linkWorker } from '../../services/workerService';
+import { createWorker, updateWorker, getWorkerById } from '../../services/workerService';
+import vendorService from '../../services/vendorService';
 import { publicCatalogService } from '../../../../services/catalogService';
 import { toast } from 'react-hot-toast';
 import { z } from "zod";
@@ -41,8 +42,6 @@ const AddEditWorker = () => {
   const navigate = useNavigate();
   const isEdit = !!id;
   const [showPassword, setShowPassword] = useState(false);
-
-  const [activeTab, setActiveTab] = useState('new'); // 'new' | 'link'
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -99,10 +98,26 @@ const AddEditWorker = () => {
   useEffect(() => {
     const initData = async () => {
       try {
-        const catRes = await publicCatalogService.getCategories();
-        if (catRes.success) {
-          console.log('Loaded Categories:', catRes.categories || []);
-          setCategories(catRes.categories || []);
+        // Fetch services opted by the vendor in Manage Services
+        const customRes = await vendorService.getMyCustomContent();
+        let optedList = [];
+        const seenTitles = new Set();
+
+        if (customRes?.success) {
+          const myServices = (customRes.data?.services || []).filter(s => !s.offeringType || s.offeringType === 'SERVICE');
+          myServices.forEach(s => {
+            // Add service title
+            if (s.title && !seenTitles.has(s.title.toLowerCase().trim())) {
+              seenTitles.add(s.title.toLowerCase().trim());
+              optedList.push({ _id: s._id || s.id, title: s.title });
+            }
+            // Add parent category title for broader category matching
+            const catTitle = s.category || s.categoryId?.title;
+            if (catTitle && typeof catTitle === 'string' && !seenTitles.has(catTitle.toLowerCase().trim())) {
+              seenTitles.add(catTitle.toLowerCase().trim());
+              optedList.push({ _id: catTitle, title: catTitle });
+            }
+          });
         }
 
         if (isEdit) {
@@ -110,6 +125,16 @@ const AddEditWorker = () => {
           const res = await getWorkerById(id);
           if (res.success) {
             const w = res.data;
+            const existingCats = w.serviceCategories || (w.serviceCategory ? [w.serviceCategory] : []);
+
+            // Ensure worker's existing specializations remain available in edit mode
+            existingCats.forEach(catName => {
+              if (catName && !seenTitles.has(catName.toLowerCase().trim())) {
+                seenTitles.add(catName.toLowerCase().trim());
+                optedList.push({ _id: catName, title: catName });
+              }
+            });
+
             setFormData({
               name: w.name || '',
               phone: w.phone || '',
@@ -118,7 +143,7 @@ const AddEditWorker = () => {
                 number: w.aadhar?.number || '',
                 document: w.aadhar?.document || ''
               },
-              serviceCategories: w.serviceCategories || (w.serviceCategory ? [w.serviceCategory] : []),
+              serviceCategories: existingCats,
               address: {
                 addressLine1: w.address?.addressLine1 || w.address?.fullAddress || '',
                 addressLine2: w.address?.addressLine2 || '',
@@ -139,6 +164,8 @@ const AddEditWorker = () => {
           }
           setLoading(false);
         }
+
+        setCategories(optedList);
       } catch (error) {
         console.error('Init error:', error);
         toast.error('Failed to load data');
@@ -384,95 +411,12 @@ const AddEditWorker = () => {
     }
   };
 
-  const handleLinkWorker = async () => {
-    if (!linkPhone.trim() || linkPhone.length < 10) {
-      toast.error('Enter valid phone number');
-      return;
-    }
-    try {
-      setLoading(true);
-      await linkWorker(linkPhone);
-      toast.success('Worker linked successfully!');
-      window.dispatchEvent(new Event('vendorWorkersUpdated'));
-      navigate('/vendor/workers');
-    } catch (error) {
-      console.error('Link error:', error);
-      toast.error(error.response?.data?.message || 'Failed to link worker');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // selectedCategoriesData and allAvailableSkills removed as they are no longer needed
-
   return (
     <div className="min-h-screen pb-20 bg-white">
       <main className="px-4 pt-6 max-w-lg mx-auto">
-        {/* Tabs */}
-        {!isEdit && (
-          <div className="flex bg-gray-100 rounded-xl p-1 mb-8">
-            <button
-              onClick={() => setActiveTab('new')}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 ${activeTab === 'new'
-                ? 'bg-blue-900 text-white shadow-sm'
-                : 'text-gray-600 hover:text-blue-900'
-                }`}
-            >
-              <FiUserPlus className="w-4 h-4" />
-              Direct Entry
-            </button>
-            <button
-              onClick={() => setActiveTab('link')}
-              className={`flex-1 py-2.5 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 ${activeTab === 'link'
-                ? 'bg-blue-900 text-white shadow-sm'
-                : 'text-gray-600 hover:text-blue-900'
-                }`}
-            >
-              <FiLink className="w-4 h-4" />
-              Link Phone
-            </button>
-          </div>
-        )}
-
-        {/* Link Existing Mode */}
-        {activeTab === 'link' && !isEdit && (
-          <div className="space-y-6 py-4">
-            <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center mx-auto text-blue-900">
-              <FiSearch className="w-8 h-8" />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Sync Existing Worker</h3>
-              <p className="text-xs text-gray-500 max-w-xs mx-auto">
-                Enter the verified phone number to instantly link a registered worker.
-              </p>
-            </div>
-
-            <div>
-              <input
-                type="tel"
-                value={linkPhone}
-                onChange={(e) => setLinkPhone(e.target.value)}
-                placeholder="0000000000"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:border-blue-900 focus:bg-white outline-none text-center text-xl font-bold text-gray-900"
-                maxLength={10}
-              />
-            </div>
-
-            <button
-              onClick={handleLinkWorker}
-              disabled={loading}
-              className="w-full py-3 text-white rounded-xl text-xs font-semibold bg-blue-900 hover:bg-blue-800 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              {loading ? 'Searching...' : 'Search & Link'}
-            </button>
-          </div>
-        )}
-
-        {/* Create / Edit Mode */}
-        {(activeTab === 'new' || isEdit) && (
-          <div className="space-y-6">
-            
-            {/* Profile Photo Upload */}
+        <div className="space-y-6">
+          
+          {/* Profile Photo Upload */}
             <div className="flex flex-col items-center justify-center">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm bg-white flex items-center justify-center group relative">
@@ -484,7 +428,7 @@ const AddEditWorker = () => {
                     />
                   ) : (
                     <div className="flex flex-col items-center justify-center text-blue-900">
-                      <FiUserPlus className="w-8 h-8" />
+                      <FiUser className="w-8 h-8" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
@@ -662,7 +606,16 @@ const AddEditWorker = () => {
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 py-4 text-gray-400 text-xs text-center">No categories found</div>
+                          <div className="px-4 py-4 text-gray-400 text-xs text-center space-y-1.5">
+                            <p>No opted services found in portfolio.</p>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); navigate('/vendor/my-services'); }}
+                              className="text-blue-600 font-semibold underline text-[11px] hover:text-blue-800"
+                            >
+                              + Add services in Manage Services
+                            </button>
+                          </div>
                         )}
                       </div>
                     </React.Fragment>
@@ -772,8 +725,7 @@ const AddEditWorker = () => {
               ) : (isEdit ? 'Update Credentials' : 'Add Worker')}
             </button>
           </div>
-        )}
-      </main >
+        </main >
 
       <AddressSelectionModal
         isOpen={isAddressModalOpen}

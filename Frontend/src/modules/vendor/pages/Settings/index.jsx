@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiVolume2, FiGlobe, FiInfo, FiLogOut, FiTrash2, FiMapPin, FiChevronRight, FiSettings } from 'react-icons/fi';
+import { FiBell, FiVolume2, FiInfo, FiLogOut, FiTrash2, FiMapPin, FiChevronRight, FiSettings } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
@@ -15,7 +15,6 @@ const Settings = () => {
   const [settings, setSettings] = useState({
     notifications: true,
     soundAlerts: true,
-    language: 'en',
   });
 
   useEffect(() => {
@@ -88,12 +87,6 @@ const Settings = () => {
         }
       }
     }
-  };
-
-  const handleLanguageChange = async (lang) => {
-    const updated = { ...settings, language: lang };
-    setSettings(updated);
-    await updateDBSettings(updated);
   };
 
   const handleLogout = () => {
@@ -228,34 +221,6 @@ const Settings = () => {
             </div>
             <FiChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
           </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-5 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center">
-            <FiGlobe className="w-5 h-5 text-purple-600" />
-          </div>
-          <h3 className="font-normal text-gray-800 tracking-tight capitalize text-sm">Protocol Language</h3>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { code: 'en', name: 'English (US)' },
-            { code: 'hi', name: 'हिंदी (India)' },
-          ].map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => handleLanguageChange(lang.code)}
-              className={`py-5 px-8 rounded-2xl text-center font-normal text-[10px] capitalize tracking-widest transition-all duration-300 ${
-                settings.language === lang.code
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                  : 'bg-gray-50 text-gray-500 border border-gray-100 hover:bg-gray-100'
-              }`}
-            >
-              {lang.name}
-            </button>
-          ))}
         </div>
       </div>
 

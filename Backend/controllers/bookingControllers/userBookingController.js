@@ -137,14 +137,13 @@ const createBooking = async (req, res) => {
     let nearbyVendors = [];
     let subscribedVendorIds = [];
     
-    // EXCLUSIVE lock: ONLY apply if the frontend explicitly requested direct single-vendor booking.
-    const isDirectBooking = (bookingType || '').toUpperCase() === 'DIRECT' || req.body.isDirectVendorBooking === true;
-    let targetVendorId = (isDirectBooking && vendorId) ? vendorId : null;
+    let isProduct = (service.offeringType || offeringType) === 'PRODUCT';
+    let targetVendorId = vendorId || service.vendorId || null;
 
     if (targetVendorId) {
-      console.log(`[CreateBooking] Direct single-vendor booking requested for vendorId: ${targetVendorId}`);
-      const ownerVendor = await Vendor.findById(targetVendorId);
-      if (ownerVendor) {
+      console.log(`[CreateBooking] Direct vendor booking target requested for vendorId: ${targetVendorId}`);
+      const ownerVendor = await Vendor.findById(targetVendorId).select('_id name businessName phone address isOnline approvalStatus isActive').lean();
+      if (ownerVendor && ownerVendor.approvalStatus === 'approved' && ownerVendor.isActive !== false) {
         console.log(`[CreateBooking] Exclusively routing to vendor: ${ownerVendor.businessName} (${ownerVendor._id})`);
         nearbyVendors = [{
           _id: ownerVendor._id,
@@ -154,7 +153,7 @@ const createBooking = async (req, res) => {
         }];
         subscribedVendorIds = [ownerVendor._id.toString()];
       } else {
-        console.log(`[CreateBooking] Target vendor NOT found for id: ${targetVendorId} — falling back to wave system`);
+        console.log(`[CreateBooking] Target vendor NOT found or inactive for id: ${targetVendorId} — falling back to wave system`);
         targetVendorId = null;
       }
     }
@@ -244,6 +243,43 @@ const createBooking = async (req, res) => {
       console.log(`[CreateBooking] Global online subscriber fallback matched: ${nearbyVendors.length} vendors`);
     }
 
+    // Product Order Fallback: If product order has no online vendor, match any subscribed active vendor offering this product
+    if (isProduct && nearbyVendors.length === 0) {
+      console.log(`[CreateBooking] Product order fallback: Searching any active vendor subscribed to ${service.title}`);
+      const ServiceModel = require('../../models/UserService');
+      const titleRegex = new RegExp(service.title.replace(/\s+/g, '\\s*'), 'i');
+      const productSubs = await ServiceModel.find({
+        $or: [
+          { _id: service._id },
+          { title: titleRegex }
+        ],
+        vendorId: { $ne: null },
+        status: 'active'
+      }).select('vendorId').lean();
+
+      const candidateVendorIds = productSubs.map(s => s.vendorId?.toString()).filter(Boolean);
+
+      if (candidateVendorIds.length > 0) {
+        const candidateVendors = await Vendor.find({
+          _id: { $in: candidateVendorIds },
+          approvalStatus: 'approved',
+          isActive: true
+        }).select('_id name businessName phone address').lean();
+
+        if (candidateVendors.length > 0) {
+          nearbyVendors = candidateVendors.map(v => ({
+            _id: v._id,
+            distance: 0,
+            businessName: v.businessName,
+            phone: v.phone
+          }));
+          targetVendorId = candidateVendors[0]._id;
+          subscribedVendorIds = candidateVendorIds;
+          console.log(`[CreateBooking] Matched product vendor(s): ${candidateVendors.map(v => v._id).join(', ')}`);
+        }
+      }
+    }
+
     if (nearbyVendors.length === 0) {
       return res.status(400).json({
         success: false,
@@ -253,7 +289,6 @@ const createBooking = async (req, res) => {
     }
 
     // Auto-assign product vendor if not provided (assign closest vendor selling this product)
-    let isProduct = (service.offeringType || offeringType) === 'PRODUCT';
     if (isProduct && !targetVendorId && nearbyVendors.length > 0) {
       targetVendorId = nearbyVendors[0]._id;
       console.log(`[CreateBooking] Auto-assigning product vendor: ${targetVendorId}`);

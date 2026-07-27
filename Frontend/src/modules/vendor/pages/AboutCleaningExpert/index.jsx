@@ -1,11 +1,47 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiCheckCircle, FiUsers, FiShield, FiClock, FiAward, FiHeart, FiGlobe, FiSmile, FiSmartphone } from 'react-icons/fi';
+import { FiArrowLeft, FiUsers, FiShield, FiClock, FiAward, FiGlobe } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Logo from '../../../../components/common/Logo';
+import { configService } from '../../../../services/configService';
 
 const AboutPlugPro = () => {
   const navigate = useNavigate();
+  const [platformConfig, setPlatformConfig] = useState({
+    companyName: 'PlugPro',
+    stats: [
+      { number: '10K+', label: 'Happy Customers' },
+      { number: '500+', label: 'Service Partners' },
+      { number: '4.8', label: 'Platform Rating' },
+    ]
+  });
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await configService.getSettings();
+        if (res && res.success) {
+          const companyName = res.settings?.companyName || 'PlugPro';
+          const happyCustomers = res.stats?.happyCustomers || '10K+';
+          const servicePartners = res.stats?.servicePartners || '500+';
+          const platformRating = res.stats?.platformRating || '4.8';
+
+          setPlatformConfig({
+            companyName,
+            stats: [
+              { number: happyCustomers, label: 'Happy Customers' },
+              { number: servicePartners, label: 'Service Partners' },
+              { number: platformRating, label: 'Platform Rating' },
+            ]
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching platform config:', error);
+      }
+    };
+
+    fetchConfig();
+  }, []);
 
   // Container animation variants
   const containerVariants = {
@@ -53,12 +89,6 @@ const AboutPlugPro = () => {
     }
   ];
 
-  const stats = [
-    { number: '10K+', label: 'Happy Customers' },
-    { number: '500+', label: 'Service Partners' },
-    { number: '4.8', label: 'Platform Rating' },
-  ];
-
   return (
     <motion.div
       initial="hidden"
@@ -75,7 +105,9 @@ const AboutPlugPro = () => {
           >
             <FiArrowLeft className="w-5 h-5 text-black" />
           </button>
-          <span className="text-sm font-medium capitalize tracking-[0.3em] text-black">About PlugPro</span>
+          <span className="text-sm font-medium capitalize tracking-[0.3em] text-black">
+            About {platformConfig.companyName}
+          </span>
         </div>
       </header>
 
@@ -90,7 +122,7 @@ const AboutPlugPro = () => {
           </div>
 
           <h1 className="text-4xl font-medium text-black mb-4 tracking-tighter">
-            PlugPro <span className="text-gray-200">Network</span>
+            {platformConfig.companyName} <span className="text-gray-200">Network</span>
           </h1>
           <p className="text-[10px] font-medium capitalize tracking-[0.2em] text-gray-400 max-w-xs mx-auto leading-loose">
             Redefining professional service delivery through technology and trust.
@@ -99,7 +131,7 @@ const AboutPlugPro = () => {
 
         {/* Stats Row */}
         <motion.div variants={itemVariants} className="flex justify-between bg-black rounded-[40px] p-8 shadow-2xl shadow-gray-200">
-          {stats.map((stat, idx) => (
+          {platformConfig.stats.map((stat, idx) => (
             <div key={idx} className="flex-1 text-center px-2">
               <div className="text-xl font-medium text-white tracking-tighter">
                 {stat.number}
@@ -119,7 +151,7 @@ const AboutPlugPro = () => {
             </div>
             <h3 className="text-xs font-medium text-black capitalize tracking-[0.3em] mb-4">Our Vision</h3>
             <p className="text-[11px] font-normal text-gray-500 leading-relaxed relative z-10 tracking-tighter">
-              PlugPro is architecting a new standard for home and personal services. We bridge the gap between skilled experts and discerning users through a seamless, secure, and transparent marketplace. Our focus is quality at scale.
+              {platformConfig.companyName} is architecting a new standard for home and personal services. We bridge the gap between skilled experts and discerning users through a seamless, secure, and transparent marketplace. Our focus is quality at scale.
             </p>
           </div>
         </motion.div>
@@ -146,7 +178,7 @@ const AboutPlugPro = () => {
         {/* Footer Info */}
         <motion.div variants={itemVariants} className="text-center pt-8 border-t border-gray-100">
           <p className="text-[9px] font-medium text-gray-300 capitalize tracking-[0.2em] mb-1">Ecosystem Managed By</p>
-          <span className="text-sm font-medium text-black capitalize tracking-[0.4em]">PlugPro Elite</span>
+          <span className="text-sm font-medium text-black capitalize tracking-[0.4em]">{platformConfig.companyName} Elite</span>
           <div className="flex items-center justify-center gap-2 mt-6">
             <div className="w-1.5 h-1.5 rounded-full bg-black animate-pulse" />
             <p className="text-[9px] font-medium text-gray-400 capitalize tracking-widest">Version 8.0.0 Global</p>
