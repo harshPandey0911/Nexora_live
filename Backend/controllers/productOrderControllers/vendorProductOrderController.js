@@ -187,6 +187,13 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product order not found or not assigned to you' });
     }
 
+    if (status === 'OUT_FOR_DELIVERY' && order.paymentMethod === 'online' && order.paymentStatus !== 'PAID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot dispatch order! Customer has not completed online payment yet.'
+      });
+    }
+
     order.status = status;
 
     if (status === 'OUT_FOR_DELIVERY') {

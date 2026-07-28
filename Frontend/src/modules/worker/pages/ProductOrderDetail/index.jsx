@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiMapPin, FiPhone, FiUser, FiClock, FiPackage, FiCheckCircle, FiXCircle, FiChevronRight, FiKey, FiTruck, FiShoppingBag } from 'react-icons/fi';
 import { workerTheme as themeColors } from '../../../../theme';
@@ -160,7 +160,19 @@ const ProductOrderDetail = () => {
               <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl">📦</div>
               <div><p className="text-xs font-bold text-slate-400 uppercase">Order ID</p><p className="font-black text-slate-900 text-base">#{order.orderId}</p></div>
             </div>
-            <div className="text-right">{getStatusBadge(order.status)}<p className="text-2xl font-black text-slate-900 mt-2">₹{order.financialBreakdown?.totalAmount || 0}</p><p className="text-xs font-bold text-slate-400 uppercase mt-0.5">{order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}</p></div>
+            <div className="text-right">
+              {getStatusBadge(order.status)}
+              <p className="text-2xl font-black text-slate-900 mt-2">₹{order.financialBreakdown?.totalAmount || 0}</p>
+              {order.paymentMethod === 'cod' ? (
+                <p className="text-xs font-bold text-amber-600 uppercase mt-0.5">Cash on Delivery</p>
+              ) : order.paymentStatus === 'PAID' ? (
+                <p className="text-xs font-bold text-emerald-600 uppercase mt-0.5">Paid Online</p>
+              ) : (
+                <span className="inline-block bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded uppercase mt-0.5 animate-pulse">
+                  ⚠️ ONLINE PAYMENT PENDING
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -214,7 +226,12 @@ const ProductOrderDetail = () => {
             {(order.financialBreakdown?.tax > 0) && <div className="flex justify-between text-slate-600"><span>Tax</span><span>₹{order.financialBreakdown.tax}</span></div>}
             <div className="border-t border-slate-100 my-2" />
             <div className="flex justify-between items-center"><span className="font-black text-slate-900">Total</span><span className="text-xl font-black text-slate-900">₹{order.financialBreakdown?.totalAmount || 0}</span></div>
-            <div className="flex justify-between text-xs text-slate-500"><span>Payment</span><span className="font-bold">{order.paymentMethod === 'cod' ? 'Cash on Delivery' : 'Paid Online'}</span></div>
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Payment Status</span>
+              <span className={`font-bold ${order.paymentMethod === 'cod' ? 'text-amber-600' : order.paymentStatus === 'PAID' ? 'text-emerald-600' : 'text-red-600 font-black'}`}>
+                {order.paymentMethod === 'cod' ? 'Cash on Delivery' : order.paymentStatus === 'PAID' ? 'Paid Online' : '⚠️ ONLINE PAYMENT PENDING'}
+              </span>
+            </div>
           </div>
         </div>
 

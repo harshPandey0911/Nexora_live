@@ -1072,6 +1072,13 @@ const initiateDeliveryOtp = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product order not found' });
     }
 
+    if (order.paymentMethod === 'online' && order.paymentStatus !== 'PAID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot generate OTP! Online payment is pending. Customer must pay online first.'
+      });
+    }
+
     if (order.status !== 'OUT_FOR_DELIVERY') {
       return res.status(400).json({ success: false, message: 'Order must be OUT_FOR_DELIVERY to initiate delivery OTP' });
     }
@@ -1138,6 +1145,13 @@ const verifyDeliveryOtp = async (req, res) => {
     const order = await ProductOrder.findOne({ _id: id, workerId });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    if (order.paymentMethod === 'online' && order.paymentStatus !== 'PAID') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot deliver order! Online payment is pending. Ask customer to pay online first.'
+      });
     }
 
     if (!order.deliveryOtp) {

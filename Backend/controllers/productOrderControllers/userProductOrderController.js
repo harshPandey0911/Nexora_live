@@ -308,15 +308,15 @@ const createProductOrder = async (req, res) => {
 
     await orderObj.save();
 
-    // If COD, trigger vendor broadcast immediately and clear cart
+    // Trigger vendor broadcast for both COD and Online Payment methods so vendor receives alert immediately
+    const notified = await broadcastProductOrderToVendors(orderObj);
+
+    // If COD, clear product cart items and return immediately
     if (paymentMethod === 'cod') {
-      // Clear product cart items
       await Cart.findOneAndUpdate(
         { userId },
         { $pull: { items: { 'serviceId.offeringType': 'PRODUCT' } } }
       ).catch(() => {});
-
-      const notified = await broadcastProductOrderToVendors(orderObj);
 
       return res.status(201).json({
         success: true,
@@ -401,14 +401,10 @@ const verifyProductOrderPayment = async (req, res) => {
       { $pull: { items: { 'serviceId.offeringType': 'PRODUCT' } } }
     ).catch(() => {});
 
-    // Broadcast to candidate vendors
-    const notified = await broadcastProductOrderToVendors(productOrder);
-
     return res.json({
       success: true,
       message: 'Payment verified and product order confirmed!',
-      data: productOrder,
-      notifiedVendors: notified
+      data: productOrder
     });
 
   } catch (error) {

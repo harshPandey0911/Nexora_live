@@ -217,7 +217,7 @@ const ProductOrderConfirmation = () => {
         </div>
 
         {/* ── DELIVERY OTP BANNER ─────────────────────────────────── */}
-        {(deliveryOtp || (order.status === 'OUT_FOR_DELIVERY' && order.deliveryOtp)) && (
+        {(order.paymentMethod !== 'online' || order.paymentStatus === 'PAID') && (deliveryOtp || (order.status === 'OUT_FOR_DELIVERY' && order.deliveryOtp)) && (
           <div className="mb-8 rounded-3xl overflow-hidden border-2 border-emerald-400 shadow-lg">
             {/* Green header */}
             <div className="bg-emerald-500 px-6 py-4 flex items-center gap-3">
@@ -246,8 +246,8 @@ const ProductOrderConfirmation = () => {
           </div>
         )}
 
-        {/* OUT_FOR_DELIVERY waiting banner (before OTP arrives) */}
-        {order.status === 'OUT_FOR_DELIVERY' && !deliveryOtp && !order.deliveryOtp && (
+        {/* OUT_FOR_DELIVERY waiting banner (before OTP arrives or payment pending) */}
+        {order.status === 'OUT_FOR_DELIVERY' && (order.paymentMethod !== 'online' || order.paymentStatus === 'PAID') && !deliveryOtp && !order.deliveryOtp && (
           <div className="mb-8 bg-blue-50 border-2 border-blue-200 rounded-3xl px-6 py-5 flex items-center gap-4">
             <span className="text-3xl">🚚</span>
             <div>
