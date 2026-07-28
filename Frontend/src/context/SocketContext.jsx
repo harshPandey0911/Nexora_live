@@ -271,6 +271,11 @@ export const SocketProvider = ({ children }) => {
           newSocket.emit('join_vendor_room', vendorId);
         }
       }
+
+      // If admin, explicitly join admin_room
+      if (userType === 'admin') {
+        newSocket.emit('join_admin_room');
+      }
     });
 
     newSocket.on('disconnect', () => {
@@ -339,9 +344,97 @@ export const SocketProvider = ({ children }) => {
       if (userType === 'worker') window.dispatchEvent(new Event('workerJobsUpdated'));
     });
 
+    // Listen for product order status updates (user & vendor)
+    newSocket.on('product_order_status_update', (data) => {
+      if (userType === 'user') {
+        window.dispatchEvent(new CustomEvent('productOrderStatusUpdate', { detail: data }));
+      }
+      if (userType === 'vendor') {
+        window.dispatchEvent(new Event('vendorJobsUpdated'));
+        window.dispatchEvent(new Event('vendorNotificationsUpdated'));
+      }
+    });
+
+    // ─── DELIVERY OTP — USER SIDE ────────────────────────────────────────────
+    // When worker initiates OTP, user sees a big prominent OTP popup
+    if (userType === 'user') {
+      newSocket.on('product_delivery_otp', (data) => {
+        const { otp, customOrderId, message } = data;
+
+        // Play notification sound
+        if (isSoundEnabled('user')) playNotificationSound();
+
+        // Show a large persistent toast with the OTP prominently displayed
+        toast.custom(
+          (t) => (
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.9 }}
+              animate={{ opacity: t.visible ? 1 : 0, y: t.visible ? 0 : -30, scale: t.visible ? 1 : 0.9 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden border-2 border-emerald-400 pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="bg-emerald-500 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">📦</span>
+                  <div>
+                    <p className="text-white font-black text-sm uppercase tracking-wide">Delivery OTP</p>
+                    <p className="text-emerald-100 text-xs font-medium">Order #{customOrderId}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="text-white/80 hover:text-white w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* OTP Display */}
+              <div className="px-5 py-5 text-center">
+                <p className="text-slate-500 text-sm font-medium mb-3">Share this OTP with the delivery person</p>
+                <div className="flex gap-2 justify-center mb-4">
+                  {String(otp).split('').map((digit, i) => (
+                    <div
+                      key={i}
+                      className="w-14 h-14 bg-emerald-50 border-2 border-emerald-400 rounded-2xl flex items-center justify-center text-2xl font-black text-emerald-700 shadow-sm"
+                    >
+                      {digit}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 font-medium">Valid for 15 minutes</p>
+                <p className="text-xs text-slate-500 mt-1">{message}</p>
+              </div>
+
+              {/* Dismiss */}
+              <div className="px-5 pb-4">
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500 text-white font-bold text-sm active:scale-95 transition-transform"
+                >
+                  Got it!
+                </button>
+              </div>
+            </motion.div>
+          ),
+          {
+            id: `delivery-otp-${data.orderId}`,
+            duration: 180000, // 3 minutes — stays until dismissed
+            position: 'top-center',
+            style: { maxWidth: '100%', width: 'auto', padding: 0 }
+          }
+        );
+
+        // Also dispatch event so order detail page can refresh if open
+        window.dispatchEvent(new CustomEvent('productOrderStatusUpdate', { detail: data }));
+      });
+    }
+
+
     // Listen for special Vendor Booking Requests & Product Orders
     if (userType === 'vendor') {
-      const handleVendorAlert = (data) => {
+      const handleVendorBookingAlert = (data) => {
         console.log('🚨 New Vendor Request Alert Received on Socket:', data);
 
         // Acknowledge receipt to server
@@ -350,29 +443,21 @@ export const SocketProvider = ({ children }) => {
         // Play urgent alert ring
         playAlertRing();
 
-        window.dispatchEvent(new Event('vendorJobsUpdated'));
-        window.dispatchEvent(new Event('vendorNotificationsUpdated'));
-      };
-
-      newSocket.on('new_product_order_alert', handleVendorAlert);
-
-      newSocket.on('new_booking_request', (data) => {
-        handleVendorAlert(data);
-
         // Save to localStorage for the Alert screen and Dashboard to read
-        // Note: Even though we are moving to backend, keeping this for immediate UI responsiveness before potential refresh lag
         const newJob = {
-          id: data.bookingId,
-          serviceType: data.serviceName,
+          id: data.bookingId || data.orderId,
+          orderId: data.orderId || data.customOrderId,
+          isProductOrder: !!(data.orderId || data.customOrderId),
+          serviceType: data.serviceName || 'Product Order',
           customerName: data.customerName,
           customerPhone: data.customerPhone,
           location: {
             address: data.address?.addressLine1 || 'Location shared',
             distance: data.distance ? `${data.distance.toFixed(1)} km` : 'Near you'
           },
-          price: data.price,
+          price: data.price || data.totalAmount,
           vendorEarnings: data.vendorEarnings,
-          serviceCategory: data.serviceCategory,
+          serviceCategory: data.serviceCategory || 'Product',
           brandName: data.brandName,
           brandIcon: data.brandIcon,
           categoryIcon: data.categoryIcon,
@@ -415,41 +500,21 @@ export const SocketProvider = ({ children }) => {
             data={{
               ...data,
               type: 'new_booking_request',
-              title: '⚡ NEW BOOKING SIGNAL',
-              message: `Incoming ${data.serviceName} request from ${data.customerName}. Accept now to secure deployment.`
+              title: newJob.isProductOrder ? '📦 NEW PRODUCT ORDER' : '⚡ NEW BOOKING SIGNAL',
+              message: `Incoming ${newJob.serviceType} request from ${data.customerName}. Accept now to secure order.`
             }}
             onClick={() => {
               toast.dismiss(t.id);
-              navigate(`/vendor/booking/${data.bookingId}`);
-            }}
-            actions={[
-              {
-                label: 'Accept',
-                onClick: () => {
-                  acceptBooking(data.bookingId).then(() => {
-                    // Clear from localStorage so the modal doesn't reappear
-                    const pending = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
-                    localStorage.setItem('vendorPendingJobs', JSON.stringify(
-                      pending.filter(j => String(j.id || j._id) !== String(data.bookingId))
-                    ));
-                    window.dispatchEvent(new CustomEvent('removeVendorBooking', { detail: { id: data.bookingId } }));
-                    assignWorker(data.bookingId, 'SELF').catch(() => {});
-                  }).catch(() => {});
-                  toast.dismiss(t.id);
-                }
-              },
-              {
-                label: 'Reject',
-                onClick: () => {
-                  rejectBooking(data.bookingId);
-                  toast.dismiss(t.id);
-                }
+              if (newJob.isProductOrder) {
+                navigate('/vendor/product-orders');
+              } else {
+                navigate(`/vendor/booking/${data.bookingId}`);
               }
-            ]}
+            }}
           />
         ), {
-          id: `new-booking-${data.bookingId}`,
-          duration: 10000, // Longer duration for critical alerts
+          id: `new-booking-${newJob.id}`,
+          duration: 10000,
           position: 'top-right',
           style: { maxWidth: '100%', width: 'auto' }
         });
@@ -458,7 +523,10 @@ export const SocketProvider = ({ children }) => {
         window.dispatchEvent(new Event('vendorJobsUpdated'));
         window.dispatchEvent(new Event('vendorStatsUpdated'));
         window.dispatchEvent(new Event('vendorNotificationsUpdated'));
-      });
+      };
+
+      newSocket.on('new_product_order_alert', handleVendorBookingAlert);
+      newSocket.on('new_booking_request', handleVendorBookingAlert);
 
       // Listen for booking_taken - when another vendor accepts a job
       newSocket.on('booking_taken', (data) => {
@@ -596,6 +664,105 @@ export const SocketProvider = ({ children }) => {
         const event = new CustomEvent('showWorkerJobAlert', { detail: newJob });
         window.dispatchEvent(event);
       });
+
+      // Listen for Product Order delivery task assignments
+      newSocket.on('new_product_delivery_task', (data) => {
+        // Play urgent alert ring
+        playAlertRing();
+
+        const addr = data.deliveryAddress;
+        const addressStr = addr
+          ? (addr.addressLine1 ? `${addr.addressLine1}, ${addr.city || ''}`.trim().replace(/,\s*$/, '') : addr.fullAddress || addr.address || 'Location shared')
+          : 'Location shared';
+
+        const newJob = {
+          id: String(data.orderId || data.customOrderId),
+          _id: String(data.orderId || data.customOrderId),
+          serviceType: data.items?.[0]?.title || 'Product Delivery',
+          customerName: data.contactDetails?.name || data.contactDetails?.fullName || 'Customer',
+          customerPhone: data.contactDetails?.phone || data.contactDetails?.mobile || '',
+          location: { address: addressStr },
+          price: data.totalAmount || 0,
+          isProductOrder: true,
+          orderId: data.customOrderId || String(data.orderId),
+          items: data.items || [],
+          status: 'ASSIGNED',
+          createdAt: new Date().toISOString()
+        };
+
+        const pendingJobs = JSON.parse(localStorage.getItem('workerPendingJobs') || '[]');
+        if (!pendingJobs.find(job => String(job.id || job._id) === String(newJob.id))) {
+          pendingJobs.unshift(newJob);
+          localStorage.setItem('workerPendingJobs', JSON.stringify(pendingJobs));
+        }
+
+        // Notify app components to refresh
+        window.dispatchEvent(new Event('workerJobsUpdated'));
+
+        // Show the global alert popup to worker
+        const event = new CustomEvent('showWorkerJobAlert', { detail: newJob });
+        window.dispatchEvent(event);
+      });
+    }
+
+    // Listen for Special Admin Escalation Signals & Notifications
+    if (userType === 'admin') {
+      const handleAdminEscalation = (data) => {
+        if (isSoundEnabled('admin')) playAlertRing();
+
+        const orderNum = data.customOrderId || data.orderId || data.bookingNumber || data.bookingId;
+        const sName = data.serviceName || 'Order / Booking';
+
+        toast.custom(
+          (t) => (
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.9 }}
+              animate={{ opacity: t.visible ? 1 : 0, y: t.visible ? 0 : -30, scale: t.visible ? 1 : 0.9 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="w-full max-w-sm bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border-2 border-amber-500 pointer-events-auto text-white p-5 relative"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl animate-bounce">⚠️</span>
+                <div>
+                  <p className="font-black text-amber-400 text-xs uppercase tracking-widest">Escalated To Admin</p>
+                  <p className="font-bold text-sm text-white">Order #{orderNum}</p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+                {data.message || `No vendor accepted ${sName}. Manual assignment required.`}
+              </p>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    navigate('/admin/bookings/manual');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider transition-all"
+                >
+                  Assign Vendor Now
+                </button>
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="px-3 py-2.5 rounded-xl bg-slate-800 text-slate-400 text-xs font-bold"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          ),
+          {
+            id: `admin-escalate-${data.bookingId || data.orderId}`,
+            duration: 15000,
+            position: 'top-right'
+          }
+        );
+
+        window.dispatchEvent(new Event('adminBookingsUpdated'));
+      };
+
+      newSocket.on('adminBookingEscalated', handleAdminEscalation);
     }
 
     return () => {

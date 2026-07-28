@@ -626,11 +626,47 @@ const BookingDetails = () => {
         <main className="max-w-xl mx-auto px-4 py-6 space-y-6">
 
 
-          {/* Visual Progress Stepper - Simplified */}
+          {/* Visual Progress Stepper - Product Order vs Service Booking */}
           {['cancelled', 'rejected'].includes(booking.status?.toLowerCase()) ? (
             <div className="bg-red-50 rounded-2xl p-4 border border-red-100 flex items-center gap-3 text-red-700">
               <FiXCircle className="w-5 h-5 shrink-0" />
               <p className="font-medium text-sm">This booking has been {booking.status.toLowerCase()}.</p>
+            </div>
+          ) : (booking.offeringType === 'PRODUCT' || booking.orderId) ? (
+            <div className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100 relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
+                {[
+                  { step: 1, title: 'Ordered', statusKey: ['pending_acceptance', 'requested', 'searching', 'confirmed', 'accepted', 'assigned', 'packing', 'out_for_delivery', 'delivered'] },
+                  { step: 2, title: 'Accepted', statusKey: ['confirmed', 'accepted', 'assigned', 'packing', 'out_for_delivery', 'delivered'] },
+                  { step: 3, title: 'Packing', statusKey: ['packing', 'out_for_delivery', 'delivered'] },
+                  { step: 4, title: 'On The Way', statusKey: ['out_for_delivery', 'delivered'] },
+                  { step: 5, title: 'Delivered', statusKey: ['delivered'] },
+                ].map((s) => {
+                  const isCompleted = s.statusKey.includes(booking.status?.toLowerCase());
+                  return (
+                    <div key={s.step} className="flex flex-col items-center gap-1.5 flex-1">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                        isCompleted ? 'bg-teal-600 text-white shadow-lg shadow-teal-200' : 'bg-gray-100 text-gray-400'
+                      }`}>
+                        {isCompleted ? <FiCheckCircle className="w-4 h-4" /> : s.step}
+                      </div>
+                      <p className="text-[9px] font-bold text-gray-600 uppercase tracking-tight text-center">
+                        {s.title}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Connection progress line for product stages */}
+              <div className="absolute top-[3.2rem] left-[10%] right-[10%] h-0.5 bg-gray-100 -z-0">
+                <div className="h-full bg-teal-500 transition-all duration-700" style={{
+                  width:
+                    booking.status?.toLowerCase() === 'delivered' ? '100%' :
+                    booking.status?.toLowerCase() === 'out_for_delivery' ? '75%' :
+                    booking.status?.toLowerCase() === 'packing' ? '50%' :
+                    ['confirmed', 'accepted', 'assigned'].includes(booking.status?.toLowerCase()) ? '25%' : '0%'
+                }}></div>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-100">

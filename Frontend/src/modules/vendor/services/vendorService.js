@@ -135,6 +135,15 @@ const vendorService = {
     }
   },
 
+  assignProductOrderWorker: async (orderId, workerId) => {
+    try {
+      const response = await api.post(`/vendors/product-orders/${orderId}/assign-worker`, { workerId });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   updateProductOrderStatus: async (orderId, status) => {
     try {
       const response = await api.put(`/vendors/product-orders/${orderId}/status`, { status });

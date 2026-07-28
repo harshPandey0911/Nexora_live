@@ -177,6 +177,10 @@ export default function GlobalWorkerJobAlert() {
 
   const handleAccept = async (id) => {
     try {
+      // Find the job to check if it's a product order
+      const job = activeAlerts.find(b => String(b.id || b._id) === String(id));
+      const isProductOrder = job?.isProductOrder || job?.orderId || (job?.items && job?.items.length > 0);
+
       await workerService.respondToJob(id, 'ACCEPTED');
 
       // Clear from pending local storage
@@ -192,7 +196,13 @@ export default function GlobalWorkerJobAlert() {
 
       window.dispatchEvent(new Event('workerJobsUpdated'));
       toast.success('Job Accepted Successfully!');
-      navigate(`/worker/job/${id}`);
+
+      // Navigate to appropriate page
+      if (isProductOrder) {
+        navigate(`/worker/product-order/${id}`);
+      } else {
+        navigate(`/worker/job/${id}`);
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to accept job');
     }

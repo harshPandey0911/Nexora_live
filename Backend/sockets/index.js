@@ -64,6 +64,7 @@ const initializeSocket = (server) => {
       updateWorkerOnlineStatus(socket.userId, true, socket.id);
     } else if (role === 'ADMIN') {
       socket.join(`admin_${socket.userId.toString()}`);
+      socket.join('admin_room');
     }
 
     // Explicit Room Join Events (Fallback/Frontend Initiated)

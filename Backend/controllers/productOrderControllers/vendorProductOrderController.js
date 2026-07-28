@@ -81,7 +81,10 @@ const acceptProductOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Vendor not found' });
     }
 
-    const order = await ProductOrder.findById(orderId);
+    const order = mongoose.Types.ObjectId.isValid(orderId)
+      ? await ProductOrder.findById(orderId)
+      : await ProductOrder.findOne({ orderId });
+
     if (!order) {
       return res.status(404).json({ success: false, message: 'Product order not found' });
     }
@@ -140,7 +143,7 @@ const acceptProductOrder = async (req, res) => {
         phone: vendor.phone,
         profilePhoto: vendor.profilePhoto,
         rating: vendor.rating || 4.8,
-        deliveryCharge: vendorDeliveryCharge
+        deliveryCharge: deliveryCharge
       },
       financialBreakdown: order.financialBreakdown
     };
@@ -279,10 +282,73 @@ const getVendorProductOrders = async (req, res) => {
   }
 };
 
+/**
+ * Assign Worker / Delivery Boy to Product Order
+ */
+const assignProductOrderWorker = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { orderId } = req.params;
+    const { workerId } = req.body;
+
+    const order = mongoose.Types.ObjectId.isValid(orderId)
+      ? await ProductOrder.findById(orderId)
+      : await ProductOrder.findOne({ orderId });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    // Ensure vendor owns or accepts order first
+    if (!order.vendorId) {
+      order.vendorId = vendorId;
+      order.status = 'ACCEPTED';
+      order.acceptedAt = new Date();
+    } else if (order.vendorId.toString() !== vendorId) {
+      return res.status(403).json({ success: false, message: 'Order assigned to another vendor' });
+    }
+
+    if (workerId && workerId !== 'SELF') {
+      const Worker = require('../../models/Worker');
+      const worker = await Worker.findById(workerId);
+      if (!worker) {
+        return res.status(404).json({ success: false, message: 'Selected worker not found' });
+      }
+      order.workerId = workerId;
+      order.assignedWorkerAt = new Date();
+
+      // Emit socket event to Worker/Delivery Boy
+      const io = getIO();
+      io.to(`worker_${workerId}`).emit('new_product_delivery_task', {
+        orderId: order._id,
+        customOrderId: order.orderId,
+        items: order.items,
+        deliveryAddress: order.deliveryAddress,
+        contactDetails: order.contactDetails,
+        totalAmount: order.financialBreakdown?.totalAmount
+      });
+    } else {
+      order.workerId = null;
+    }
+
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: workerId === 'SELF' ? 'Assigned to self' : 'Product order assigned to delivery boy successfully',
+      data: order
+    });
+  } catch (error) {
+    console.error('Assign product order worker error:', error);
+    return res.status(500).json({ success: false, message: 'Error assigning worker to product order' });
+  }
+};
+
 module.exports = {
   updateDeliverySettings,
   getDeliverySettings,
   acceptProductOrder,
   updateOrderStatus,
-  getVendorProductOrders
+  getVendorProductOrders,
+  assignProductOrderWorker
 };

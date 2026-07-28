@@ -102,14 +102,16 @@ const AssignedJobs = () => {
     } else if (filter === 'confirmed') {
       matchesFilter = ['confirmed', 'assigned', 'pending'].includes(status);
     } else if (filter === 'in_progress') {
-      matchesFilter = ['in_progress', 'started', 'reached', 'visited', 'work_done', 'on_the_way'].includes(status);
+      matchesFilter = ['in_progress', 'started', 'reached', 'visited', 'work_done', 'on_the_way', 'packing', 'out_for_delivery'].includes(status);
     } else if (filter === 'completed') {
-      matchesFilter = ['completed', 'worker_paid', 'paid'].includes(status);
+      matchesFilter = ['completed', 'worker_paid', 'paid', 'delivered'].includes(status);
     }
 
+    const customerName = job.userId?.name || job.contactDetails?.name || '';
     const matchesSearch = searchQuery === '' ||
       job.serviceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.userId?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (job.orderId || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesFilter && matchesSearch;
   }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -178,11 +180,14 @@ const AssignedJobs = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredJobs.map((job) => {
               const statusColor = getStatusColor(job.status);
+              const isProductOrder = job.isProductOrder;
+              const customerName = job.userId?.name || job.contactDetails?.name || 'Customer';
+              const addressLine = job.address?.addressLine1 || job.deliveryAddress?.addressLine1 || 'Address unavailable';
 
               return (
                 <div
                   key={job._id}
-                  onClick={() => navigate(`/worker/job/${job._id}`)}
+                  onClick={() => isProductOrder ? navigate(`/worker/product-order/${job._id}`) : navigate(`/worker/job/${job._id}`)}
                   className="bg-white rounded-3xl p-5 border border-slate-200/80 shadow-sm hover:shadow-xl hover:border-teal-300 transition-all duration-300 cursor-pointer active:scale-98 relative overflow-hidden flex flex-col justify-between group"
                 >
                   <div className="space-y-3">
@@ -190,17 +195,25 @@ const AssignedJobs = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-bold group-hover:scale-105 transition-transform"
+                          className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 font-bold group-hover:scale-105 transition-transform text-lg"
                           style={{
-                            background: `${statusColor}15`,
-                            color: statusColor,
+                            background: isProductOrder ? '#e0f2fe' : `${statusColor}15`,
+                            color: isProductOrder ? '#0284c7' : statusColor,
                           }}
                         >
-                          <FiBriefcase className="w-5 h-5" />
+                          {isProductOrder ? '📦' : <FiBriefcase className="w-5 h-5" />}
                         </div>
 
                         <div className="min-w-0">
-                          <h3 className="font-extrabold text-slate-900 text-sm truncate tracking-tight">{job.serviceName}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-extrabold text-slate-900 text-sm truncate tracking-tight">{job.serviceName}</h3>
+                            {isProductOrder && (
+                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-lg bg-blue-100 text-blue-700 border border-blue-200 shrink-0">Delivery</span>
+                            )}
+                          </div>
+                          {isProductOrder && job.orderId && (
+                            <p className="text-[10px] text-slate-400 font-semibold mt-0.5">#{job.orderId}</p>
+                          )}
                           <span
                             className="inline-block text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg mt-1"
                             style={{
@@ -216,7 +229,7 @@ const AssignedJobs = () => {
 
                       <div className="text-right shrink-0">
                         <span className="text-base font-black text-slate-900">
-                          ₹{job.finalAmount}
+                          ₹{job.finalAmount || job.financialBreakdown?.totalAmount || 0}
                         </span>
                       </div>
                     </div>
@@ -225,18 +238,21 @@ const AssignedJobs = () => {
                     <div className="bg-slate-50/70 rounded-2xl p-3 space-y-2 border border-slate-100 text-xs">
                       <div className="flex items-center gap-2 text-slate-700 font-medium">
                         <FiUser className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{job.userId?.name || 'Customer'}</span>
+                        <span className="truncate">{customerName}</span>
                       </div>
 
                       <div className="flex items-center gap-2 text-slate-600 font-medium">
                         <FiMapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{job.address?.addressLine1 || 'Address unavailable'}</span>
+                        <span className="truncate">{addressLine}</span>
                       </div>
 
                       <div className="flex items-center gap-2 text-slate-500 font-medium">
                         <FiClock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span>
-                          {job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'} • {job.scheduledTime || 'N/A'}
+                          {isProductOrder
+                            ? 'Immediate Delivery'
+                            : `${job.scheduledDate ? new Date(job.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'} • ${job.scheduledTime || 'N/A'}`
+                          }
                         </span>
                       </div>
                     </div>
@@ -244,7 +260,7 @@ const AssignedJobs = () => {
 
                   {/* Footer Arrow Action */}
                   <div className="flex items-center justify-between pt-3 mt-2 border-t border-slate-100 text-xs font-bold text-teal-700 group-hover:text-teal-800">
-                    <span>View Details</span>
+                    <span>{isProductOrder ? 'Delivery Task' : 'View Details'}</span>
                     <FiChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>

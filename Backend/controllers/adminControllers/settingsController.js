@@ -175,11 +175,11 @@ exports.updateSettings = async (req, res, next) => {
 // Get Public Settings (Visited Charges, GST, Live Stats)
 exports.getPublicSettings = async (req, res, next) => {
   try {
-    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig termsAndConditions privacyPolicy workerTermsAndConditions workerPrivacyPolicy vendorTermsAndConditions vendorPrivacyPolicy maxCartItemQuantity').lean();
+    let settings = await Settings.findOne({ type: 'global' }).select('visitedCharges productDeliveryCharge serviceGstPercentage partsGstPercentage supportEmail supportPhone supportWhatsapp cancellationPenalty companyName companyAddress companyCity companyState companyPincode companyPhone companyEmail isOnlinePaymentEnabled slotConfig termsAndConditions privacyPolicy workerTermsAndConditions workerPrivacyPolicy vendorTermsAndConditions vendorPrivacyPolicy maxCartItemQuantity').lean();
 
     // Default if not found (fallback values)
     if (!settings) {
-      settings = { visitedCharges: 29, serviceGstPercentage: 18, partsGstPercentage: 18, maxCartItemQuantity: 100, companyName: 'Nexora' };
+      settings = { visitedCharges: 29, productDeliveryCharge: 49, serviceGstPercentage: 18, partsGstPercentage: 18, maxCartItemQuantity: 100, companyName: 'Nexora' };
     }
 
     const User = require('../../models/User');

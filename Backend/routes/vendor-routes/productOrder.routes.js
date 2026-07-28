@@ -7,13 +7,15 @@ const {
   getDeliverySettings,
   acceptProductOrder,
   updateOrderStatus,
-  getVendorProductOrders
+  getVendorProductOrders,
+  assignProductOrderWorker
 } = require('../../controllers/productOrderControllers/vendorProductOrderController');
 
 router.get('/delivery-settings', authenticate, isVendor, getDeliverySettings);
 router.put('/delivery-settings', authenticate, isVendor, updateDeliverySettings);
 router.get('/product-orders', authenticate, isVendor, getVendorProductOrders);
 router.post('/product-orders/:orderId/accept', authenticate, isVendor, acceptProductOrder);
+router.post('/product-orders/:orderId/assign-worker', authenticate, isVendor, assignProductOrderWorker);
 router.put('/product-orders/:orderId/status', authenticate, isVendor, updateOrderStatus);
 
 module.exports = router;

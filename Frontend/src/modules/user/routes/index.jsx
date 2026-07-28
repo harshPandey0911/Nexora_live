@@ -184,6 +184,7 @@ const UserRoutes = () => {
                 <Route path="/checkout" element={<ProtectedRoute userType="user"><Checkout /></ProtectedRoute>} />
                 <Route path="/product-checkout" element={<ProtectedRoute userType="user"><ProductCheckout /></ProtectedRoute>} />
                 <Route path="/product-order-confirmation/:orderId" element={<ProtectedRoute userType="user"><ProductOrderConfirmation /></ProtectedRoute>} />
+                <Route path="/product-order/:orderId" element={<ProtectedRoute userType="user"><ProductOrderConfirmation /></ProtectedRoute>} />
                 <Route path="/my-bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
                 <Route path="/bookings" element={<ProtectedRoute userType="user"><MyBookings /></ProtectedRoute>} />
                 <Route path="/booking/:id" element={<ProtectedRoute userType="user"><BookingDetails /></ProtectedRoute>} />

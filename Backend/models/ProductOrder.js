@@ -58,6 +58,16 @@ const productOrderSchema = new mongoose.Schema({
     default: null,
     index: true
   },
+  workerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Worker',
+    default: null,
+    index: true
+  },
+  assignedWorkerAt: {
+    type: Date,
+    default: null
+  },
   items: [productOrderItemSchema],
   deliveryAddress: {
     type: { type: String, default: 'home' },
@@ -86,9 +96,13 @@ const productOrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['PENDING_ACCEPTANCE', 'ACCEPTED', 'REJECTED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'],
+    enum: ['PENDING_ACCEPTANCE', 'ACCEPTED', 'REJECTED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED', 'ESCALATED'],
     default: 'PENDING_ACCEPTANCE',
     index: true
+  },
+  isEscalatedToAdmin: {
+    type: Boolean,
+    default: false
   },
   financialBreakdown: {
     subtotal: { type: Number, required: true },
@@ -107,7 +121,11 @@ const productOrderSchema = new mongoose.Schema({
   dispatchedAt: { type: Date, default: null },
   deliveredAt: { type: Date, default: null },
   cancelledAt: { type: Date, default: null },
-  cancellationReason: { type: String, default: null }
+  cancellationReason: { type: String, default: null },
+  workerResponse: { type: String, enum: ['PENDING', 'ACCEPTED', 'REJECTED'], default: 'PENDING' },
+  workerAcceptedAt: { type: Date, default: null },
+  deliveryOtp: { type: String, default: null },
+  deliveryOtpExpiry: { type: Date, default: null }
 }, {
   timestamps: true
 });

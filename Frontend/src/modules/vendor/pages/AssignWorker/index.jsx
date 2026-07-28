@@ -39,12 +39,34 @@ const AssignWorker = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        // Load booking details
-        const bookingRes = await getBookingById(id);
-        const bData = bookingRes.booking || bookingRes.data;
+        let bData;
+        if (String(id).startsWith('ORD-')) {
+          const { default: vendorService } = await import('../../services/vendorService');
+          const productOrdersRes = await vendorService.getVendorProductOrders();
+          const allOrders = [
+            ...(productOrdersRes.data?.assignedOrders || []),
+            ...(productOrdersRes.data?.pendingAlerts || [])
+          ];
+          bData = allOrders.find(o => String(o._id) === String(id) || String(o.orderId) === String(id));
+          if (bData) bData.isProductOrder = true;
+        } else {
+          try {
+            const bookingRes = await getBookingById(id);
+            bData = bookingRes.booking || bookingRes.data;
+          } catch (e) {
+            const { default: vendorService } = await import('../../services/vendorService');
+            const productOrdersRes = await vendorService.getVendorProductOrders();
+            const allOrders = [
+              ...(productOrdersRes.data?.assignedOrders || []),
+              ...(productOrdersRes.data?.pendingAlerts || [])
+            ];
+            bData = allOrders.find(o => String(o._id) === String(id) || String(o.orderId) === String(id));
+            if (bData) bData.isProductOrder = true;
+          }
+        }
+
         if (bData) {
           setBooking(bData);
-
           const unassignableStatuses = [
             'completed', 'work_done', 'in_progress', 'visited', 'journey_started',
             'on_the_way', 'reached', 'cancelled', 'rejected', 'vendor_rejected', 'vendor rejected'
@@ -55,7 +77,7 @@ const AssignWorker = () => {
             return;
           }
         } else {
-          throw new Error('Booking not found');
+          throw new Error('Booking or Product Order not found');
         }
 
         // Load workers
@@ -93,13 +115,22 @@ const AssignWorker = () => {
 
       const workerId = assignToSelf ? 'SELF' : selectedWorker.id || selectedWorker._id;
 
-      const response = await assignWorkerApi(id, workerId);
+      let response;
+      if (booking.isProductOrder || booking.items || booking.orderId?.startsWith('ORD-')) {
+        const { default: vendorService } = await import('../../services/vendorService');
+        response = await vendorService.assignProductOrderWorker(id, workerId);
+      } else {
+        response = await assignWorkerApi(id, workerId);
+      }
 
       if (response && response.success) {
-        toast.success('Worker assigned successfully');
-        // Notify other components
+        toast.success(assignToSelf ? 'Assigned to self' : 'Delivery worker assigned successfully');
         window.dispatchEvent(new Event('vendorJobsUpdated'));
-        navigate(`/vendor/booking/${id}`, { replace: true });
+        if (booking.isProductOrder || booking.items || booking.orderId?.startsWith('ORD-')) {
+          navigate('/vendor/product-orders', { replace: true });
+        } else {
+          navigate(`/vendor/booking/${id}`, { replace: true });
+        }
       } else {
         throw new Error(response?.message || 'Failed to assign worker');
       }
@@ -126,23 +157,33 @@ const AssignWorker = () => {
   const getAddressString = (addr) => {
     if (!addr) return 'Address not available';
     if (typeof addr === 'string') return addr;
-    return `${addr.addressLine1 || ''}, ${addr.city || ''} ${addr.pincode || ''}`;
+    const line1 = addr.addressLine1 || addr.fullAddress || addr.address || '';
+    const city = addr.city || '';
+    const pin = addr.pincode || '';
+    const result = [line1, city, pin].filter(Boolean).join(', ');
+    return result || 'Address not available';
   };
+
+  const serviceTitle = booking.serviceName || booking.serviceType || booking.items?.[0]?.title || booking.serviceId?.title || (booking.orderId ? `Product Order #${booking.orderId}` : 'Service');
+  const addressVal = booking.deliveryAddress || booking.address || booking.location;
+  const totalPriceVal = booking.financialBreakdown?.totalAmount || booking.financialBreakdown?.vendorEarnings || booking.totalAmount || booking.finalAmount || booking.price || 0;
 
   return (
     <div className="min-h-screen pb-20 bg-white">
-      <Header title="Assign Worker" onBack={() => navigate(`/vendor/booking/${id}`, { replace: true })} />
+      <Header title="Assign Worker" onBack={() => navigate(-1)} />
 
       <main className="px-4 pt-24 pb-6">
         {/* Booking Summary (Black Theme) */}
         <div className="bg-white rounded-[32px] p-6 mb-6 shadow-sm border border-gray-100">
-          <p className="text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1">Active Booking</p>
-          <h3 className="text-xl font-medium text-gray-900 mb-2">{booking.serviceName || booking.serviceId?.title || 'Service'}</h3>
-          <p className="text-xs font-medium text-gray-500 leading-relaxed">{getAddressString(booking.address || booking.location)}</p>
+          <p className="text-[10px] font-medium capitalize tracking-widest text-gray-400 mb-1">
+            {booking.isProductOrder || booking.items || booking.orderId ? 'Active Product Order' : 'Active Booking'}
+          </p>
+          <h3 className="text-xl font-medium text-gray-900 mb-2">{serviceTitle}</h3>
+          <p className="text-xs font-medium text-gray-500 leading-relaxed">{getAddressString(addressVal)}</p>
           <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
             <span className="text-[10px] font-medium capitalize tracking-widest text-gray-400">Total Value</span>
             <span className="text-lg font-medium text-black">
-              ₹{booking.finalAmount || booking.price || 0}
+              ₹{totalPriceVal}
             </span>
           </div>
         </div>

@@ -321,8 +321,18 @@ const AdminSettings = () => {
         ...slotConfig,
         gapInMinutes: parseInt(slotConfig.gapInMinutes, 10) || 60
       };
-      await updateSettings({ ...financialSettings, slotConfig: finalSlotConfig });
-      toast.success('Financial settings updated');
+      const formattedFinancials = {
+        ...financialSettings,
+        visitedCharges: Number(financialSettings.visitedCharges),
+        productDeliveryCharge: Number(financialSettings.productDeliveryCharge),
+        serviceGstPercentage: Number(financialSettings.serviceGstPercentage),
+        partsGstPercentage: Number(financialSettings.partsGstPercentage),
+        vendorCashLimit: Number(financialSettings.vendorCashLimit),
+        cancellationPenalty: Number(financialSettings.cancellationPenalty),
+        slotConfig: finalSlotConfig
+      };
+      await updateSettings(formattedFinancials);
+      toast.success('Financial settings updated successfully');
     } catch (error) {
       toast.error('Failed to update settings');
     } finally {

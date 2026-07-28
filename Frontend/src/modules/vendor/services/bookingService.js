@@ -35,7 +35,9 @@ export const getBookingById = async (bookingId) => {
     const response = await api.get(`/vendors/bookings/${bookingId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching booking:', error);
+    if (error.response?.status !== 404) {
+      console.error('Error fetching booking:', error);
+    }
     throw error;
   }
 };

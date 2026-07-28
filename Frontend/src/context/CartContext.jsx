@@ -90,6 +90,8 @@ export const CartProvider = ({ children }) => {
     return true;
   };
 
+  const [productDeliveryChargeRate, setProductDeliveryChargeRate] = useState(49);
+
   // Initialize config on mount
   useEffect(() => {
     const fetchConfig = async () => {
@@ -98,6 +100,10 @@ export const CartProvider = ({ children }) => {
         const charges = res.data?.settings?.visitedCharges;
         if (res.data?.success && charges !== undefined && charges !== null && !isNaN(Number(charges))) {
           setPlatformFeeRate(Number(charges));
+        }
+        const pDelivery = res.data?.settings?.productDeliveryCharge;
+        if (res.data?.success && pDelivery !== undefined && pDelivery !== null && !isNaN(Number(pDelivery))) {
+          setProductDeliveryChargeRate(Number(pDelivery));
         }
         const limit = res.data?.settings?.maxCartItemQuantity;
         if (res.data?.success && limit !== undefined && limit !== null && !isNaN(Number(limit))) {
@@ -599,6 +605,7 @@ export const CartProvider = ({ children }) => {
     isLoading,
     isInitialized,
     platformFeeRate,
+    productDeliveryChargeRate,
     maxCartItemQuantity,
     fetchCart,
     addToCart,

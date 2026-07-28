@@ -120,7 +120,11 @@ const MyBookings = () => {
   };
 
   const handleBookingClick = (booking) => {
-    navigate(`/user/booking/${booking._id || booking.id}`);
+    if (booking.offeringType === 'PRODUCT' || booking.orderId || booking.isProductOrder) {
+      navigate(`/user/product-order/${booking._id || booking.id}`);
+    } else {
+      navigate(`/user/booking/${booking._id || booking.id}`);
+    }
   };
 
   const formatDate = (dateString) => {

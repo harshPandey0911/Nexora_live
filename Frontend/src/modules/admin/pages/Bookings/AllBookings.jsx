@@ -196,8 +196,7 @@ const AllBookings = () => {
       fetchData();
     });
 
-    socket.on('adminBookingDecline', (data) => {
-      toast.error(data.message || 'Vendor declined booking!', { icon: '❌' });
+    socket.on('adminBookingDecline', () => {
       fetchData();
     });
 

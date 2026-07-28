@@ -98,31 +98,10 @@ const AdminLayout = () => {
     const handleEscalation = async (data) => {
       console.log('🚨 [AdminLayout] Received vendor cancellation/decline socket event:', data);
       const bId = data.bookingId || data.id;
-      const vName = data.vendorName || data.vendorId?.businessName || data.vendorId?.name || 'Vendor';
-      
-      toast.error(`Vendor ${vName} ${data.status === 'CANCELLED' ? 'cancelled' : 'declined'} booking #${data.bookingNumber || ''}`, {
-        duration: 6000
-      });
 
       // Dispatch event to reload active booking lists across admin UI
-      window.dispatchEvent(new CustomEvent('adminBookingStatusChanged', { detail: { bookingId: bId, status: data.status || 'CANCELLED' } }));
+      window.dispatchEvent(new CustomEvent('adminBookingStatusChanged', { detail: { bookingId: bId, status: data.status || 'ESCALATED' } }));
       window.dispatchEvent(new Event('adminBookingAssigned'));
-
-      if (bId) {
-        try {
-          const res = await adminBookingService.getBookingById(bId);
-          if (res.success && res.data) {
-            setActiveAlert({
-              ...res.data,
-              declinedVendorName: vName,
-              declineReason: data.reason || data.rejectReason || null
-            });
-            startAlarm();
-          }
-        } catch (err) {
-          console.error('[AdminLayout] Failed to fetch booking details for alert:', err);
-        }
-      }
     };
 
     const handleAcceptance = (data) => {
@@ -139,7 +118,6 @@ const AdminLayout = () => {
       window.dispatchEvent(new Event('adminBookingAssigned'));
     };
 
-    socket.on('adminBookingEscalated', handleEscalation);
     socket.on('adminBookingDecline', handleEscalation);
     socket.on('vendor_cancelled_booking', handleEscalation);
     socket.on('vendor_rejected_booking', handleEscalation);

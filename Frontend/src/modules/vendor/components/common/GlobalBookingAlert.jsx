@@ -173,7 +173,15 @@ export default function GlobalBookingAlert() {
       onAccept={async (id) => {
         ignoredBookingIds.current.add(String(id));
         try {
-          await acceptBooking(id);
+          const targetJob = activeAlertBookings.find(b => String(b.id || b._id) === String(id));
+          const isProductOrder = targetJob?.isProductOrder || targetJob?.orderId || (targetJob?.items && targetJob?.items.length > 0);
+
+          if (isProductOrder) {
+            const { default: vendorService } = await import('../../services/vendorService');
+            await vendorService.acceptProductOrder(id);
+          } else {
+            await acceptBooking(id);
+          }
 
           // ✅ IMMEDIATELY clear from localStorage and dismiss modal
           const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
@@ -185,21 +193,31 @@ export default function GlobalBookingAlert() {
 
           window.dispatchEvent(new Event('vendorJobsUpdated'));
           window.dispatchEvent(new Event('vendorStatsUpdated'));
-          toast.success('Job accepted! Assigning to you...');
+          toast.success(isProductOrder ? 'Product Order Accepted!' : 'Job accepted! Assigning to you...');
 
-          assignWorker(id, 'SELF').catch(err => {
-            console.warn('[GlobalAlert] assignWorker SELF failed (non-critical):', err?.message);
-          });
+          if (!isProductOrder) {
+            assignWorker(id, 'SELF').catch(err => {
+              console.warn('[GlobalAlert] assignWorker SELF failed (non-critical):', err?.message);
+            });
+          }
 
         } catch (e) {
-          console.error('[GlobalAlert] Accept booking failed:', e);
-          toast.error('Failed to accept job. Please try again.');
+          console.error('[GlobalAlert] Accept order failed:', e);
+          toast.error(e?.response?.data?.message || 'Failed to accept order. Please try again.');
         }
       }}
       onAssign={async (id) => {
         ignoredBookingIds.current.add(String(id));
         try {
-          await acceptBooking(id);
+          const targetJob = activeAlertBookings.find(b => String(b.id || b._id) === String(id));
+          const isProductOrder = targetJob?.isProductOrder || targetJob?.orderId || (targetJob?.items && targetJob?.items.length > 0);
+
+          if (isProductOrder) {
+            const { default: vendorService } = await import('../../services/vendorService');
+            await vendorService.acceptProductOrder(id);
+          } else {
+            await acceptBooking(id);
+          }
 
           const pendingJobs = JSON.parse(localStorage.getItem('vendorPendingJobs') || '[]');
           const updated = pendingJobs.filter(b => String(b.id || b._id) !== String(id));
@@ -210,10 +228,17 @@ export default function GlobalBookingAlert() {
 
           window.dispatchEvent(new Event('vendorJobsUpdated'));
           window.dispatchEvent(new Event('vendorStatsUpdated'));
-          toast.success('Job claimed! Redirecting to assign...');
-          navigate(`/vendor/booking/${id}/assign-worker`);
+
+          if (isProductOrder) {
+            toast.success('Product Order claimed! Redirecting to assign worker...');
+            navigate(`/vendor/booking/${id}/assign-worker`);
+          } else {
+            toast.success('Job claimed! Redirecting to assign...');
+            navigate(`/vendor/booking/${id}/assign-worker`);
+          }
         } catch (e) {
-          toast.error('Failed to claim job');
+          console.error('[GlobalAlert] Forward/Claim order failed:', e);
+          toast.error(e?.response?.data?.message || 'Failed to claim job');
         }
       }}
       onReject={async (id, reason) => {

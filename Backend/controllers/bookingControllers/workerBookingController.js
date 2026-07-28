@@ -1,4 +1,5 @@
 const Booking = require('../../models/Booking');
+const ProductOrder = require('../../models/ProductOrder');
 const { validationResult } = require('express-validator');
 const { BOOKING_STATUS, PAYMENT_STATUS } = require('../../utils/constants');
 
@@ -10,7 +11,7 @@ const getAssignedJobs = async (req, res) => {
     const workerId = req.user.id;
     const { status, page = 1, limit = 50 } = req.query;
 
-    // Build query
+    // Build query for service bookings
     const query = { workerId };
     if (status) {
       query.status = status;
@@ -28,7 +29,7 @@ const getAssignedJobs = async (req, res) => {
     // Pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get bookings
+    // Get service bookings
     const bookings = await Booking.find(query)
       .populate('userId', 'name phone email')
       .populate('vendorId', 'name businessName phone')
@@ -38,12 +39,60 @@ const getAssignedJobs = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
+    // Also get product orders assigned to this worker
+    const productOrderQuery = { workerId };
+    if (status) {
+      // Map booking statuses to product order statuses where applicable
+      const statusMap = {
+        'ASSIGNED': 'ACCEPTED',
+        'CONFIRMED': 'ACCEPTED',
+      };
+      productOrderQuery.status = statusMap[status?.toUpperCase()] || status;
+    }
+
+    const productOrders = await ProductOrder.find(productOrderQuery)
+      .populate('userId', 'name phone email')
+      .populate('vendorId', 'name businessName phone')
+      .sort({ createdAt: -1 });
+
+    // Normalize product orders to match booking shape for frontend compatibility
+    const normalizedProductOrders = productOrders.map(order => ({
+      _id: order._id,
+      isProductOrder: true,
+      orderId: order.orderId,
+      serviceName: order.items?.[0]?.title || 'Product Delivery',
+      status: order.status === 'ACCEPTED' ? 'ASSIGNED' : order.status,
+      finalAmount: order.financialBreakdown?.totalAmount || 0,
+      price: order.financialBreakdown?.totalAmount || 0,
+      userId: order.userId,
+      vendorId: order.vendorId,
+      address: order.deliveryAddress
+        ? {
+            addressLine1: order.deliveryAddress.addressLine1 || '',
+            city: order.deliveryAddress.city || '',
+            pincode: order.deliveryAddress.pincode || ''
+          }
+        : null,
+      contactDetails: order.contactDetails,
+      items: order.items,
+      scheduledDate: null,
+      scheduledTime: null,
+      createdAt: order.createdAt,
+      paymentMethod: order.paymentMethod,
+      financialBreakdown: order.financialBreakdown,
+      deliveryAddress: order.deliveryAddress
+    }));
+
+    // Merge and sort by createdAt
+    const allJobs = [...bookings, ...normalizedProductOrders]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
     // Get total count
-    const total = await Booking.countDocuments(query);
+    const total = allJobs.length;
 
     res.status(200).json({
       success: true,
-      data: bookings,
+      data: allJobs,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -59,6 +108,7 @@ const getAssignedJobs = async (req, res) => {
     });
   }
 };
+
 
 /**
  * Get job details by ID
@@ -745,10 +795,52 @@ const respondToJob = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body; // 'ACCEPTED' or 'REJECTED'
 
+    // First try to find a service booking
     const booking = await Booking.findOne({ _id: id, workerId });
 
+    // If not a service booking, check if it's a product order delivery task
     if (!booking) {
-      return res.status(404).json({ success: false, message: 'Job not found' });
+      const productOrder = await ProductOrder.findOne({ _id: id, workerId });
+
+      if (!productOrder) {
+        return res.status(404).json({ success: false, message: 'Job not found' });
+      }
+
+      // Handle product order accept/reject
+      if (status === 'ACCEPTED') {
+        productOrder.workerResponse = 'ACCEPTED';
+        productOrder.workerAcceptedAt = new Date();
+        await productOrder.save();
+
+        const io = req.app.get('io') || require('../../sockets').getIO();
+        if (io) {
+          io.to(`vendor_${productOrder.vendorId}`).emit('worker_job_accepted', {
+            bookingId: productOrder._id,
+            bookingNumber: productOrder.orderId,
+            workerId: workerId
+          });
+        }
+
+        return res.status(200).json({ success: true, message: 'Product delivery task accepted', data: productOrder });
+
+      } else if (status === 'REJECTED') {
+        productOrder.workerId = null;
+        productOrder.workerResponse = 'REJECTED';
+        await productOrder.save();
+
+        const io = req.app.get('io') || require('../../sockets').getIO();
+        if (io) {
+          io.to(`vendor_${productOrder.vendorId}`).emit('worker_job_rejected', {
+            bookingId: productOrder._id,
+            bookingNumber: productOrder.orderId,
+            workerId: workerId
+          });
+        }
+
+        return res.status(200).json({ success: true, message: 'Product delivery task rejected', data: productOrder });
+      }
+
+      return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
     // Idempotency check: If already in desired state, return success without re-notifying
@@ -845,6 +937,286 @@ const respondToJob = async (req, res) => {
   }
 };
 
+
+/**
+ * Get product order detail for worker
+ */
+const getProductOrderById = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+
+    const order = await ProductOrder.findOne({ _id: id, workerId })
+      .populate('userId', 'name phone email')
+      .populate('vendorId', 'name businessName phone');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    return res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    console.error('Get product order by id error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch product order' });
+  }
+};
+
+/**
+ * Update product order status (PACKING / OUT_FOR_DELIVERY)
+ */
+const updateProductOrderStatus = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['PACKING', 'OUT_FOR_DELIVERY'];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status. Allowed: PACKING, OUT_FOR_DELIVERY' });
+    }
+
+    const order = await ProductOrder.findOne({ _id: id, workerId })
+      .populate('userId', 'name phone')
+      .populate('vendorId', 'name businessName');
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    order.status = status;
+    if (status === 'OUT_FOR_DELIVERY') {
+      order.dispatchedAt = new Date();
+    }
+    await order.save();
+
+    // Status-specific message config
+    const statusConfig = {
+      PACKING: {
+        userTitle: '📦 Order is Being Packed',
+        userMsg: `Your order #${order.orderId} is being packed and will be dispatched soon.`,
+        vendorTitle: '📦 Order Packing Started',
+        vendorMsg: `Delivery boy started packing order #${order.orderId}.`,
+      },
+      OUT_FOR_DELIVERY: {
+        userTitle: '🚚 Order Out for Delivery!',
+        userMsg: `Your order #${order.orderId} is on the way! Delivery expected shortly.`,
+        vendorTitle: '🚚 Order Out for Delivery',
+        vendorMsg: `Order #${order.orderId} is now out for delivery.`,
+      }
+    };
+    const cfg = statusConfig[status];
+
+    // Socket notifications
+    const io = req.app.get('io') || require('../../sockets').getIO();
+    if (io) {
+      const payload = { orderId: order._id, customOrderId: order.orderId, status: order.status };
+      io.to(`user_${order.userId._id || order.userId}`).emit('product_order_status_update', payload);
+      io.to(`vendor_${order.vendorId._id || order.vendorId}`).emit('product_order_status_update', payload);
+    }
+
+    // In-app notifications
+    try {
+      const { createNotification } = require('../notificationControllers/notificationController');
+      await Promise.all([
+        createNotification({
+          userId: order.userId._id || order.userId,
+          type: 'order_status_update',
+          title: cfg.userTitle,
+          message: cfg.userMsg,
+          relatedId: order._id,
+          relatedType: 'productOrder',
+          priority: 'high'
+        }),
+        createNotification({
+          vendorId: order.vendorId._id || order.vendorId,
+          type: 'order_status_update',
+          title: cfg.vendorTitle,
+          message: cfg.vendorMsg,
+          relatedId: order._id,
+          relatedType: 'productOrder'
+        })
+      ]);
+    } catch (notifErr) {
+      console.error('[updateProductOrderStatus] Notification error (non-critical):', notifErr.message);
+    }
+
+    // Push notification to user via FCM
+    try {
+      const { sendNotificationToUser } = require('../../services/firebaseAdmin');
+      sendNotificationToUser((order.userId._id || order.userId).toString(), {
+        title: cfg.userTitle,
+        body: cfg.userMsg
+      }).catch(err => console.error('[updateProductOrderStatus] FCM error:', err));
+    } catch (fcmErr) {
+      // FCM optional, ignore
+    }
+
+    return res.status(200).json({ success: true, message: `Order status updated to ${status}`, data: order });
+  } catch (error) {
+    console.error('Update product order status error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update status' });
+  }
+};
+
+/**
+ * Initiate delivery OTP — generates OTP and sends to user
+ */
+const initiateDeliveryOtp = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+
+    const order = await ProductOrder.findOne({ _id: id, workerId })
+      .populate('userId', 'name phone email');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    if (order.status !== 'OUT_FOR_DELIVERY') {
+      return res.status(400).json({ success: false, message: 'Order must be OUT_FOR_DELIVERY to initiate delivery OTP' });
+    }
+
+    // Generate 4-digit OTP
+    const otp = String(Math.floor(1000 + Math.random() * 9000));
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 min expiry
+
+    order.deliveryOtp = otp;
+    order.deliveryOtpExpiry = otpExpiry;
+    await order.save();
+
+    // Send OTP to user via socket notification
+    const io = req.app.get('io') || require('../../sockets').getIO();
+    if (io) {
+      io.to(`user_${order.userId._id || order.userId}`).emit('product_delivery_otp', {
+        orderId: order._id,
+        customOrderId: order.orderId,
+        otp,
+        message: `Your delivery OTP for order #${order.orderId} is: ${otp}. Share with the delivery person.`
+      });
+    }
+
+    // Also create an in-app notification for user
+    try {
+      const { createNotification } = require('../notificationControllers/notificationController');
+      await createNotification({
+        userId: order.userId._id || order.userId,
+        type: 'delivery_otp',
+        title: '📦 Delivery OTP',
+        message: `Your delivery OTP for order #${order.orderId} is: ${otp}. Share with the delivery person. Valid for 15 minutes.`,
+        relatedId: order._id,
+        relatedType: 'productOrder',
+        priority: 'high'
+      });
+    } catch (notifErr) {
+      console.error('[initiateDeliveryOtp] Notification error (non-critical):', notifErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP sent to customer successfully',
+      data: { otpSent: true, expiresAt: otpExpiry }
+    });
+  } catch (error) {
+    console.error('Initiate delivery OTP error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate delivery OTP' });
+  }
+};
+
+/**
+ * Verify delivery OTP — marks order as DELIVERED
+ */
+const verifyDeliveryOtp = async (req, res) => {
+  try {
+    const workerId = req.user.id;
+    const { id } = req.params;
+    const { otp } = req.body;
+
+    if (!otp || otp.length !== 4) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid 4-digit OTP' });
+    }
+
+    const order = await ProductOrder.findOne({ _id: id, workerId });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Product order not found' });
+    }
+
+    if (!order.deliveryOtp) {
+      return res.status(400).json({ success: false, message: 'No delivery OTP generated. Please initiate OTP first.' });
+    }
+
+    if (new Date() > order.deliveryOtpExpiry) {
+      return res.status(400).json({ success: false, message: 'OTP has expired. Please generate a new OTP.' });
+    }
+
+    if (order.deliveryOtp !== String(otp)) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP. Please check with the customer.' });
+    }
+
+    // Mark as DELIVERED
+    order.status = 'DELIVERED';
+    order.deliveredAt = new Date();
+    order.deliveryOtp = null; // Clear OTP after use
+    order.deliveryOtpExpiry = null;
+
+    if (order.paymentMethod === 'cod') {
+      order.paymentStatus = 'COD_COLLECTED';
+    }
+
+    await order.save();
+
+    // Update vendor wallet earnings
+    const Vendor = require('../../models/Vendor');
+    const vendor = await Vendor.findById(order.vendorId);
+    if (vendor) {
+      if (!vendor.wallet) vendor.wallet = {};
+      vendor.wallet.earnings = (vendor.wallet.earnings || 0) + (order.financialBreakdown?.vendorEarnings || 0);
+      vendor.completedJobs = (vendor.completedJobs || 0) + 1;
+      await vendor.save();
+    }
+
+    // Notify user and vendor via socket
+    const io = req.app.get('io') || require('../../sockets').getIO();
+    if (io) {
+      io.to(`user_${order.userId}`).emit('product_order_status_update', {
+        orderId: order._id,
+        customOrderId: order.orderId,
+        status: 'DELIVERED',
+        paymentStatus: order.paymentStatus
+      });
+      io.to(`vendor_${order.vendorId}`).emit('product_order_delivered', {
+        orderId: order._id,
+        customOrderId: order.orderId,
+        workerId
+      });
+    }
+
+    // In-app notification to user
+    try {
+      const { createNotification } = require('../notificationControllers/notificationController');
+      await createNotification({
+        userId: order.userId,
+        type: 'order_delivered',
+        title: '✅ Order Delivered!',
+        message: `Your order #${order.orderId} has been delivered successfully!`,
+        relatedId: order._id,
+        relatedType: 'productOrder',
+        priority: 'high'
+      });
+    } catch (notifErr) {
+      console.error('[verifyDeliveryOtp] Notification error (non-critical):', notifErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Order delivered successfully!',
+      data: order
+    });
+  } catch (error) {
+    console.error('Verify delivery OTP error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to verify delivery OTP' });
+  }
+};
+
 module.exports = {
   getAssignedJobs,
   getJobById,
@@ -855,5 +1227,9 @@ module.exports = {
   verifyVisit,
   workerReachedLocation,
   collectCash,
-  respondToJob
+  respondToJob,
+  getProductOrderById,
+  updateProductOrderStatus,
+  initiateDeliveryOtp,
+  verifyDeliveryOtp
 };

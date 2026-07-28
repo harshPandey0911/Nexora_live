@@ -37,7 +37,13 @@ const ProductVendorSearchModal = ({ isOpen, onClose, currentStep, acceptedVendor
               We are broadcasting your product order to active local vendors. Please wait while a vendor accepts your order.
             </p>
 
-            <div className="mt-6 flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold">
+            {/* Visible Countdown Timer */}
+            <div className="mt-4 px-4 py-2 bg-slate-100 rounded-xl flex items-center gap-2 text-xs font-bold text-slate-700 border border-slate-200">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+              <span>Redirecting to Tracking Page in 10s...</span>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold">
               <FiTruck className="w-4 h-4" />
               Real-time Vendor Dispatch
             </div>

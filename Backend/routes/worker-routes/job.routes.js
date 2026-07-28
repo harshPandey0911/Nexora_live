@@ -13,7 +13,11 @@ const {
   verifyVisit,
   workerReachedLocation,
   collectCash,
-  respondToJob
+  respondToJob,
+  getProductOrderById,
+  updateProductOrderStatus,
+  initiateDeliveryOtp,
+  verifyDeliveryOtp
 } = require('../../controllers/bookingControllers/workerBookingController');
 const {
   createOrUpdateBill,
@@ -79,6 +83,12 @@ router.get('/catalog/parts', authenticate, isWorker, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to fetch parts catalog' });
   }
 });
+
+// Product Order Delivery Routes (for workers)
+router.get('/product-orders/:id', authenticate, isWorker, getProductOrderById);
+router.put('/product-orders/:id/status', authenticate, isWorker, updateProductOrderStatus);
+router.post('/product-orders/:id/initiate-delivery-otp', authenticate, isWorker, initiateDeliveryOtp);
+router.post('/product-orders/:id/verify-delivery-otp', authenticate, isWorker, verifyDeliveryOtp);
 
 module.exports = router;
 

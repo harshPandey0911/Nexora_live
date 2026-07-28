@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { 
   FiPackage, FiPlus, FiTrash2, FiEye, FiSearch, 
   FiDownload, FiFilter, FiMoreVertical, FiChevronDown, FiBox,
-  FiUser, FiMapPin, FiClock, FiChevronRight, FiCheckCircle, FiTruck
+  FiUser, FiMapPin, FiClock, FiChevronRight, FiCheckCircle, FiTruck, FiUsers
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import vendorService from '../../services/vendorService';
@@ -155,7 +155,7 @@ const ProductOrders = memo(() => {
                   <p className="text-[10px] text-gray-400">{alert.contactDetails?.name} • {alert.deliveryAddress?.city}</p>
                 </div>
                 <button
-                  onClick={() => handleAcceptOrder(alert._id)}
+                  onClick={() => handleAcceptOrder(alert._id || alert.orderId)}
                   className="px-4 py-2 bg-[#00246b] text-white rounded-xl text-xs font-bold uppercase shadow-md active:scale-95 transition-all"
                 >
                   Accept
@@ -275,7 +275,15 @@ const ProductOrders = memo(() => {
                         <option value="CANCELLED">Cancelled</option>
                       </select>
                     </td>
-                    <td className="px-4 py-5 text-right">
+                    <td className="px-4 py-5 text-right flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => navigate(`/vendor/booking/${order._id}/assign-worker`)}
+                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-900 text-white text-[10px] font-bold rounded-xl uppercase shadow-sm flex items-center gap-1"
+                        title="Forward to Delivery Boy"
+                      >
+                        <FiUsers className="w-3 h-3" />
+                        {order.workerId ? 'Reassign' : 'Forward'}
+                      </button>
                       {order.status === 'ACCEPTED' && (
                         <button 
                           onClick={(e) => handleUpdateStatus(e, order._id, 'PACKING')}

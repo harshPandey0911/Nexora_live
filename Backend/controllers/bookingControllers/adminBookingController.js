@@ -90,7 +90,7 @@ const getAllBookings = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Get bookings
-    const bookings = await Booking.find(query)
+    let bookings = await Booking.find(query)
       .populate('userId', 'name phone email')
       .populate('vendorId', 'name businessName phone')
       .populate('serviceId', 'title iconUrl')
@@ -101,8 +101,54 @@ const getAllBookings = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit));
 
-    // Get total count
-    const total = await Booking.countDocuments(query);
+    let total = await Booking.countDocuments(query);
+
+    // If MANUAL_ASSIGNMENT filter is active, also include Escalated / Pending Product Orders
+    if (status && status.toUpperCase() === 'MANUAL_ASSIGNMENT') {
+      const ProductOrder = require('../../models/ProductOrder');
+      const escalatedProductOrders = await ProductOrder.find({
+        $or: [
+          { status: 'ESCALATED' },
+          { isEscalatedToAdmin: true },
+          { status: 'PENDING_ACCEPTANCE', vendorId: null }
+        ]
+      })
+        .populate('userId', 'name phone email')
+        .populate('vendorId', 'name businessName phone')
+        .populate('workerId', 'name phone')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // Transform ProductOrders to match Booking interface format for admin UI
+      const formattedProductOrders = escalatedProductOrders.map(pOrder => ({
+        _id: pOrder._id,
+        id: pOrder._id,
+        bookingNumber: pOrder.orderId,
+        serviceName: pOrder.items?.[0]?.title ? `${pOrder.items[0].title}${pOrder.items.length > 1 ? ` +${pOrder.items.length - 1} items` : ''}` : 'Product Order',
+        serviceCategory: 'Product Order',
+        status: pOrder.status === 'ESCALATED' ? 'escalated' : pOrder.status.toLowerCase(),
+        adminAssignmentStatus: pOrder.status === 'ESCALATED' ? 'NEEDS_ASSIGNMENT' : 'PENDING',
+        userId: pOrder.userId,
+        vendorId: pOrder.vendorId,
+        workerId: pOrder.workerId,
+        finalAmount: pOrder.financialBreakdown?.totalAmount || 0,
+        totalAmount: pOrder.financialBreakdown?.totalAmount || 0,
+        address: {
+          addressLine1: `${pOrder.deliveryAddress?.addressLine1 || ''}, ${pOrder.deliveryAddress?.city || ''}`,
+          city: pOrder.deliveryAddress?.city,
+          lat: pOrder.deliveryAddress?.lat,
+          lng: pOrder.deliveryAddress?.lng
+        },
+        scheduledDate: pOrder.createdAt,
+        scheduledTime: 'ASAP / Immediate',
+        createdAt: pOrder.createdAt,
+        isProductOrder: true,
+        offeringType: 'PRODUCT'
+      }));
+
+      bookings = [...formattedProductOrders, ...bookings];
+      total += formattedProductOrders.length;
+    }
 
     res.status(200).json({
       success: true,
@@ -130,7 +176,7 @@ const getBookingById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const bookingDoc = await Booking.findById(id)
+    let bookingDoc = await Booking.findById(id)
       .populate('userId', 'name phone email addresses')
       .populate('vendorId', 'name businessName phone email address')
       .populate('serviceId', 'title description iconUrl images')
@@ -139,6 +185,43 @@ const getBookingById = async (req, res) => {
       .populate('vendorBillId')
       .populate({ path: 'activityLog.actorId', select: 'name businessName phone' })
       .lean();
+
+    if (!bookingDoc) {
+      const ProductOrder = require('../../models/ProductOrder');
+      const pOrder = await ProductOrder.findById(id)
+        .populate('userId', 'name phone email addresses')
+        .populate('vendorId', 'name businessName phone email address')
+        .populate('workerId', 'name phone rating totalJobs completedJobs')
+        .lean();
+
+      if (pOrder) {
+        bookingDoc = {
+          _id: pOrder._id,
+          id: pOrder._id,
+          bookingNumber: pOrder.orderId,
+          serviceName: pOrder.items?.[0]?.title ? `${pOrder.items[0].title}${pOrder.items.length > 1 ? ` +${pOrder.items.length - 1} items` : ''}` : 'Product Order',
+          serviceCategory: 'Product Order',
+          status: pOrder.status === 'ESCALATED' ? 'escalated' : pOrder.status.toLowerCase(),
+          adminAssignmentStatus: pOrder.status === 'ESCALATED' ? 'NEEDS_ASSIGNMENT' : 'PENDING',
+          userId: pOrder.userId,
+          vendorId: pOrder.vendorId,
+          workerId: pOrder.workerId,
+          finalAmount: pOrder.financialBreakdown?.totalAmount || 0,
+          totalAmount: pOrder.financialBreakdown?.totalAmount || 0,
+          address: {
+            addressLine1: `${pOrder.deliveryAddress?.addressLine1 || ''}, ${pOrder.deliveryAddress?.city || ''}`,
+            city: pOrder.deliveryAddress?.city,
+            lat: pOrder.deliveryAddress?.lat,
+            lng: pOrder.deliveryAddress?.lng
+          },
+          scheduledDate: pOrder.createdAt,
+          scheduledTime: 'ASAP / Immediate',
+          createdAt: pOrder.createdAt,
+          isProductOrder: true,
+          offeringType: 'PRODUCT'
+        };
+      }
+    }
 
     if (!bookingDoc) {
       return res.status(404).json({
@@ -358,7 +441,21 @@ const getBookingAnalytics = async (req, res) => {
 const getEligibleVendorsForAssignment = async (req, res) => {
   try {
     const { id } = req.params;
-    const booking = await Booking.findById(id).lean();
+    let booking = await Booking.findById(id).lean();
+    if (!booking) {
+      const ProductOrder = require('../../models/ProductOrder');
+      const pOrder = await ProductOrder.findById(id).lean();
+      if (pOrder) {
+        booking = {
+          _id: pOrder._id,
+          serviceCategory: 'Product Order',
+          bookedItems: pOrder.items,
+          serviceName: pOrder.items?.[0]?.title || 'Product Order',
+          address: pOrder.deliveryAddress
+        };
+      }
+    }
+
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
@@ -375,19 +472,6 @@ const getEligibleVendorsForAssignment = async (req, res) => {
     const matchedCats = await Category.find({ title: categoryRegex }).select('_id').lean();
     const matchedCatIds = matchedCats.map(c => c._id);
 
-    // Find all vendors with active UserService subscriptions in this category or title
-    const categorySubscriptions = await UserService.find({
-      $or: [
-        { categoryId: { $in: matchedCatIds } },
-        { category: categoryRegex },
-        { title: categoryRegex },
-        { title: { $regex: new RegExp(bookingCategory.replace(/\s+/g, '\\s*'), 'i') } }
-      ],
-      status: 'active'
-    }).select('vendorId title').lean();
-
-    const categoryVendorIds = Array.from(new Set(categorySubscriptions.map(s => s.vendorId?.toString()).filter(Boolean)));
-
     // Extract all required service titles from bookedItems (or serviceName)
     const requiredTitles = [];
     if (Array.isArray(booking.bookedItems) && booking.bookedItems.length > 0) {
@@ -402,19 +486,47 @@ const getEligibleVendorsForAssignment = async (req, res) => {
       requiredTitles.push(booking.serviceName.trim());
     }
 
-    const city = booking.address?.city;
-    const query = {
-      _id: { $in: categoryVendorIds },
+    // Find all active subscriptions matching item title or category
+    const titleRegexes = requiredTitles.map(t => new RegExp(t.replace(/\s+/g, '\\s*'), 'i'));
+    const categorySubscriptions = await UserService.find({
+      $or: [
+        { categoryId: { $in: matchedCatIds } },
+        { category: categoryRegex },
+        { title: categoryRegex },
+        { title: { $in: titleRegexes } }
+      ],
+      status: 'active'
+    }).select('vendorId title category').lean();
+
+    const categoryVendorIds = Array.from(new Set(categorySubscriptions.map(s => s.vendorId?.toString()).filter(Boolean)));
+
+    // Fallback: If no vendorId found in subscriptions, search all approved vendors
+    let query = {
       approvalStatus: 'approved',
-      isActive: true
+      isActive: { $ne: false }
     };
-    if (city) {
-      query['address.city'] = { $regex: new RegExp(city.trim(), 'i') };
+
+    if (categoryVendorIds.length > 0) {
+      query._id = { $in: categoryVendorIds };
     }
 
-    const categoryVendors = await Vendor.find(query)
+    let categoryVendors = await Vendor.find(query)
       .select('name businessName email phone address profilePhoto rating level isOnline availability')
       .lean();
+
+    // If city filtering resulted in 0 vendors, fallback to all approved vendors without city restriction
+    if ((!categoryVendors || categoryVendors.length === 0) && categoryVendorIds.length > 0) {
+      categoryVendors = await Vendor.find({ _id: { $in: categoryVendorIds }, approvalStatus: 'approved', isActive: { $ne: false } })
+        .select('name businessName email phone address profilePhoto rating level isOnline availability')
+        .lean();
+    }
+
+    if (!categoryVendors || categoryVendors.length === 0) {
+      // Ultimate fallback for product orders: show all approved active vendors in admin panel
+      categoryVendors = await Vendor.find({ approvalStatus: 'approved', isActive: { $ne: false } })
+        .select('name businessName email phone address profilePhoto rating level isOnline availability')
+        .lean();
+    }
 
     // Separate into Fully Qualified (All Items) vs Category Qualified
     const vendorIdSets = await Promise.all(
@@ -479,9 +591,46 @@ const assignVendor = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Vendor ID is required' });
     }
 
-    const booking = await Booking.findById(id);
+    let booking = await Booking.findById(id);
     if (!booking) {
-      return res.status(404).json({ success: false, message: 'Booking not found' });
+      const ProductOrder = require('../../models/ProductOrder');
+      const Vendor = require('../../models/Vendor');
+      const pOrder = await ProductOrder.findById(id);
+      if (pOrder) {
+        const assignedVendor = await Vendor.findById(vendorId);
+        if (!assignedVendor) {
+          return res.status(404).json({ success: false, message: 'Vendor not found' });
+        }
+        pOrder.vendorId = vendorId;
+        pOrder.status = 'PENDING_ACCEPTANCE';
+        pOrder.isEscalatedToAdmin = false;
+        await pOrder.save();
+
+        // Socket emit to vendor and user
+        const io = req.app.get('io');
+        if (io) {
+          io.to(`vendor_${vendorId}`).emit('new_product_order_alert', {
+            orderId: pOrder._id,
+            customOrderId: pOrder.orderId,
+            items: pOrder.items,
+            totalAmount: pOrder.financialBreakdown?.totalAmount,
+            assignedByAdmin: true
+          });
+          io.to(`user_${pOrder.userId}`).emit('product_order_status_update', {
+            orderId: pOrder._id,
+            status: 'ACCEPTED',
+            vendor: assignedVendor
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          message: 'Product Order assigned to vendor successfully by Admin',
+          data: pOrder
+        });
+      }
+
+      return res.status(404).json({ success: false, message: 'Booking or Product Order not found' });
     }
 
     // Capability Check Safeguard:

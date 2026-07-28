@@ -37,7 +37,7 @@ const toAssetUrl = (url) => {
 
 const ProductCheckout = () => {
   const navigate = useNavigate();
-  const { cartItems: globalCartItems, isInitialized, removeItem: removeItemGlobal, updateItem: updateItemGlobal, clearCart: clearCartGlobal, platformFeeRate } = useCart();
+  const { cartItems: globalCartItems, isInitialized, removeItem: removeItemGlobal, updateItem: updateItemGlobal, clearCart: clearCartGlobal, platformFeeRate, productDeliveryChargeRate } = useCart();
 
   const [cartItems, setCartItems] = useState([]);
   const [address, setAddress] = useState('');
@@ -59,7 +59,7 @@ const ProductCheckout = () => {
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [acceptedVendor, setAcceptedVendor] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
-  const [vendorDeliveryCharge, setVendorDeliveryCharge] = useState(49); // Default estimated COD delivery charge
+  const [vendorDeliveryCharge, setVendorDeliveryCharge] = useState(30);
   const [adminPlatformFee, setAdminPlatformFee] = useState(null);
 
   // Load Razorpay SDK lazily
@@ -87,40 +87,50 @@ const ProductCheckout = () => {
     }
   }, [globalCartItems, isInitialized]);
 
+  // Sync delivery charge from CartContext when updated
+  useEffect(() => {
+    if (productDeliveryChargeRate !== undefined && productDeliveryChargeRate !== null) {
+      setVendorDeliveryCharge(productDeliveryChargeRate);
+    }
+  }, [productDeliveryChargeRate]);
+
   // Load user profile & address details
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         setLoading(true);
         const response = await userAuthService.getCheckoutData();
-        if (response.success) {
-          if (response.settings?.productDeliveryCharge !== undefined) {
-            setVendorDeliveryCharge(response.settings.productDeliveryCharge);
+        if (response.success && response.settings) {
+          const pCharge = response.settings.productDeliveryCharge;
+          if (pCharge !== undefined && pCharge !== null && !isNaN(Number(pCharge))) {
+            setVendorDeliveryCharge(Number(pCharge));
           }
-          if (response.settings?.visitedCharges !== undefined) {
-            setAdminPlatformFee(response.settings.visitedCharges);
+          if (response.settings.visitedCharges !== undefined && response.settings.visitedCharges !== null) {
+            setAdminPlatformFee(Number(response.settings.visitedCharges));
           }
-          if (response.user) {
-            setContactDetails({
-              name: response.user.name || '',
-              phone: response.user.phone || ''
-            });
+        } else if (productDeliveryChargeRate !== undefined && productDeliveryChargeRate !== null) {
+          setVendorDeliveryCharge(Number(productDeliveryChargeRate));
+        }
+        if (response.success && response.user) {
+          setContactDetails({
+            name: response.user.name || '',
+            phone: response.user.phone || ''
+          });
 
-            if (response.user.addresses && response.user.addresses.length > 0) {
-              setSavedAddresses(response.user.addresses);
-              const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
-              setAddress(defaultAddr.addressLine1);
-              setHouseNumber(defaultAddr.addressLine2 || '');
-              setAddressDetails({
-                address: defaultAddr.addressLine1,
-                lat: defaultAddr.lat,
-                lng: defaultAddr.lng,
-                type: defaultAddr.type,
-                city: defaultAddr.city,
-                state: defaultAddr.state,
-                pincode: defaultAddr.pincode
-              });
-            }
+          if (response.user.addresses && response.user.addresses.length > 0) {
+            setSavedAddresses(response.user.addresses);
+            const defaultAddr = response.user.addresses.find(a => a.isDefault) || response.user.addresses[0];
+            setAddress(defaultAddr.addressLine1);
+            setHouseNumber(defaultAddr.addressLine2 || '');
+            setAddressDetails({
+              address: defaultAddr.addressLine1,
+              lat: defaultAddr.lat,
+              lng: defaultAddr.lng,
+              type: defaultAddr.type,
+              city: defaultAddr.city,
+              state: defaultAddr.state,
+              pincode: defaultAddr.pincode
+            });
           }
         }
       } catch (error) {
@@ -159,8 +169,36 @@ const ProductCheckout = () => {
       }, 2000);
     });
 
+    // Polling fallback: If vendor accepts or order is created, redirect to confirmation page after timeout
+    const interval = setInterval(async () => {
+      if (createdOrder?._id || createdOrder?.orderId) {
+        try {
+          const res = await productOrderService.getDetails(createdOrder._id || createdOrder.orderId);
+          if (res.success && res.data && ['ACCEPTED', 'PACKING', 'OUT_FOR_DELIVERY', 'DELIVERED'].includes(res.data.status)) {
+            setAcceptedVendor(res.data.vendorId);
+            setCurrentStep('accepted');
+            toast.success('Product order accepted!');
+            setTimeout(() => {
+              setShowVendorModal(false);
+              navigate(`/user/product-order/${res.data._id || res.data.orderId}`, { replace: true });
+            }, 1500);
+          }
+        } catch (err) {}
+      }
+    }, 4000);
+
+    // Hard fallback: Navigate to order detail page after 10 seconds so user is not stuck on loading modal
+    const timeout = setTimeout(() => {
+      if (createdOrder?._id || createdOrder?.orderId) {
+        setShowVendorModal(false);
+        navigate(`/user/product-order/${createdOrder._id || createdOrder.orderId}`, { replace: true });
+      }
+    }, 12000);
+
     return () => {
       socket.disconnect();
+      clearInterval(interval);
+      clearTimeout(timeout);
     };
   }, [currentStep, createdOrder]);
 
@@ -220,8 +258,8 @@ const ProductCheckout = () => {
       setCurrentStep('searching');
 
       const formattedItems = cartItems.map(item => ({
-        productId: typeof item.serviceId === 'object' ? item.serviceId._id || item.serviceId.id : item.serviceId,
-        title: item.title,
+        productId: typeof item.serviceId === 'object' ? (item.serviceId._id || item.serviceId.id) : (item.serviceId || item.id || item._id),
+        title: item.title || item.card?.title || 'Product Item',
         description: item.description || '',
         icon: item.icon || '',
         unitPrice: item.unitPrice || (item.price / (item.serviceCount || 1)),
@@ -255,73 +293,14 @@ const ProductCheckout = () => {
       }
 
       setCreatedOrder(res.data.order || res.data);
+      setCurrentStep('waiting');
+      clearCartGlobal().catch(() => {});
 
       if (paymentMethod === 'cod') {
-        setCurrentStep('waiting');
-        clearCartGlobal().catch(() => {});
         toast.success('Order placed! Notifying nearby vendors...');
       } else {
-        // Online Payment Flow with Razorpay
-        if (!window.Razorpay) {
-          toast.error('Razorpay SDK not loaded');
-          setCurrentStep('failed');
-          return;
-        }
-
-        const razorpayOrder = res.data.razorpayOrder;
-        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_8sYbzHWidwe5Zw';
-
-        const options = {
-          key: razorpayKey,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency || 'INR',
-          name: 'Nexora Product Order',
-          description: `Payment for Order #${res.data.order?.orderId}`,
-          image: NEXORA_LOGO_BASE64,
-          order_id: razorpayOrder.id,
-          handler: async function (response) {
-            try {
-              toast.loading('Verifying online payment...');
-              const verifyRes = await productOrderService.verifyPayment({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                orderId: res.data.order?._id
-              });
-
-              toast.dismiss();
-
-              if (verifyRes.success) {
-                toast.success('Payment verified successfully!');
-                setCurrentStep('waiting');
-                clearCartGlobal().catch(() => {});
-              } else {
-                toast.error(verifyRes.message || 'Payment verification failed');
-                setCurrentStep('failed');
-              }
-            } catch (err) {
-              toast.dismiss();
-              toast.error('Error verifying payment');
-              setCurrentStep('failed');
-            }
-          },
-          prefill: {
-            name: contactDetails.name,
-            contact: contactDetails.phone
-          },
-          theme: {
-            color: '#00246b'
-          }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', function (response) {
-          toast.error(`Payment failed: ${response.error.description}`);
-          setCurrentStep('failed');
-        });
-        rzp.open();
+        toast.success('Searching nearby vendors! You can complete online payment once accepted.');
       }
-
     } catch (error) {
       console.error('Error placing product order:', error);
       toast.error('Error initiating product order');

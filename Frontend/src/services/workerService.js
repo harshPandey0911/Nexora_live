@@ -149,6 +149,27 @@ const workerService = {
   createOrUpdateBill: async (bookingId, data) => {
     const response = await api.post(`/workers/jobs/${bookingId}/bill`, data);
     return response.data;
+  },
+
+  // Product Order Delivery
+  getProductOrderById: async (id) => {
+    const response = await api.get(`/workers/product-orders/${id}`);
+    return response.data;
+  },
+
+  updateProductOrderStatus: async (id, status) => {
+    const response = await api.put(`/workers/product-orders/${id}/status`, { status });
+    return response.data;
+  },
+
+  initiateDeliveryOtp: async (id) => {
+    const response = await api.post(`/workers/product-orders/${id}/initiate-delivery-otp`);
+    return response.data;
+  },
+
+  verifyDeliveryOtp: async (id, otp) => {
+    const response = await api.post(`/workers/product-orders/${id}/verify-delivery-otp`, { otp });
+    return response.data;
   }
 };
 

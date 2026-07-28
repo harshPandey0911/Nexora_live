@@ -20,20 +20,15 @@ const generateOrderId = () => {
   return `ORD-${timestamp}-${random}`;
 };
 
+const { calculateDistance: calcDistService } = require('../../services/locationService');
+
 /**
- * Calculate distance between two coordinates in kilometers (Haversine formula)
+ * Calculate distance between two coordinates in kilometers using locationService
  */
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 999;
-  const R = 6371; // Radius of the Earth in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return Math.round(R * c * 10) / 10;
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  const dist = calcDistService({ lat: lat1, lng: lon1 }, { lat: lat2, lng: lon2 });
+  return Math.round(dist * 10) / 10;
 };
 
 /**
@@ -44,9 +39,11 @@ const broadcastProductOrderToVendors = async (productOrder) => {
     const userLat = productOrder.deliveryAddress?.lat;
     const userLng = productOrder.deliveryAddress?.lng;
 
-    // Flexible query to find active candidate vendors
+    // Query to find active, online and available candidate vendors
     let vendorQuery = {
       isActive: { $ne: false },
+      isOnline: true,
+      availability: { $ne: 'OFFLINE' },
       $or: [
         { approvalStatus: { $regex: /approved/i } },
         { approvalStatus: { $exists: false } },
@@ -55,14 +52,36 @@ const broadcastProductOrderToVendors = async (productOrder) => {
     };
 
     let vendors = await Vendor.find(vendorQuery);
+    const io = getIO();
 
     if (!vendors || vendors.length === 0) {
-      console.log(`[ProductOrder] No vendors match query, fetching all vendors as fallback...`);
-      vendors = await Vendor.find({});
-    }
+      console.log(`[ProductOrder] No active/online vendors found for order ${productOrder.orderId}. Immediate escalation to Admin...`);
+      
+      productOrder.status = 'ESCALATED';
+      productOrder.isEscalatedToAdmin = true;
+      await productOrder.save();
 
-    if (!vendors || vendors.length === 0) {
-      console.log(`[ProductOrder] No vendors exist in database for order ${productOrder.orderId}`);
+      if (io) {
+        const escalatePayload = {
+          orderId: productOrder._id,
+          customOrderId: productOrder.orderId,
+          bookingId: productOrder._id,
+          serviceName: productOrder.items?.[0]?.title || 'Product Order',
+          totalAmount: productOrder.financialBreakdown?.totalAmount,
+          message: `Product Order #${productOrder.orderId} escalated to admin (no active vendors nearby).`
+        };
+
+        io.to('admin_room').emit('adminBookingEscalated', escalatePayload);
+        io.emit('adminBookingEscalated', escalatePayload);
+
+        io.to(`user_${productOrder.userId}`).emit('product_order_status_update', {
+          orderId: productOrder._id,
+          customOrderId: productOrder.orderId,
+          status: 'ESCALATED',
+          message: 'Our admin team is manually assigning a nearby vendor partner for your order.'
+        });
+      }
+
       return false;
     }
 
@@ -70,15 +89,14 @@ const broadcastProductOrderToVendors = async (productOrder) => {
     const candidateVendors = vendors.filter(vendor => {
       const vendorLat = vendor.location?.lat || vendor.address?.lat;
       const vendorLng = vendor.location?.lng || vendor.address?.lng;
-      if (!vendorLat || !vendorLng || !userLat || !userLng) return true; // Fallback include
+      if (!vendorLat || !vendorLng || !userLat || !userLng) return true;
 
       const dist = calculateDistance(userLat, userLng, vendorLat, vendorLng);
       const range = vendor.settings?.serviceRange || 20;
-      return dist <= range;
+      return dist === null || dist <= range;
     });
 
     const targetVendors = candidateVendors.length > 0 ? candidateVendors : vendors;
-    const io = getIO();
     let notifiedCount = 0;
 
     for (const vendor of targetVendors) {
@@ -100,12 +118,12 @@ const broadcastProductOrderToVendors = async (productOrder) => {
       const alertData = {
         orderId: productOrder._id,
         customOrderId: productOrder.orderId,
-        bookingId: productOrder._id, // Backward compatibility for socket handlers
+        bookingId: productOrder._id,
         serviceName: productOrder.items?.[0]?.title || 'Product Order',
         itemsCount: productOrder.items.length,
         totalAmount: productOrder.financialBreakdown.totalAmount,
         price: productOrder.financialBreakdown.totalAmount,
-        deliveryCharge: productOrder.financialBreakdown.deliveryCharge, // 100% to vendor!
+        deliveryCharge: productOrder.financialBreakdown.deliveryCharge,
         vendorEarnings: productOrder.financialBreakdown.vendorEarnings,
         paymentMethod: productOrder.paymentMethod,
         customerName: productOrder.contactDetails.name,
@@ -127,6 +145,42 @@ const broadcastProductOrderToVendors = async (productOrder) => {
         body: `New order #${productOrder.orderId} for ₹${productOrder.financialBreakdown.totalAmount}. Accept to start delivery!`
       }).catch(err => console.error('Product FCM error:', err));
     }
+
+    // Schedule 45-second timeout escalation to Admin if no vendor accepts
+    setTimeout(async () => {
+      try {
+        const freshOrder = await ProductOrder.findById(productOrder._id);
+        if (freshOrder && freshOrder.status === 'PENDING_ACCEPTANCE') {
+          freshOrder.status = 'ESCALATED';
+          freshOrder.isEscalatedToAdmin = true;
+          await freshOrder.save();
+
+          console.log(`[ProductOrder] ⚠️ Order ${freshOrder.orderId} unaccepted after 45s. Escalated to Admin.`);
+
+          if (io) {
+            const escalatePayload = {
+              orderId: freshOrder._id,
+              customOrderId: freshOrder.orderId,
+              bookingId: freshOrder._id,
+              serviceName: freshOrder.items?.[0]?.title || 'Product Order',
+              totalAmount: freshOrder.financialBreakdown?.totalAmount,
+              message: `Product Order #${freshOrder.orderId} unaccepted by vendors after 45s. Escalated for manual admin dispatch.`
+            };
+
+            io.to('admin_room').emit('adminBookingEscalated', escalatePayload);
+            io.emit('adminBookingEscalated', escalatePayload);
+            io.to(`user_${freshOrder.userId}`).emit('product_order_status_update', {
+              orderId: freshOrder._id,
+              customOrderId: freshOrder.orderId,
+              status: 'ESCALATED',
+              message: 'Our admin team is manually assigning a nearby vendor partner for your order.'
+            });
+          }
+        }
+      } catch (timerErr) {
+        console.error('[ProductOrder] Error in timeout escalation:', timerErr);
+      }
+    }, 45000);
 
     console.log(`[ProductOrder] Broadcasted order ${productOrder.orderId} to ${notifiedCount} vendors`);
     return notifiedCount > 0;
@@ -184,7 +238,10 @@ const createProductOrder = async (req, res) => {
     const formattedItems = [];
 
     for (const item of items) {
-      const pId = item.productId || item.serviceId || item._id;
+      let pId = item.productId || item.serviceId || item._id;
+      if (!mongoose.Types.ObjectId.isValid(pId)) {
+        pId = new mongoose.Types.ObjectId();
+      }
       const unitPrice = Number(item.unitPrice || item.price || 0);
       const quantity = Number(item.quantity || item.serviceCount || 1);
       const itemPrice = unitPrice * quantity;
@@ -270,17 +327,20 @@ const createProductOrder = async (req, res) => {
     }
 
     // Online Payment: Create Razorpay Order
-    const razorpayOrder = await razorpayService.createRazorpayOrder(
+    const razorpayOrder = await razorpayService.createOrder(
       totalAmount,
       'INR',
       `order_receipt_${orderObj.orderId}`
     );
 
-    if (!razorpayOrder || !razorpayOrder.id) {
-      return res.status(500).json({ success: false, message: 'Failed to create Razorpay payment order' });
+    if (!razorpayOrder || !razorpayOrder.success || !razorpayOrder.orderId) {
+      return res.status(500).json({ success: false, message: razorpayOrder?.error || 'Failed to create Razorpay payment order' });
     }
 
-    orderObj.razorpayDetails.razorpayOrderId = razorpayOrder.id;
+    if (!orderObj.razorpayDetails) {
+      orderObj.razorpayDetails = {};
+    }
+    orderObj.razorpayDetails.razorpayOrderId = razorpayOrder.orderId;
     await orderObj.save();
 
     return res.status(201).json({
@@ -289,7 +349,7 @@ const createProductOrder = async (req, res) => {
       data: {
         order: orderObj,
         razorpayOrder: {
-          id: razorpayOrder.id,
+          id: razorpayOrder.orderId,
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency
         }
@@ -314,7 +374,7 @@ const verifyProductOrderPayment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product order not found' });
     }
 
-    const isValid = razorpayService.verifyPaymentSignature(
+    const isValid = await razorpayService.verifyPayment(
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature
@@ -363,8 +423,27 @@ const verifyProductOrderPayment = async (req, res) => {
 const getProductOrderDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const order = await ProductOrder.findById(orderId)
+    let query = {};
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      query = { $or: [{ _id: orderId }, { orderId: orderId }] };
+    } else {
+      query = { orderId: orderId };
+    }
+
+    let order = await ProductOrder.findOne(query)
       .populate('vendorId', 'name businessName phone profilePhoto rating location address settings.deliverySettings');
+
+    // Fallback to Booking collection if not found in ProductOrder
+    if (!order && mongoose.Types.ObjectId.isValid(orderId)) {
+      const Booking = require('../../models/Booking');
+      const bookingDoc = await Booking.findById(orderId)
+        .populate('vendorId', 'name businessName phone profilePhoto rating location address')
+        .populate('workerId', 'name phone profilePhoto');
+      if (bookingDoc) {
+        order = bookingDoc.toObject();
+        if (!order.orderId) order.orderId = order.bookingNumber || String(order._id).slice(-8).toUpperCase();
+      }
+    }
 
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
@@ -413,12 +492,44 @@ const cancelProductOrder = async (req, res) => {
     order.status = 'CANCELLED';
     order.cancelledAt = new Date();
     order.cancellationReason = reason || 'Cancelled by user';
+
+    let refundProcessed = false;
+    let refundError = null;
+
+    // Trigger Razorpay Auto-Refund if paid online
+    if (order.paymentMethod === 'online' && order.paymentStatus === 'PAID' && order.razorpayDetails?.razorpayPaymentId) {
+      try {
+        const refundRes = await razorpayService.refundPayment(
+          order.razorpayDetails.razorpayPaymentId,
+          order.financialBreakdown?.totalAmount,
+          { orderId: order.orderId, reason: order.cancellationReason }
+        );
+        if (refundRes && refundRes.success) {
+          order.paymentStatus = 'REFUNDED';
+          refundProcessed = true;
+        } else {
+          refundError = refundRes?.error || 'Refund initiation failed';
+        }
+      } catch (err) {
+        console.error('Razorpay Product Order Refund Error:', err);
+        refundError = err.message;
+      }
+    }
+
     await order.save();
 
-    // Cancel requests
+    // Cancel pending requests
     await ProductOrderRequest.updateMany({ orderId: order._id }, { status: 'EXPIRED' });
 
-    return res.json({ success: true, message: 'Product order cancelled successfully', data: order });
+    return res.json({
+      success: true,
+      message: refundProcessed 
+        ? 'Product order cancelled & 100% refund initiated to your bank account' 
+        : 'Product order cancelled successfully',
+      data: order,
+      refundProcessed,
+      refundError
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error cancelling product order' });
   }
