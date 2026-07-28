@@ -6,6 +6,13 @@ import { configService } from '../../../../services/configService';
 import { publicCatalogService } from '../../../../services/catalogService';
 import api from '../../../../services/api';
 
+const toAssetUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000').replace(/\/api$/, '');
+  return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const Footer = ({ hasBottomNav }) => {
   const location = useLocation();
   const currentYear = new Date().getFullYear();
@@ -47,8 +54,9 @@ const Footer = ({ hasBottomNav }) => {
         }
         const cityId = currentCity?._id || currentCity?.id || '';
         const response = await publicCatalogService.getHomeData(cityId);
-        if (response?.success && response?.homeContent?.siteIdentity?.logoUrl) {
-          setLogoUrl(response.homeContent.siteIdentity.logoUrl);
+        if (response?.success && response?.homeContent?.siteIdentity) {
+          const identity = response.homeContent.siteIdentity;
+          setLogoUrl(identity.brandLogoUrl || identity.logoUrl || '');
         }
       } catch (error) {
         console.error('Failed to fetch logo for footer:', error);
@@ -97,7 +105,11 @@ const Footer = ({ hasBottomNav }) => {
           {/* Brand Column */}
           <div className="space-y-4">
             <Link to="/user" className="inline-block transform hover:scale-105 transition-transform duration-300">
-              <Logo className="h-10 w-auto" src={logoUrl} />
+              {logoUrl ? (
+                <img src={toAssetUrl(logoUrl)} alt="Nexora Go" className="h-10 w-auto max-w-[200px] object-contain" />
+              ) : (
+                <Logo className="h-10 w-auto" />
+              )}
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
               Nexora Go is your one-stop destination for all home services. From electrical repairs to premium salon services, we bring the experts to your doorstep.

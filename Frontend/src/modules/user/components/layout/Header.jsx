@@ -51,6 +51,7 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
 
   const brandName = siteIdentity?.brandName || 'NEXORA GO';
   const slogan = siteIdentity?.slogan || 'Everything you need, one place';
+  const brandLogoUrl = siteIdentity?.brandLogoUrl;
 
   const handleLocationClick = () => {
     if (onLocationClick) {
@@ -143,17 +144,27 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
 
             {/* Left: Logo & Brand Name */}
             <Link to="/user" className="flex items-center gap-3 shrink-0 group">
-              <div ref={logoRef} className="relative">
-                <Logo className="h-10 w-10 sm:h-12 sm:w-12" src={siteIdentity?.logoUrl} />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {brandName}
-                </span>
-                <span className="text-[10px] font-semibold text-gray-400 -mt-1 hidden sm:inline">
-                  {slogan}
-                </span>
-              </div>
+              {brandLogoUrl ? (
+                <img 
+                  src={toAssetUrl(brandLogoUrl)} 
+                  alt={brandName} 
+                  className="h-10 sm:h-12 w-auto max-w-[220px] object-contain transition-transform group-hover:scale-105" 
+                />
+              ) : (
+                <>
+                  <div ref={logoRef} className="relative">
+                    <Logo className="h-10 w-10 sm:h-12 sm:w-12" src={siteIdentity?.logoUrl} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-black text-lg sm:text-xl tracking-tight text-gray-900 group-hover:text-blue-600 transition-colors">
+                      {brandName}
+                    </span>
+                    <span className="text-[10px] font-semibold text-gray-400 -mt-1 hidden sm:inline">
+                      {slogan}
+                    </span>
+                  </div>
+                </>
+              )}
             </Link>
 
             {/* Desktop Nav Links */}
@@ -258,10 +269,20 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
                   {/* Drawer Top Header */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-white shrink-0">
                     <div className="flex items-center gap-2.5">
-                      <Logo className="h-8 w-8" src={siteIdentity?.logoUrl} />
-                      <span className="font-black text-base tracking-tight text-gray-900">
-                        {brandName}
-                      </span>
+                      {brandLogoUrl ? (
+                        <img 
+                          src={toAssetUrl(brandLogoUrl)} 
+                          alt={brandName} 
+                          className="h-8 w-auto max-w-[160px] object-contain" 
+                        />
+                      ) : (
+                        <>
+                          <Logo className="h-8 w-8" src={siteIdentity?.logoUrl} />
+                          <span className="font-black text-base tracking-tight text-gray-900">
+                            {brandName}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <button
                       onClick={() => setIsMobileMenuOpen(false)}

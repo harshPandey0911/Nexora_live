@@ -51,7 +51,7 @@ const VendorLayout = ({ children }) => {
 
   // Check if current page is a detail/sub page (they have their own dedicated headers)
   const isDetailPage = location.pathname.includes('/vendor/booking/') || 
-                       location.pathname.includes('/vendor/profile') ||
+                       location.pathname.includes('/vendor/profile/details') ||
                        location.pathname.includes('/vendor/address-management') ||
                        location.pathname.includes('/vendor/support/ticket/') ||
                        location.pathname.includes('/vendor/wallet/') ||
@@ -102,7 +102,7 @@ const VendorLayout = ({ children }) => {
       {/* Mobile Sidebar Backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[140] lg:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}

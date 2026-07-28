@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   FiPackage, FiPlus, FiTrash2, FiEye, FiSearch, 
   FiDownload, FiFilter, FiMoreVertical, FiChevronDown, FiBox,
@@ -12,7 +11,6 @@ import { toast } from 'react-hot-toast';
 import Pagination from '../../../../components/common/Pagination';
 
 const MyProducts = () => {
-  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [categories, setCategories] = useState([]);
@@ -368,12 +366,6 @@ const MyProducts = () => {
                                   </td>
                                   <td className="px-4 py-3 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                       <button 
-                                         onClick={() => navigate(`/vendor/product/edit/${item.id}`)}
-                                         className="px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[8px] font-medium capitalize tracking-widest hover:bg-blue-600 hover:text-white transition-all border border-blue-100 shadow-sm active:scale-95"
-                                       >
-                                         Manage
-                                       </button>
                                        <button 
                                          onClick={() => setShowConfirm(item.id)}
                                          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"

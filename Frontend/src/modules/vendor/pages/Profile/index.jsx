@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiUser, FiEdit2, FiMapPin, FiBriefcase, FiStar, FiSettings, FiChevronRight, FiLogOut, FiPlus, FiUsers, FiAlertTriangle } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiBriefcase, FiPackage, FiStar, FiSettings, FiChevronRight, FiLogOut, FiPlus, FiUsers, FiAlertTriangle } from 'react-icons/fi';
 import { FaWallet } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../../theme';
@@ -25,7 +25,7 @@ const Profile = () => {
     { id: 2, label: 'Wallet', icon: FaWallet, path: '/vendor/wallet' },
     { id: 5, label: 'My Ratings', icon: FiStar, path: '/vendor/my-ratings' },
     { id: 10, label: 'My Services', icon: FiBriefcase, path: '/vendor/my-services' },
-    { id: 11, label: 'Add Custom Offering', icon: FiPlus, path: '/vendor/add-custom-content', highlight: true },
+    { id: 12, label: 'My Products', icon: FiPackage, path: '/vendor/my-products' },
     { id: 7, label: 'Manage Address', icon: FiMapPin, path: '/vendor/address-management' },
     { id: 8, label: 'Settings', icon: FiSettings, path: '/vendor/settings' },
     { id: 9, label: 'About Nexora', icon: null, customIcon: 'S', path: '/vendor/about-cleaning-expert' },
@@ -148,26 +148,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header - White Style - Hidden on Mobile */}
-      <div className="hidden md:flex bg-white p-6 rounded-3xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
-        <div>
-          <h2 className="text-3xl font-medium text-gray-900 tracking-tight leading-none">
-            Identity Hub
-          </h2>
-          <p className="text-gray-500 font-medium mt-2">
-            Manage your personal credentials and professional profile
-          </p>
-        </div>
-        <motion.button 
-          whileTap={{ scale: 0.9 }}
-          onClick={() => navigate('/vendor/settings')}
-          className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center group hover:bg-white transition-all shadow-inner"
-        >
-          <FiSettings className="w-8 h-8 text-gray-400 group-hover:text-blue-600 transition-colors" />
-        </motion.button>
-      </div>
-
+    <div className="space-y-6 pb-12">
       {/* Profile Master Card (Horizontal & Extremely Compact - Light themed) */}
       <div 
         className="rounded-2xl p-4 border border-blue-100/70 shadow-sm mb-4 relative overflow-hidden group"

@@ -4,7 +4,7 @@ import {
   FiHome, FiShoppingBag, FiBox, FiPackage, 
   FiDollarSign, FiCreditCard, FiUsers, FiStar, 
   FiPercent, FiBarChart2, FiFileText, FiSettings, 
-  FiUser, FiHelpCircle, FiLogOut, FiBell
+  FiUser, FiHelpCircle, FiLogOut, FiBell, FiX
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../../services/authService';
@@ -82,22 +82,27 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
 
   return (
     <>
-    <aside className={`w-[278px] h-screen bg-slate-800 border-r border-slate-700/50 flex flex-col shrink-0 fixed top-0 transition-all duration-300 overflow-hidden z-50 shadow-2xl ${isOpen ? 'left-0' : '-left-[278px] lg:left-0'}`}>
+    <aside className={`w-[278px] h-screen bg-slate-800 border-r border-slate-700/50 flex flex-col shrink-0 fixed top-0 transition-all duration-300 overflow-hidden z-[150] shadow-2xl ${isOpen ? 'left-0' : '-left-[278px] lg:left-0'}`}>
       {/* Header Section */}
-      <div className="px-4 py-6 border-b border-slate-700 bg-slate-900">
-        <div className="flex items-center justify-between gap-3 px-2">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <Logo className="w-12 h-12 object-cover rounded-xl shadow-lg border border-slate-700 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h2 className="font-bold text-white text-sm tracking-tight truncate">
-                Verified Partner
-              </h2>
-              <p className="text-[10px] font-bold text-gray-400 capitalize tracking-widest truncate flex items-center gap-1">
-                <FiStar className="w-2.5 h-2.5 text-blue-400" /> ID: #V-7742
-              </p>
-            </div>
+      <div className="px-4 py-5 border-b border-slate-700 bg-slate-900 flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Logo className="w-10 h-10 object-cover rounded-xl shadow-lg border border-slate-700 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-white text-sm tracking-tight truncate">
+              Verified Partner
+            </h2>
+            <p className="text-[10px] font-bold text-gray-400 capitalize tracking-widest truncate flex items-center gap-1">
+              <FiStar className="w-2.5 h-2.5 text-blue-400" /> ID: #V-7742
+            </p>
           </div>
         </div>
+        <button
+          onClick={() => setIsOpen?.(false)}
+          className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-slate-800 transition-colors lg:hidden active:scale-95 border border-slate-700/60"
+          title="Close Navigation"
+        >
+          <FiX className="w-5 h-5" />
+        </button>
       </div>
  
       <nav className="flex-1 overflow-y-auto p-3 scrollbar-admin lg:pb-3 space-y-1 overscroll-contain">
