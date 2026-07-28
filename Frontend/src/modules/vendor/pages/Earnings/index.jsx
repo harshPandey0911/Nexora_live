@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiDollarSign, FiTrendingUp, FiCalendar, FiGift, FiAlertCircle, FiPieChart } from 'react-icons/fi';
+import { FiDollarSign, FiTrendingUp, FiCalendar, FiGift, FiAlertCircle, FiPieChart, FiArrowUpRight, FiArrowDownRight } from 'react-icons/fi';
 import { FaWallet } from 'react-icons/fa';
-import { vendorTheme as themeColors } from '../../../../theme';
 import { getEarningsOverview } from '../../services/earningsService';
 import LogoLoader from '../../../../components/common/LogoLoader';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -23,7 +22,6 @@ const Earnings = () => {
       history: []
     };
   });
-
 
   const fetchEarnings = async () => {
     try {
@@ -72,84 +70,86 @@ const Earnings = () => {
   const { totals, breakdown, chartData, history } = earningsData;
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Header - White Style - Hidden on Mobile */}
-      <div className="hidden md:flex bg-white p-5 rounded-3xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header - Compact & Modern */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
-          <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">
             Revenue Analytics
           </h2>
-          <p className="text-gray-500 text-[11px] font-medium mt-2">
-            Monitor your financial performance and deployment growth
+          <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5">
+            Monitor financial performance, order payouts and gross earnings
           </p>
         </div>
-        <div className="w-12 h-12 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner">
-          <FiTrendingUp className="w-6 h-6 text-blue-600" />
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+          <FiTrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-5 py-3.5 rounded-2xl text-[13px] font-normal flex items-center gap-3">
-          <FiAlertCircle className="w-4 h-4" />
-          {error}
+        <div className="bg-rose-50 border border-rose-100 text-rose-700 px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <FiAlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Top Totals Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600 border border-blue-100">
               <FiCalendar className="w-3.5 h-3.5" />
             </div>
-            <p className="text-[8px] font-medium capitalize tracking-wider text-gray-400">Today</p>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Today</span>
           </div>
-          <p className="text-xl font-medium text-gray-800 tracking-tight">₹{totals.today.toLocaleString()}</p>
+          <p className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">₹{(totals.today || 0).toLocaleString('en-IN')}</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+        <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600 border border-emerald-100">
               <FiTrendingUp className="w-3.5 h-3.5" />
             </div>
-            <p className="text-[8px] font-medium capitalize tracking-wider text-gray-400">This Week</p>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">This Week</span>
           </div>
-          <p className="text-xl font-medium text-gray-800 tracking-tight">₹{totals.week.toLocaleString()}</p>
+          <p className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">₹{(totals.week || 0).toLocaleString('en-IN')}</p>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+        <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600 border border-purple-100">
               <FiPieChart className="w-3.5 h-3.5" />
             </div>
-            <p className="text-[8px] font-medium capitalize tracking-wider text-gray-400">This Month</p>
+            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">This Month</span>
           </div>
-          <p className="text-xl font-medium text-gray-800 tracking-tight">₹{totals.month.toLocaleString()}</p>
+          <p className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">₹{(totals.month || 0).toLocaleString('en-IN')}</p>
         </div>
 
-        <div className="bg-[#2874F0] rounded-2xl p-4 shadow-lg shadow-blue-100 relative overflow-hidden group flex flex-col justify-between">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.1)_0%,transparent_50%)]" />
-          <div className="flex items-center gap-2 mb-2 relative z-10">
-            <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+        <div className="bg-gradient-to-br from-[#00246b] via-[#001c54] to-[#0d1b3e] text-white rounded-xl p-3.5 shadow-md flex flex-col justify-between relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-1.5 bg-white/10 rounded-lg border border-white/20 backdrop-blur-xs">
               <FaWallet className="w-3.5 h-3.5 text-white" />
             </div>
-            <p className="text-[8px] font-medium capitalize tracking-wider text-white/80">All Time</p>
+            <span className="text-[9px] font-bold text-blue-200 uppercase tracking-widest">All Time</span>
           </div>
-          <p className="text-xl font-medium text-white relative z-10 tracking-tight">₹{totals.total.toLocaleString()}</p>
+          <p className="text-base sm:text-lg font-bold text-white tracking-tight">₹{(totals.total || 0).toLocaleString('en-IN')}</p>
         </div>
       </div>
 
-      {/* Chart Section */}
-      <div className="bg-white rounded-[28px] p-6 border border-gray-100 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-          <h3 className="text-base font-normal text-gray-800 capitalize tracking-widest">Revenue Growth</h3>
-          <div className="flex bg-gray-50 rounded-xl p-1 border border-gray-100">
+      {/* Revenue Area Chart Section */}
+      <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Revenue Growth Trend</h3>
+            <p className="text-[9px] font-medium text-gray-400">Historical performance graph</p>
+          </div>
+          <div className="flex bg-gray-50 rounded-lg p-0.5 border border-gray-100 shrink-0">
             {['daily', 'weekly', 'monthly'].map(p => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-4 py-2 text-[10px] font-normal capitalize rounded-lg transition-all ${
-                  period === p ? 'bg-white text-blue-600 shadow-sm border border-gray-100' : 'text-gray-400 hover:text-gray-600'
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all cursor-pointer ${
+                  period === p ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
                 {p}
@@ -158,125 +158,125 @@ const Earnings = () => {
           </div>
         </div>
         
-        <div className="h-64 w-full">
+        <div className="h-56 sm:h-64 w-full pt-2">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2874F0" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#2874F0" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#00246b" stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor="#00246b" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="date" tickFormatter={formatXAxis} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 600 }} dy={10} />
+                <XAxis dataKey="date" tickFormatter={formatXAxis} axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 600 }} dy={5} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#94A3B8', fontWeight: 600 }} />
                 <Tooltip 
-                  contentStyle={{ borderRadius: '16px', backgroundColor: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                  itemStyle={{ color: '#1E293B', fontWeight: '800', fontSize: '14px' }}
-                  labelStyle={{ color: '#64748B', fontSize: '11px', fontWeight: '700', marginBottom: '4px', textTransform: 'capitalize' }}
-                  formatter={(value) => [`₹${value}`, 'Revenue']}
+                  contentStyle={{ borderRadius: '12px', backgroundColor: '#00246b', border: 'none', color: '#FFFFFF', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ color: '#38BDF8', fontWeight: '800', fontSize: '12px' }}
+                  labelStyle={{ color: '#93C5FD', fontSize: '10px', fontWeight: '700', marginBottom: '2px', textTransform: 'uppercase' }}
+                  formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Revenue']}
                 />
-                <Area type="monotone" dataKey="amount" stroke="#2874F0" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
+                <Area type="monotone" dataKey="amount" stroke="#00246b" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-             <div className="h-full flex items-center justify-center text-gray-400 text-sm font-normal capitalize tracking-widest">
-               No data available for this period
+             <div className="h-full flex items-center justify-center text-gray-400 text-xs font-bold uppercase tracking-widest">
+               No revenue data available
              </div>
           )}
         </div>
       </div>
 
-      {/* Breakdown Section */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between px-1">
-          <h3 className="text-base font-normal text-gray-800 capitalize tracking-widest">Operational Breakdown</h3>
-          <div className="relative group">
-            <select 
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="bg-white border border-gray-200 text-[10px] font-normal text-gray-600 px-6 py-2.5 rounded-xl outline-none cursor-pointer appearance-none capitalize tracking-widest hover:border-blue-500/50 transition-all shadow-sm"
-            >
-              <option value="all">Consolidated</option>
-              <option value="today">Today</option>
-              <option value="week">Weekly</option>
-              <option value="month">Monthly</option>
-            </select>
-          </div>
+      {/* Operational Breakdown Section */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-0.5">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Operational Breakdown</h3>
+          <select 
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="bg-white border border-gray-200 text-[10px] font-bold text-gray-700 px-3 py-1.5 rounded-lg outline-none cursor-pointer uppercase tracking-wider hover:border-gray-300 transition-all shadow-2xs"
+          >
+            <option value="all">Consolidated</option>
+            <option value="today">Today</option>
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+          </select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-2xl p-6 flex items-center justify-between border border-gray-100 group hover:shadow-md transition-all shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <FiDollarSign className="w-6 h-6" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                <FiDollarSign className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-normal capitalize text-gray-400 tracking-wider">Gross Earnings</p>
-                <p className="text-xl font-medium text-gray-800">+₹{breakdown.totalEarnings.toLocaleString()}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Gross Earnings</p>
+                <p className="text-sm sm:text-base font-bold text-gray-900">+₹{(breakdown.totalEarnings || 0).toLocaleString('en-IN')}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 flex items-center justify-between border border-gray-100 group hover:shadow-md transition-all shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <FiGift className="w-6 h-6" />
+          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
+                <FiGift className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-normal capitalize text-gray-400 tracking-wider">Protocol Bonuses</p>
-                <p className="text-xl font-medium text-gray-800">+₹{breakdown.totalBonuses.toLocaleString()}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Protocol Bonuses</p>
+                <p className="text-sm sm:text-base font-bold text-gray-900">+₹{(breakdown.totalBonuses || 0).toLocaleString('en-IN')}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 flex items-center justify-between border border-gray-100 group hover:shadow-md transition-all shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                <FiAlertCircle className="w-6 h-6" />
+          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
+                <FiAlertCircle className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-[10px] font-normal capitalize text-gray-400 tracking-wider">System Deductions</p>
-                <p className="text-xl font-medium text-rose-600">-₹{breakdown.totalDeductions.toLocaleString()}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">System Deductions</p>
+                <p className="text-sm sm:text-base font-bold text-rose-600">-₹{(breakdown.totalDeductions || 0).toLocaleString('en-IN')}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Transactions List */}
-      <div className="space-y-6 pt-6">
-         <div className="flex items-center justify-between px-1">
-          <h2 className="text-xl font-normal text-gray-800 capitalize tracking-tight">Recent Activity</h2>
-          <button onClick={() => navigate('/vendor/wallet')} className="text-xs font-normal text-blue-600 hover:underline capitalize tracking-widest">View Wallet</button>
+      {/* Recent Activity List */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between px-0.5">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Recent Activity</h3>
+          <button 
+            onClick={() => navigate('/vendor/wallet')} 
+            className="text-[10px] font-bold text-blue-600 hover:underline uppercase tracking-wider cursor-pointer"
+          >
+            Audit Wallet →
+          </button>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-2">
           {history.length === 0 ? (
-            <div className="bg-white rounded-[40px] p-20 text-center border border-gray-100 shadow-sm">
-              <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-gray-100">
-                <span className="text-3xl opacity-20">📊</span>
-              </div>
-              <p className="text-[10px] font-normal text-gray-400 capitalize tracking-widest">No activity history recorded</p>
+            <div className="bg-white rounded-xl p-8 border border-dashed border-gray-200 text-center shadow-2xs">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">No Activity Recorded</p>
             </div>
           ) : (
             history.map((item) => (
-              <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between hover:shadow-md transition-all shadow-sm group">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.isDeduction ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
-                    {item.isDeduction ? <FiTrendingUp className="w-5 h-5 rotate-180" /> : <FiTrendingUp className="w-5 h-5" />}
+              <div key={item.id} className="bg-white rounded-xl p-3 border border-gray-100 hover:border-gray-200 shadow-2xs flex items-center justify-between transition-all">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border border-gray-100 ${item.isDeduction ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
+                    {item.isDeduction ? <FiArrowDownRight className="w-4 h-4" /> : <FiArrowUpRight className="w-4 h-4" />}
                   </div>
-                  <div>
-                    <p className="text-sm font-normal text-gray-800 capitalize tracking-tight">{item.description || item.type.replace('_', ' ')}</p>
-                    <p className="text-[10px] font-normal text-gray-400 capitalize tracking-wider">
-                      {new Date(item.date).toLocaleDateString()} • {new Date(item.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900 capitalize truncate">{item.description || item.type?.replace('_', ' ')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium">
+                      {new Date(item.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} • {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
-                <div className="text-right px-2">
-                  <p className={`text-lg font-medium ${item.isDeduction ? 'text-rose-600' : 'text-[#2874F0]'}`}>
-                    {item.isDeduction ? '-' : '+'}₹{item.amount.toLocaleString()}
+                <div className="text-right shrink-0 ml-2">
+                  <p className={`text-xs font-bold ${item.isDeduction ? 'text-rose-600' : 'text-blue-600'}`}>
+                    {item.isDeduction ? '-' : '+'}₹{item.amount?.toLocaleString('en-IN')}
                   </p>
                 </div>
               </div>

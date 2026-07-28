@@ -403,7 +403,7 @@ const BookingTimeline = () => {
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
       <Header title="Booking Timeline" onBack={() => navigate(`/vendor/booking/${id}`, { replace: true })} />
 
-      <main className="px-4 pt-24 pb-6">
+      <main className="px-4 pt-16 sm:pt-20 pb-6">
         <div
           className="bg-white rounded-xl p-6 shadow-md"
           style={{

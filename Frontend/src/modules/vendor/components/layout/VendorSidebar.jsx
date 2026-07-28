@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FiHome, FiShoppingBag, FiBox, FiPackage, 
-  FiDollarSign, FiCreditCard, FiUsers, FiStar, 
-  FiPercent, FiBarChart2, FiFileText, FiSettings, 
-  FiUser, FiHelpCircle, FiLogOut, FiBell, FiX
+  FiHome, FiShoppingBag, FiPackage, FiLayers, FiGrid,
+  FiTrendingUp, FiCreditCard, FiUsers, FiStar, 
+  FiSettings, FiUser, FiHelpCircle, FiLogOut, FiBell, FiX
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { logout } from '../../services/authService';
@@ -37,7 +36,6 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
       setStats(JSON.parse(cached));
     }
     
-    // Also refresh permissions if vendorData changed
     const data = localStorage.getItem('vendorData');
     if (data) {
       const vendor = JSON.parse(data);
@@ -55,100 +53,139 @@ const VendorSidebar = ({ isOpen, setIsOpen }) => {
     };
   }, [loadStats]);
 
-  const allNavItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: FiHome, path: '/vendor/dashboard' },
-    { id: 'orders', label: 'Service Bookings', icon: FiShoppingBag, path: '/vendor/jobs', badge: stats.inProgressBookings || 0 },
-    { id: 'product-orders', label: 'Product Orders', icon: FiPackage, path: '/vendor/product-orders' },
-    { id: 'services', label: 'Manage Services', icon: FiBox, path: '/vendor/my-services' },
-    { id: 'manage-products', label: 'Manage Products', icon: FiPackage, path: '/vendor/my-products' },
-    { id: 'workers', label: 'Manage Workers', icon: FiUsers, path: '/vendor/workers' },
-    { id: 'earnings', label: 'Earnings', icon: FiDollarSign, path: '/vendor/earnings' },
-    { id: 'wallet', label: 'Wallet & Payouts', icon: FiCreditCard, path: '/vendor/wallet' },
-    { id: 'reviews', label: 'My Ratings', icon: FiStar, path: '/vendor/my-ratings' },
-    { id: 'notifications', label: 'Notifications', icon: FiBell, path: '/vendor/notifications' },
-    { id: 'store-settings', label: 'Store Settings', icon: FiSettings, path: '/vendor/settings' },
-    { id: 'profile-settings', label: 'Profile Settings', icon: FiUser, path: '/vendor/profile' },
-    { id: 'support', label: 'Support', icon: FiHelpCircle, path: '/vendor/support' },
-    { id: 'logout', label: 'Logout', icon: FiLogOut, path: '/logout', isDanger: true },
+  const rawSections = [
+    {
+      title: 'OPERATIONS',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: FiHome, path: '/vendor/dashboard' },
+        { id: 'orders', label: 'Service Bookings', icon: FiShoppingBag, path: '/vendor/jobs', badge: stats.inProgressBookings || 0 },
+        { id: 'product-orders', label: 'Product Orders', icon: FiPackage, path: '/vendor/product-orders' },
+      ]
+    },
+    {
+      title: 'PORTFOLIO & FLEET',
+      items: [
+        { id: 'services', label: 'Manage Services', icon: FiLayers, path: '/vendor/my-services' },
+        { id: 'manage-products', label: 'Manage Products', icon: FiGrid, path: '/vendor/my-products' },
+        { id: 'workers', label: 'Manage Workers', icon: FiUsers, path: '/vendor/workers' },
+      ]
+    },
+    {
+      title: 'FINANCE',
+      items: [
+        { id: 'earnings', label: 'Earnings', icon: FiTrendingUp, path: '/vendor/earnings' },
+        { id: 'wallet', label: 'Wallet & Payouts', icon: FiCreditCard, path: '/vendor/wallet' },
+      ]
+    },
+    {
+      title: 'ACCOUNT & HELP',
+      items: [
+        { id: 'reviews', label: 'My Ratings', icon: FiStar, path: '/vendor/my-ratings' },
+        { id: 'notifications', label: 'Notifications', icon: FiBell, path: '/vendor/notifications' },
+        { id: 'store-settings', label: 'Store Settings', icon: FiSettings, path: '/vendor/settings' },
+        { id: 'profile-settings', label: 'Profile Settings', icon: FiUser, path: '/vendor/profile' },
+        { id: 'support', label: 'Support', icon: FiHelpCircle, path: '/vendor/support' },
+      ]
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { id: 'logout', label: 'Logout', icon: FiLogOut, path: '/logout', isDanger: true },
+      ]
+    }
   ];
 
-  // Filter items based on permissions
-  // If permissions array is empty (e.g. old user), show all by default
-  const navItems = allNavItems.filter(item => {
-    if (item.id === 'logout') return true;
-    if (!permissions || permissions.length === 0) return true;
-    return permissions.includes(item.id);
-  });
+  // Filter sections and items based on permissions
+  const sections = rawSections.map(section => {
+    const filteredItems = section.items.filter(item => {
+      if (item.id === 'logout') return true;
+      if (!permissions || permissions.length === 0) return true;
+      return permissions.includes(item.id);
+    });
+    return { ...section, items: filteredItems };
+  }).filter(section => section.items.length > 0);
 
   return (
     <>
-    <aside className={`w-[278px] h-screen bg-slate-800 border-r border-slate-700/50 flex flex-col shrink-0 fixed top-0 transition-all duration-300 overflow-hidden z-[150] shadow-2xl ${isOpen ? 'left-0' : '-left-[278px] lg:left-0'}`}>
+    <aside className={`w-[278px] h-screen bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 fixed top-0 transition-all duration-300 overflow-hidden z-[150] shadow-2xl ${isOpen ? 'left-0' : '-left-[278px] lg:left-0'}`}>
       {/* Header Section */}
-      <div className="px-4 py-5 border-b border-slate-700 bg-slate-900 flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <Logo className="w-10 h-10 object-cover rounded-xl shadow-lg border border-slate-700 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-white text-sm tracking-tight truncate">
-              Verified Partner
-            </h2>
-            <p className="text-[10px] font-bold text-gray-400 capitalize tracking-widest truncate flex items-center gap-1">
-              <FiStar className="w-2.5 h-2.5 text-blue-400" /> ID: #V-7742
+      <div className="px-4 py-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Logo className="w-9 h-9 object-cover rounded-xl shadow-md border border-slate-800 flex-shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h2 className="font-bold text-white text-xs sm:text-sm tracking-tight truncate">
+                Verified Partner
+              </h2>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate flex items-center gap-1 mt-0.5">
+              <FiStar className="w-2.5 h-2.5 text-amber-400 fill-amber-400" /> ID: #V-7742
             </p>
           </div>
         </div>
         <button
           onClick={() => setIsOpen?.(false)}
-          className="p-1.5 rounded-xl text-gray-400 hover:text-white hover:bg-slate-800 transition-colors lg:hidden active:scale-95 border border-slate-700/60"
+          className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors lg:hidden active:scale-95 border border-slate-800 cursor-pointer"
           title="Close Navigation"
         >
-          <FiX className="w-5 h-5" />
+          <FiX className="w-4 h-4" />
         </button>
       </div>
  
-      <nav className="flex-1 overflow-y-auto p-3 scrollbar-admin lg:pb-3 space-y-1 overscroll-contain">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <motion.div
-              key={item.id}
-              whileTap={{ scale: 0.98 }}
-              onClick={async () => {
-                setIsOpen?.(false);
-                if (item.id === 'logout') {
-                  setShowLogoutConfirm(true);
-                } else {
-                  navigate(item.path);
-                }
-              }}
-              className={`
-                flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer relative group
-                ${isActive
-                  ? "bg-[#0D9488] text-white shadow-lg shadow-teal-900/40"
-                  : item.isDanger 
-                    ? "text-rose-400 hover:bg-rose-500/10 hover:text-rose-500 mt-8"
-                    : "text-gray-400 hover:bg-slate-700/50 hover:text-white"
-                }
-              `}
-            >
-              <item.icon className={`text-lg flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-white' : 'text-gray-500'}`} />
-              <span className={`font-semibold flex-1 text-sm whitespace-nowrap ${isActive ? 'text-white' : ''}`}>
-                {item.label}
-              </span>
-              {Number(item.badge) > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
-                  {item.badge > 99 ? '99+' : item.badge}
-                </span>
-              )}
-            </motion.div>
-          );
-        })}
+      {/* Scrollable Navigation Items */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3 scrollbar-admin lg:pb-3 space-y-4 overscroll-contain">
+        {sections.map((section, idx) => (
+          <div key={idx} className="space-y-1">
+            <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-3 mb-1">
+              {section.title}
+            </h3>
+
+            {section.items.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <motion.div
+                  key={item.id}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={async () => {
+                    setIsOpen?.(false);
+                    if (item.id === 'logout') {
+                      setShowLogoutConfirm(true);
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
+                  className={`
+                    flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 cursor-pointer relative group text-xs font-bold
+                    ${isActive
+                      ? "bg-[#0D9488] text-white shadow-md shadow-teal-950"
+                      : item.isDanger 
+                        ? "text-rose-400 hover:bg-rose-500/10 hover:text-rose-500"
+                        : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+                    }
+                  `}
+                >
+                  <item.icon className={`text-base flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${isActive ? 'text-white' : item.isDanger ? 'text-rose-400' : 'text-slate-400 group-hover:text-white'}`} />
+                  <span className={`flex-1 truncate ${isActive ? 'text-white font-bold' : ''}`}>
+                    {item.label}
+                  </span>
+                  {Number(item.badge) > 0 && (
+                    <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shadow-2xs animate-pulse">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        ))}
       </nav>
  
       {/* Footer Branding */}
-      <div className="p-6 border-t border-slate-700 bg-slate-900">
-        <div className="flex flex-col gap-1 opacity-60">
-          <p className="text-[10px] font-bold text-gray-500 capitalize tracking-wider">Protocol v2.4.0</p>
-          <p className="text-[9px] font-black text-blue-400 capitalize tracking-wide">Powered by Nexora</p>
+      <div className="px-4 py-3 border-t border-slate-800 bg-slate-950">
+        <div className="flex flex-col gap-0.5 opacity-60 text-[9px]">
+          <p className="font-bold text-slate-400 uppercase tracking-widest">Nexora Operations Hub</p>
+          <p className="font-semibold text-blue-400">Protocol v2.4.0 Premium</p>
         </div>
       </div>
     </aside>

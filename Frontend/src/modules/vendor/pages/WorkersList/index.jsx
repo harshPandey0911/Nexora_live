@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUsers, FiPlus, FiSearch, FiUser, FiBriefcase, FiChevronRight, FiStar, FiRefreshCw, FiDollarSign, FiX, FiCheck, FiClock, FiFileText } from 'react-icons/fi';
-import { motion } from 'framer-motion';
+import { 
+  FiUsers, FiPlus, FiSearch, FiUser, FiBriefcase, FiChevronRight, 
+  FiStar, FiRefreshCw, FiDollarSign, FiX, FiCheck, FiClock, FiFileText, FiPhone, FiCopy
+} from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
 import { getWorkers, deleteWorker, linkWorker, payAndResetWorkerSalary, getWorkerPaymentHistory } from '../../services/workerService';
 import Pagination from '../../../../components/common/Pagination';
 
@@ -155,82 +157,81 @@ const WorkersList = () => {
   });
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-12">
-      {/* Header */}
-      <div className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between text-gray-900 border border-gray-100 gap-3 sm:gap-6">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header - Compact & Modern */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
-          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight leading-tight">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">
             Team Management
           </h2>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5 sm:mt-1">
+          <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5">
             Monitor and coordinate your field operatives and deployment fleet
           </p>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
+        <button
           onClick={() => navigate('/vendor/workers/new')}
-          className="w-full md:w-auto px-4 py-2.5 sm:px-6 sm:py-3.5 bg-[#2874F0] text-white font-medium text-xs capitalize tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#00246b] hover:bg-[#001c54] text-white text-[10px] sm:text-xs font-bold uppercase tracking-wider shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
         >
-          <FiPlus className="w-4 h-4" />
-          <span>Deploy New Operative</span>
-        </motion.button>
+          <FiPlus className="w-3.5 h-3.5" />
+          <span>Deploy Operative</span>
+        </button>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-1.5 sm:gap-2 bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
-        {[
-          { id: 'all', label: 'All Fleet' },
-          { id: 'online', label: 'Active Fleet' },
-          { id: 'offline', label: 'Standby Fleet' },
-          { id: 'past', label: 'Past Operatives' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={`
-              flex items-center gap-1.5 px-3.5 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold capitalize tracking-wider transition-all duration-300 whitespace-nowrap
-              ${filter === tab.id
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
-              }
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Search Bar */}
-      <div className="relative group max-w-2xl">
-        <FiSearch className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5 group-focus-within:text-blue-500 transition-colors" />
-        <input
-          type="text"
-          placeholder="Search operative by name or phone..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-white border border-gray-200 rounded-xl sm:rounded-2xl py-2.5 sm:py-3.5 pl-10 sm:pl-12 pr-4 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all shadow-sm"
-        />
-      </div>
-
-      {/* Workers List */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5 sm:gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl sm:rounded-3xl p-6 border border-gray-100 animate-pulse h-40 shadow-sm" />
+      {/* Navigation Tabs & Search Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-2xs overflow-x-auto scrollbar-hide">
+          {[
+            { id: 'all', label: 'All Fleet' },
+            { id: 'online', label: 'Active Fleet' },
+            { id: 'offline', label: 'Standby Fleet' },
+            { id: 'past', label: 'Past Operatives' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`
+                px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap cursor-pointer
+                ${filter === tab.id
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
+
+        {/* Search Bar */}
+        <div className="relative group flex-1 max-w-xs">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 group-focus-within:text-blue-600 transition-colors" />
+          <input
+            type="text"
+            placeholder="Search operative..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl py-1.5 pl-9 pr-3 text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all shadow-2xs placeholder-gray-300"
+          />
+        </div>
+      </div>
+
+      {/* Workers Grid */}
+      {loading ? (
+        <div className="bg-white rounded-xl p-10 text-center border border-gray-100 shadow-2xs">
+          <div className="w-7 h-7 border-2 border-[#00246b] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading Operatives...</p>
+        </div>
       ) : filteredWorkers.length === 0 ? (
-        <div className="bg-white rounded-2xl sm:rounded-[32px] p-10 sm:p-20 text-center border border-gray-100 shadow-sm">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
-            <FiUsers className="w-8 h-8 sm:w-10 sm:h-10 text-gray-300" />
-          </div>
-          <h3 className="text-lg sm:text-xl font-normal text-gray-800 mb-1.5 sm:mb-2">No Operatives Found</h3>
-          <p className="text-xs sm:text-sm text-gray-500 font-medium max-w-xs mx-auto">
-            {searchQuery ? "Your search query didn't match any team records." : 'You don\'t have any operatives in this fleet category.'}
+        <div className="bg-white rounded-xl p-10 text-center border border-dashed border-gray-200 shadow-2xs">
+          <FiUsers className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+          <h3 className="text-xs font-bold text-gray-900 uppercase">No Operatives Found</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {searchQuery ? "Your search query didn't match any records." : 'No operatives in this fleet category.'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-3.5 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredWorkers
             .slice((currentPage - 1) * pageSize, currentPage * pageSize)
             .map((worker) => {
@@ -242,132 +243,140 @@ const WorkersList = () => {
               return (
                 <motion.div
                   key={worker.id}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 relative flex flex-col justify-between overflow-hidden"
+                  className="bg-white rounded-xl p-3.5 border border-gray-100 hover:border-gray-200 shadow-2xs transition-all flex flex-col justify-between"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-3.5 sm:mb-5">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="relative shrink-0">
-                        <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-base sm:text-xl uppercase shadow-xs">
-                          {worker.name ? worker.name.charAt(0) : 'W'}
+                  <div>
+                    {/* Top Row: Avatar + Info */}
+                    <div className="flex items-start justify-between gap-2.5 mb-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="relative shrink-0">
+                          <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-bold text-base uppercase shadow-2xs">
+                            {worker.name ? worker.name.charAt(0) : 'W'}
+                          </div>
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                            isPast ? 'bg-slate-400' : isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'
+                          }`} />
                         </div>
-                        <span className={`absolute -bottom-0.5 -right-0.5 sm:-bottom-1 sm:-right-1 w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white ${
-                          isPast ? 'bg-amber-500' : isOnline ? 'bg-emerald-500' : 'bg-gray-300'
-                        }`} />
-                      </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-gray-900 text-sm sm:text-base truncate">{worker.name}</h3>
-                          {worker.rating > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-bold text-amber-500 bg-amber-50 px-1.5 sm:px-2 py-0.5 rounded-md border border-amber-100/60">
-                              <FiStar className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-amber-400 text-amber-400" />
-                              {worker.rating.toFixed(1)}
-                            </span>
-                          )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-bold text-gray-900 text-xs sm:text-sm truncate uppercase tracking-tight">{worker.name}</h3>
+                            {worker.rating > 0 && (
+                              <span className="flex items-center gap-0.5 text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 shrink-0">
+                                <FiStar className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                {worker.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-500 font-medium truncate mt-0.5 flex items-center gap-1">
+                            <FiPhone className="w-3 h-3 text-gray-400" />
+                            {worker.phone}
+                          </p>
+                          
+                          <div className="mt-1">
+                            {isPast ? (
+                              <span className="text-[9px] px-2 py-0.5 rounded-full font-bold border bg-slate-50 border-slate-200 text-slate-600 uppercase tracking-wider">
+                                Past Operative
+                              </span>
+                            ) : (
+                              <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                approval === 'approved' 
+                                  ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
+                                  : approval === 'rejected'
+                                  ? 'bg-rose-50 border-rose-100 text-rose-700'
+                                  : 'bg-amber-50 border-amber-100 text-amber-700'
+                              }`}>
+                                {approval === 'approved' ? 'Approved' : approval === 'rejected' ? 'Rejected' : 'Pending Approval'}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate mt-0.5">{worker.phone}</p>
-                        
-                        <div className="flex flex-wrap gap-1.5 mt-1 sm:mt-1.5">
-                          {isPast ? (
-                            <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-slate-100 border-slate-200 text-slate-700">
-                              Past Operative
-                            </span>
-                          ) : (
-                            <span className={`text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
-                              approval === 'approved' 
-                                ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                                : approval === 'rejected'
-                                ? 'bg-rose-50 border-rose-100 text-rose-700'
-                                : 'bg-amber-50 border-amber-100 text-amber-700'
-                            }`}>
-                              {approval === 'approved' ? 'Approved' : approval === 'rejected' ? 'Rejected' : 'Pending Approval'}
-                            </span>
-                          )}
-                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats Pill Row */}
+                    <div className="flex items-center justify-between bg-gray-50/60 p-2 rounded-lg border border-gray-100 text-[10px] mb-3">
+                      <div className="flex items-center gap-1 font-semibold text-blue-700">
+                        <FiBriefcase className="w-3 h-3 text-blue-500" />
+                        <span>{worker.completedJobs || 0} Jobs</span>
+                      </div>
+                      <div className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                        <FiDollarSign className="w-3 h-3 text-emerald-600" />
+                        <span>Owed: ₹{Number(worker.salaryOwed || 0).toLocaleString('en-IN')}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between pt-3 sm:pt-4 border-t border-gray-100 gap-2.5 sm:gap-3">
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                      <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-medium capitalize tracking-wider text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
-                        <FiBriefcase className="w-3 h-3" />
-                        <span>{worker.completedJobs || 0} Jobs</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-semibold tracking-wide text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
-                        <FiDollarSign className="w-3 h-3 text-emerald-600" />
-                        <span>Owed: ₹{Number(worker.salaryOwed || 0).toLocaleString('en-IN')}</span>
-                      </div>
-                      <span className={`text-[9px] sm:text-[10px] font-medium capitalize tracking-wider ${isPast ? 'text-amber-600' : isOnline ? 'text-emerald-600' : 'text-gray-400'}`}>
-                        {isPast ? 'Removed' : isOnline ? 'Active' : 'Standby'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 sm:gap-2 z-10">
-                      {isPast ? (
+                  {/* Actions Bar */}
+                  <div className="pt-2.5 border-t border-gray-100 flex items-center justify-between gap-1.5">
+                    {isPast ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRelink(worker.phone);
+                        }}
+                        className="w-full py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all shadow-2xs flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                      >
+                        <FiRefreshCw className="w-3 h-3" />
+                        Re-hire Operative
+                      </button>
+                    ) : (
+                      <>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRelink(worker.phone);
+                            if (Number(worker.salaryOwed || 0) <= 0) {
+                              toast.info(`No pending salary owed for ${worker.name}`);
+                              return;
+                            }
+                            handleOpenPayModal(worker);
                           }}
-                          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] font-semibold transition-all shadow-md flex items-center gap-1.5 active:scale-95"
+                          className={`flex-1 py-1.5 px-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer active:scale-95 ${
+                            Number(worker.salaryOwed || 0) > 0
+                              ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                              : 'bg-gray-100 text-gray-500 border border-gray-200'
+                          }`}
                         >
-                          <FiRefreshCw className="w-3 h-3" />
-                          Re-hire
+                          <FiDollarSign className="w-3 h-3" />
+                          {Number(worker.salaryOwed || 0) > 0 ? 'Pay & Reset' : 'Settled (₹0)'}
                         </button>
-                      ) : (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (Number(worker.salaryOwed || 0) <= 0) {
-                                toast.info(`No pending salary owed for ${worker.name}`);
-                                return;
-                              }
-                              handleOpenPayModal(worker);
-                            }}
-                            className={`px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] font-bold transition-all flex items-center gap-1 active:scale-95 ${
-                              Number(worker.salaryOwed || 0) > 0
-                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20'
-                                : 'bg-gray-100 text-gray-500 border border-gray-200 hover:bg-gray-200'
-                            }`}
-                          >
-                            <FiDollarSign className="w-3 h-3" />
-                            {Number(worker.salaryOwed || 0) > 0 ? 'Pay & Reset' : 'Settled (₹0)'}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenHistoryModal(worker);
-                            }}
-                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] font-bold border border-blue-200 transition-all flex items-center gap-1 active:scale-95"
-                          >
-                            <FiClock className="w-3 h-3 text-blue-600" />
-                            History
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/vendor/workers/edit/${worker.id}`);
-                            }}
-                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-gray-50 hover:bg-blue-50 text-gray-600 hover:text-blue-700 rounded-lg text-[10px] sm:text-[11px] font-medium border border-gray-100 transition-all"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(worker.id);
-                            }}
-                            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 rounded-lg text-[10px] sm:text-[11px] font-medium border border-rose-100 transition-all"
-                          >
-                            Delete
-                          </button>
-                        </>
-                      )}
-                    </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenHistoryModal(worker);
+                          }}
+                          className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[10px] font-bold border border-blue-100 transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                          title="Salary History"
+                        >
+                          <FiClock className="w-3 h-3 text-blue-600" />
+                          <span>History</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/vendor/workers/edit/${worker.id}`);
+                          }}
+                          className="py-1.5 px-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg text-[10px] font-bold border border-gray-200 transition-all cursor-pointer"
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(worker.id);
+                          }}
+                          className="py-1.5 px-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-[10px] font-bold border border-rose-100 transition-all cursor-pointer"
+                          title="Remove Worker"
+                        >
+                          <FiX className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -387,366 +396,361 @@ const WorkersList = () => {
             setPageSize(newSize);
             setCurrentPage(1);
           }}
-          className="mt-4"
+          className="mt-3"
         />
       )}
 
-      {/* PAY & RESET SALARY MODAL */}
-      {payModalOpen && selectedWorkerForPay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 text-gray-900"
-          >
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-                  <FiDollarSign className="w-5 h-5" />
+      {/* ── PAY & RESET SALARY MODAL ── */}
+      <AnimatePresence>
+        {payModalOpen && selectedWorkerForPay && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-gray-100 text-gray-900 z-10"
+            >
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                    <FiDollarSign className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Pay & Reset Salary</h3>
+                    <p className="text-[10px] text-gray-500 font-semibold">{selectedWorkerForPay.name}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Pay & Reset Salary</h3>
-                  <p className="text-xs text-gray-500">{selectedWorkerForPay.name}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setPayModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all"
-              >
-                <FiX className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleConfirmPayAndReset} className="space-y-4">
-              {Number(selectedWorkerForPay.salaryOwed || 0) <= 0 ? (
-                <div className="bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-900 space-y-1">
-                  <p className="text-xs font-bold flex items-center gap-1.5 text-amber-800">
-                    <span>ℹ️ No Pending Salary Owed</span>
-                  </p>
-                  <p className="text-[11px] text-amber-700 leading-snug">
-                    All completed jobs for <strong>{selectedWorkerForPay.name}</strong> are already fully settled (₹0 pending).
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100">
-                  <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1">Total Pending Salary Owed</p>
-                  <p className="text-2xl font-black text-emerald-700">₹{Number(selectedWorkerForPay.salaryOwed || 0).toLocaleString('en-IN')}</p>
-                  <p className="text-[10px] text-emerald-600 mt-1">Paying will mark pending job payouts as paid and reset worker salary balance to ₹0.</p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Payout Amount (₹)</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={payoutAmountInput}
-                  onChange={(e) => setPayoutAmountInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-gray-900 text-lg"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Payment Mode</label>
-                <select
-                  value={paymentMethodInput}
-                  onChange={(e) => setPaymentMethodInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-800 text-sm"
+                <button
+                  onClick={() => setPayModalOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all cursor-pointer"
                 >
-                  <option value="cash">Cash (Direct Handover)</option>
-                  <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
-                  <option value="bank_transfer">Bank Transfer / NEFT / IMPS</option>
-                </select>
+                  <FiX className="w-4 h-4" />
+                </button>
               </div>
 
-              {/* DYNAMIC WORKER PAYMENT DETAILS BASED ON DROPDOWN SELECTION */}
-              {paymentMethodInput === 'cash' && (
-                <div className="bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-100 text-xs space-y-1 text-emerald-900">
-                  <p className="font-bold flex items-center gap-1.5 text-emerald-800">
-                    <span>💵 Physical Cash Settlement</span>
-                  </p>
-                  <p className="text-[11px] text-emerald-700">
-                    Hand over <strong>₹{Number(payoutAmountInput || 0).toLocaleString('en-IN')}</strong> in cash directly to <strong>{selectedWorkerForPay.name}</strong> ({selectedWorkerForPay.phone}).
-                  </p>
+              <form onSubmit={handleConfirmPayAndReset} className="space-y-3.5">
+                {Number(selectedWorkerForPay.salaryOwed || 0) <= 0 ? (
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 text-amber-900 space-y-1">
+                    <p className="text-[10px] font-bold flex items-center gap-1 text-amber-800 uppercase tracking-wider">
+                      <span>ℹ️ Fully Settled</span>
+                    </p>
+                    <p className="text-[10px] text-amber-700 leading-snug">
+                      All jobs for <strong>{selectedWorkerForPay.name}</strong> are settled (₹0 pending).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-emerald-50/80 p-3 rounded-xl border border-emerald-100">
+                    <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-widest">Total Pending Owed</p>
+                    <p className="text-xl font-bold text-emerald-700">₹{Number(selectedWorkerForPay.salaryOwed || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-[9px] text-emerald-600 mt-0.5">Paying resets worker balance to ₹0.</p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Payout Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={payoutAmountInput}
+                    onChange={(e) => setPayoutAmountInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-gray-900 text-base"
+                  />
                 </div>
-              )}
 
-              {paymentMethodInput === 'upi' && (
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2.5">
-                  <p className="font-bold text-slate-800 flex items-center justify-between">
-                    <span>📱 UPI & GPay Details</span>
-                    <span className="text-[10px] text-slate-500 font-normal">Operative: {selectedWorkerForPay.name}</span>
-                  </p>
+                <div>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Payment Mode</label>
+                  <select
+                    value={paymentMethodInput}
+                    onChange={(e) => setPaymentMethodInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-gray-800 text-xs"
+                  >
+                    <option value="cash">Cash (Direct Handover)</option>
+                    <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
+                    <option value="bank_transfer">Bank Transfer / NEFT / IMPS</option>
+                  </select>
+                </div>
 
-                  {/* Custom UPI ID if present */}
-                  {selectedWorkerForPay.bankDetails?.upiId ? (
-                    <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
+                {/* DYNAMIC WORKER PAYMENT DETAILS */}
+                {paymentMethodInput === 'cash' && (
+                  <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100 text-[10px] space-y-1 text-emerald-900">
+                    <p className="font-bold flex items-center gap-1 text-emerald-800">
+                      <span>💵 Physical Cash Settlement</span>
+                    </p>
+                    <p className="text-[10px] text-emerald-700">
+                      Hand over <strong>₹{Number(payoutAmountInput || 0).toLocaleString('en-IN')}</strong> in cash directly to <strong>{selectedWorkerForPay.name}</strong> ({selectedWorkerForPay.phone}).
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethodInput === 'upi' && (
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-[10px] space-y-2">
+                    <p className="font-bold text-gray-800 flex items-center justify-between">
+                      <span>📱 UPI & GPay Details</span>
+                      <span className="text-[9px] text-gray-500 font-normal">{selectedWorkerForPay.name}</span>
+                    </p>
+
+                    {selectedWorkerForPay.bankDetails?.upiId ? (
+                      <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
+                        <div>
+                          <span className="text-[8px] text-gray-400 font-bold block uppercase">Custom UPI ID</span>
+                          <span className="font-bold text-gray-900 text-xs">{selectedWorkerForPay.bankDetails.upiId}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.upiId);
+                            toast.success('UPI ID copied!');
+                          }}
+                          className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-[9px] font-bold hover:bg-blue-100 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <FiCopy className="w-2.5 h-2.5" /> Copy
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <div className="flex items-center justify-between bg-white p-2 rounded-lg border border-gray-200">
                       <div>
-                        <span className="text-[9px] text-slate-400 font-bold block uppercase">Custom UPI ID</span>
-                        <span className="font-bold text-slate-900 text-sm">{selectedWorkerForPay.bankDetails.upiId}</span>
+                        <span className="text-[8px] text-gray-400 font-bold block uppercase">PhonePe / GPay Phone</span>
+                        <span className="font-bold text-gray-900 text-xs">{selectedWorkerForPay.phone}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.upiId);
-                          toast.success('UPI ID copied!');
+                          navigator.clipboard.writeText(selectedWorkerForPay.phone);
+                          toast.success('Phone number copied!');
                         }}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold hover:bg-blue-100 transition-all flex items-center gap-1"
+                        className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded text-[9px] font-bold hover:bg-emerald-100 transition-all flex items-center gap-1 cursor-pointer"
                       >
-                        Copy UPI
+                        <FiCopy className="w-2.5 h-2.5" /> Copy
                       </button>
                     </div>
-                  ) : null}
-
-                  {/* GPay / PhonePe Mobile Number */}
-                  <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-slate-200">
-                    <div>
-                      <span className="text-[9px] text-slate-400 font-bold block uppercase">GPay / PhonePe / Paytm Phone</span>
-                      <span className="font-bold text-slate-900 text-sm">{selectedWorkerForPay.phone}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(selectedWorkerForPay.phone);
-                        toast.success('Phone number copied!');
-                      }}
-                      className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-all flex items-center gap-1"
-                    >
-                      Copy Phone
-                    </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {paymentMethodInput === 'bank_transfer' && (
-                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs space-y-2">
-                  <p className="font-bold text-slate-800 flex items-center justify-between">
-                    <span>🏛️ Bank Account Details</span>
-                    <span className="text-[10px] text-slate-500 font-normal">Operative: {selectedWorkerForPay.name}</span>
-                  </p>
+                {paymentMethodInput === 'bank_transfer' && (
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-[10px] space-y-2">
+                    <p className="font-bold text-gray-800 flex items-center justify-between">
+                      <span>🏛️ Bank Account Details</span>
+                      <span className="text-[9px] text-gray-500 font-normal">{selectedWorkerForPay.name}</span>
+                    </p>
 
-                  {selectedWorkerForPay.bankDetails?.accountNumber ? (
-                    <div className="bg-white p-3 rounded-xl border border-slate-200 space-y-2 text-[11px]">
-                      {selectedWorkerForPay.bankDetails.accountHolderName && (
-                        <div className="flex justify-between items-center pb-1.5 border-b border-gray-100">
-                          <span className="text-slate-400 font-medium">Account Holder:</span>
-                          <span className="font-bold text-slate-900">{selectedWorkerForPay.bankDetails.accountHolderName}</span>
+                    {selectedWorkerForPay.bankDetails?.accountNumber ? (
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-200 space-y-1.5 text-[10px]">
+                        {selectedWorkerForPay.bankDetails.accountHolderName && (
+                          <div className="flex justify-between items-center pb-1 border-b border-gray-100">
+                            <span className="text-gray-400 font-medium">Account Holder:</span>
+                            <span className="font-bold text-gray-900">{selectedWorkerForPay.bankDetails.accountHolderName}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 font-medium">A/C Number:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono font-bold text-gray-900">{selectedWorkerForPay.bankDetails.accountNumber}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.accountNumber);
+                                toast.success('Account copied!');
+                              }}
+                              className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-bold hover:bg-blue-100 cursor-pointer"
+                            >
+                              Copy
+                            </button>
+                          </div>
                         </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-medium">Bank Name:</span>
-                        <span className="font-bold text-slate-800">{selectedWorkerForPay.bankDetails.bankName || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-medium">A/C Number:</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-slate-900 text-xs">{selectedWorkerForPay.bankDetails.accountNumber}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.accountNumber);
-                              toast.success('Account number copied!');
-                            }}
-                            className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold hover:bg-blue-100"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 font-medium">IFSC Code:</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-slate-900 text-xs">{selectedWorkerForPay.bankDetails.ifscCode}</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.ifscCode);
-                              toast.success('IFSC Code copied!');
-                            }}
-                            className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold hover:bg-blue-100"
-                          >
-                            Copy
-                          </button>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400 font-medium">IFSC Code:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="font-mono font-bold text-gray-900">{selectedWorkerForPay.bankDetails.ifscCode}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(selectedWorkerForPay.bankDetails.ifscCode);
+                                toast.success('IFSC copied!');
+                              }}
+                              className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-bold hover:bg-blue-100 cursor-pointer"
+                            >
+                              Copy
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 text-[11px] text-amber-800 leading-snug">
-                      ⚠️ No bank account added by {selectedWorkerForPay.name} yet. Pay via GPay/UPI (Phone: <strong>{selectedWorkerForPay.phone}</strong>) or Cash.
-                    </div>
-                  )}
-                </div>
-              )}
+                    ) : (
+                      <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-100 text-[10px] text-amber-800 leading-snug">
+                        ⚠️ No bank account added. Pay via GPay/UPI (Phone: <strong>{selectedWorkerForPay.phone}</strong>) or Cash.
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">Settlement Notes (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g., July Monthly Salary Settlement"
-                  value={payoutNotesInput}
-                  onChange={(e) => setPayoutNotesInput(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm text-gray-800"
-                />
-              </div>
-
-              <div className="pt-4 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPayModalOpen(false)}
-                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm rounded-xl transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingPay || Number(selectedWorkerForPay?.salaryOwed || 0) <= 0}
-                  className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:bg-gray-300 disabled:shadow-none disabled:cursor-not-allowed"
-                >
-                  {isSubmittingPay ? 'Processing...' : Number(selectedWorkerForPay?.salaryOwed || 0) <= 0 ? (
-                    'No Pending Salary (₹0)'
-                  ) : (
-                    <>
-                      <FiCheck className="w-4 h-4" />
-                      Confirm & Reset ₹{Number(payoutAmountInput || 0).toLocaleString('en-IN')}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-      {/* SALARY HISTORY MODAL - LIGHT THEME */}
-      {historyModalOpen && selectedWorkerForHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-gray-100 text-gray-900 overflow-hidden flex flex-col max-h-[85vh]"
-          >
-            {/* Light Emerald Gradient Header Bar */}
-            <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/80 p-6 flex items-center justify-between shrink-0 border-b border-emerald-100">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-                  <FiClock className="w-6 h-6" />
-                </div>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 tracking-tight">Salary Payout History</h3>
-                  <p className="text-xs text-gray-600 font-semibold">{selectedWorkerForHistory.name} • {selectedWorkerForHistory.phone}</p>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Settlement Notes (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Monthly Salary Settlement"
+                    value={payoutNotesInput}
+                    onChange={(e) => setPayoutNotesInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs text-gray-800 placeholder-gray-300"
+                  />
                 </div>
-              </div>
-              <button
-                onClick={() => setHistoryModalOpen(false)}
-                className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-gray-500 hover:bg-gray-100 border border-gray-200 transition-all active:scale-90 shadow-sm"
-              >
-                <FiX className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Light Summary Stat Banner */}
-            <div className="bg-emerald-50/50 px-6 py-3 border-b border-emerald-100 flex items-center justify-between text-xs shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-emerald-800 font-semibold">Pending Balance:</span>
-                <span className="font-bold text-emerald-700">₹{Number(selectedWorkerForHistory.salaryOwed || 0).toLocaleString('en-IN')}</span>
-              </div>
-              <span className="text-emerald-800 text-[11px] font-bold bg-white px-2.5 py-0.5 rounded-lg border border-emerald-200 shadow-sm">
-                {historyTotalItems} Payout Record{historyTotalItems !== 1 ? 's' : ''}
-              </span>
-            </div>
-
-            {/* Content List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-3.5 custom-scrollbar bg-slate-50/50">
-              {historyLoading ? (
-                <div className="py-16 text-center text-gray-500 space-y-3">
-                  <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs font-semibold text-gray-600">Loading payout history...</p>
+                <div className="pt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPayModalOpen(false)}
+                    className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingPay || Number(selectedWorkerForPay?.salaryOwed || 0) <= 0}
+                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:bg-gray-300 disabled:shadow-none cursor-pointer"
+                  >
+                    {isSubmittingPay ? 'Processing...' : (
+                      <>
+                        <FiCheck className="w-3.5 h-3.5" />
+                        Confirm Payout
+                      </>
+                    )}
+                  </button>
                 </div>
-              ) : paymentHistoryList.length === 0 ? (
-                <div className="py-16 text-center text-gray-400 space-y-3">
-                  <div className="w-14 h-14 rounded-3xl bg-white border border-gray-200 flex items-center justify-center mx-auto text-gray-400 shadow-sm">
-                    <FiFileText className="w-7 h-7 text-gray-400" />
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── SALARY HISTORY MODAL ── */}
+      <AnimatePresence>
+        {historyModalOpen && selectedWorkerForHistory && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 text-gray-900 overflow-hidden flex flex-col max-h-[85vh] z-10"
+            >
+              {/* Light Emerald Gradient Header Bar */}
+              <div className="bg-emerald-50/80 p-4 flex items-center justify-between shrink-0 border-b border-emerald-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-2xs">
+                    <FiClock className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-700 text-sm">No Payout Records Found</p>
-                    <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto">When you pay and reset salary for {selectedWorkerForHistory.name}, the transaction records will appear here.</p>
+                    <h3 className="text-sm font-bold text-gray-900">Salary Payout History</h3>
+                    <p className="text-[10px] text-gray-600 font-semibold">{selectedWorkerForHistory.name} • {selectedWorkerForHistory.phone}</p>
                   </div>
                 </div>
-              ) : (
-                paymentHistoryList.map((txn) => {
-                  const formattedDateStr = new Date(txn.createdAt).toLocaleString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                  });
+                <button
+                  onClick={() => setHistoryModalOpen(false)}
+                  className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-gray-500 hover:bg-gray-100 border border-gray-200 transition-all cursor-pointer"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
 
-                  return (
-                    <div
-                      key={txn._id}
-                      className="bg-white p-4.5 rounded-2xl border border-gray-200/80 hover:border-emerald-400 hover:shadow-md transition-all duration-200 space-y-3"
-                    >
-                      {/* Header Row: Mode Badge + Date + Amount */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-bold tracking-wide uppercase bg-emerald-50 text-emerald-900 border border-emerald-200">
-                            {txn.paymentMethod === 'upi' ? '📱 UPI Transfer' : txn.paymentMethod === 'bank_transfer' ? '🏛️ Bank Transfer' : '💵 Cash Handover'}
-                          </span>
-                          <p className="text-[11px] text-gray-500 font-medium pl-0.5">{formattedDateStr}</p>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-lg font-black text-emerald-600 block tracking-tight">
-                            + ₹{Number(txn.amount || 0).toLocaleString('en-IN')}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
-                            ✓ Salary Reset to ₹0
-                          </span>
-                        </div>
-                      </div>
+              {/* Light Summary Stat Banner */}
+              <div className="bg-emerald-50/40 px-4 py-2 border-b border-emerald-100 flex items-center justify-between text-xs shrink-0">
+                <div className="flex items-center gap-1.5 text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-emerald-800 font-semibold">Pending Balance:</span>
+                  <span className="font-bold text-emerald-700">₹{Number(selectedWorkerForHistory.salaryOwed || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <span className="text-emerald-800 text-[9px] font-bold bg-white px-2 py-0.5 rounded border border-emerald-200">
+                  {historyTotalItems} Record{historyTotalItems !== 1 ? 's' : ''}
+                </span>
+              </div>
 
-                      {/* Settlement Summary */}
-                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs text-gray-700 space-y-1">
-                        <p className="font-bold text-gray-900">{txn.description || 'Full Salary Payout & Balance Reset by Vendor'}</p>
-                        {txn.metadata?.notes && (
-                          <p className="text-[11px] text-gray-500 italic">Notes: "{txn.metadata.notes}"</p>
+              {/* Content List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-gray-50/40">
+                {historyLoading ? (
+                  <div className="py-12 text-center text-gray-500 space-y-2">
+                    <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading history...</p>
+                  </div>
+                ) : paymentHistoryList.length === 0 ? (
+                  <div className="py-12 text-center text-gray-400 space-y-2">
+                    <FiFileText className="w-8 h-8 text-gray-300 mx-auto" />
+                    <div>
+                      <p className="font-bold text-gray-800 text-xs uppercase">No Payout Records Found</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">Salary payout records will appear here after settlement.</p>
+                    </div>
+                  </div>
+                ) : (
+                  paymentHistoryList.map((txn) => {
+                    const formattedDateStr = new Date(txn.createdAt).toLocaleString('en-IN', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    });
+
+                    return (
+                      <div
+                        key={txn._id}
+                        className="bg-white p-3 rounded-xl border border-gray-100 shadow-2xs space-y-2"
+                      >
+                        {/* Header Row: Mode Badge + Date + Amount */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-50 text-emerald-800 border border-emerald-100">
+                              {txn.paymentMethod === 'upi' ? '📱 UPI Transfer' : txn.paymentMethod === 'bank_transfer' ? '🏛️ Bank Transfer' : '💵 Cash Handover'}
+                            </span>
+                            <p className="text-[9px] text-gray-400 font-medium mt-1">{formattedDateStr}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-emerald-600 block">
+                              + ₹{Number(txn.amount || 0).toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 inline-block mt-0.5">
+                              ✓ Reset to ₹0
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Settlement Summary */}
+                        <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 text-[10px] text-gray-700">
+                          <p className="font-bold text-gray-900">{txn.description || 'Salary Payout & Balance Reset'}</p>
+                          {txn.metadata?.notes && (
+                            <p className="text-[9px] text-gray-500 italic mt-0.5">Notes: "{txn.metadata.notes}"</p>
+                          )}
+                        </div>
+
+                        {/* Footer Reference */}
+                        {txn.referenceId && (
+                          <div className="flex items-center justify-between text-[8px] text-gray-400 font-mono pt-1 border-t border-gray-100">
+                            <span>Ref ID:</span>
+                            <span className="font-bold text-gray-600">{txn.referenceId}</span>
+                          </div>
                         )}
                       </div>
-
-                      {/* Footer Reference */}
-                      {txn.referenceId && (
-                        <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono pt-1.5 border-t border-gray-100">
-                          <span>Ref / Txn ID:</span>
-                          <span className="font-bold text-gray-700">{txn.referenceId}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-
-            {/* Light Pagination Footer */}
-            {!historyLoading && paymentHistoryList.length > 0 && (
-              <div className="p-4 bg-white border-t border-gray-100 shrink-0">
-                <Pagination
-                  currentPage={historyCurrentPage}
-                  totalPages={historyTotalPages}
-                  totalItems={historyTotalItems}
-                  pageSize={5}
-                  onPageChange={(p) => handleOpenHistoryModal(selectedWorkerForHistory, p)}
-                  onPageSizeChange={() => {}}
-                  className="my-0"
-                />
+                    );
+                  })
+                )}
               </div>
-            )}
-          </motion.div>
-        </div>
-      )}
+
+              {/* Pagination Footer */}
+              {!historyLoading && paymentHistoryList.length > 0 && (
+                <div className="p-3 bg-white border-t border-gray-100 shrink-0">
+                  <Pagination
+                    currentPage={historyCurrentPage}
+                    totalPages={historyTotalPages}
+                    totalItems={historyTotalItems}
+                    pageSize={5}
+                    onPageChange={(p) => handleOpenHistoryModal(selectedWorkerForHistory, p)}
+                    onPageSizeChange={() => {}}
+                    className="my-0 text-xs"
+                  />
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

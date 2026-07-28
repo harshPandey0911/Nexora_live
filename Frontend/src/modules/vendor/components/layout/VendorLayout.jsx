@@ -118,7 +118,7 @@ const VendorLayout = ({ children }) => {
           />
         )}
         
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-admin w-full min-w-0 ${!isDetailPage ? 'pt-24' : ''}`}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-admin w-full min-w-0 ${!isDetailPage ? 'pt-14 sm:pt-16' : ''}`}>
           <div className={`min-w-0 w-full ${location.pathname.includes('/vendor/booking/') ? '' : 'p-3 lg:p-6'}`}>
             {hasPermission ? children : (
               <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm">

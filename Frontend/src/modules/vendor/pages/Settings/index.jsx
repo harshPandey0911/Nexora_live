@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FiBell, FiVolume2, FiInfo, FiLogOut, FiTrash2, FiMapPin, FiChevronRight, FiSettings } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
 import { vendorAuthService } from '../../../../services/authService';
 import vendorService from '../../../../services/vendorService';
 import { registerFCMToken, removeFCMToken } from '../../../../services/pushNotificationService';
@@ -19,7 +18,6 @@ const Settings = () => {
 
   useEffect(() => {
     const loadSettings = async () => {
-      // 1. Instant load from local storage
       try {
         const savedSettings = JSON.parse(localStorage.getItem('vendorSettings') || '{}');
         if (Object.keys(savedSettings).length > 0) {
@@ -29,7 +27,6 @@ const Settings = () => {
         console.error('Error loading local settings:', error);
       }
 
-      // 2. Fetch latest settings from backend API
       try {
         const res = await vendorService.getSettings();
         if (res?.success && res?.data?.settings) {
@@ -66,10 +63,8 @@ const Settings = () => {
     setSettings(updated);
     await updateDBSettings(updated);
 
-    // Handle FCM Token registration/removal if notifications toggled
     if (key === 'notifications') {
       if (updated.notifications) {
-        // Turning ON
         try {
           await registerFCMToken('vendor', true);
           toast.success('Notifications enabled');
@@ -78,7 +73,6 @@ const Settings = () => {
           toast.error('Failed to enable notifications');
         }
       } else {
-        // Turning OFF
         try {
           await removeFCMToken('vendor');
           toast.success('Notifications disabled');
@@ -109,146 +103,146 @@ const Settings = () => {
 
   const handleDeleteAccount = () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      // Clear all vendor data
       localStorage.removeItem('vendorProfile');
       localStorage.removeItem('vendorSettings');
       localStorage.removeItem('vendorWorkers');
       localStorage.removeItem('vendorAcceptedBookings');
       localStorage.removeItem('vendorWallet');
       localStorage.removeItem('vendorTransactions');
-      // Navigate to home
       navigate('/');
     }
   };
 
   return (
-    <div className="space-y-5 pb-12">
-      {/* Header - White Style - Hidden on Mobile */}
-      <div className="hidden md:flex bg-white p-6 rounded-3xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header - Compact & Modern */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
-          <h2 className="text-3xl font-medium text-gray-900 tracking-tight leading-none">
-            System Configuration
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">
+            Store & System Settings
           </h2>
-          <p className="text-gray-500 font-medium mt-2">
-            Customize your operational interface and alert protocols
+          <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5">
+            Customize notification preferences, operational base and account access
           </p>
         </div>
-        <div className="w-16 h-16 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner group transition-all">
-          <FiSettings className="w-8 h-8 text-blue-600" />
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+          <FiSettings className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Notification Settings */}
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-          <h3 className="text-[10px] font-normal text-gray-400 capitalize tracking-widest mb-4">Alerts & Signals</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Notification & Sound Settings Card */}
+        <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-gray-100 shadow-2xs space-y-3">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Alerts & Signals</h3>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
-                  <FiBell className="w-5 h-5 text-blue-600" />
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <FiBell className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-normal text-gray-800 tracking-tight capitalize text-xs">Push Notifications</p>
-                  <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest mt-0.5">Real-time deployment alerts</p>
+                  <p className="font-bold text-gray-900 text-xs">Push Notifications</p>
+                  <p className="text-[10px] text-gray-400 font-medium">Real-time deployment alerts</p>
                 </div>
               </div>
               <button
                 onClick={() => handleToggle('notifications')}
-                className={`relative w-11 h-6 rounded-full transition-all duration-300 p-0.5 shrink-0 ${settings.notifications ? 'bg-blue-600 shadow shadow-blue-200' : 'bg-gray-200'}`}
+                className={`relative w-10 h-5 rounded-full transition-all duration-300 p-0.5 shrink-0 cursor-pointer ${settings.notifications ? 'bg-blue-600 shadow-2xs' : 'bg-gray-200'}`}
               >
                 <motion.span
                   animate={{ x: settings.notifications ? 20 : 0 }}
-                  className="block w-5 h-5 bg-white rounded-full shadow-sm"
+                  className="block w-4 h-4 bg-white rounded-full shadow-2xs"
                 />
               </button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-                  <FiVolume2 className="w-5 h-5 text-indigo-600" />
+            <div className="flex items-center justify-between gap-3 pt-2 border-t border-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                  <FiVolume2 className="w-4 h-4" />
                 </div>
                 <div>
-                  <p className="font-normal text-gray-800 tracking-tight capitalize text-xs">Auditory Feedback</p>
-                  <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest mt-0.5">Operational sound signals</p>
+                  <p className="font-bold text-gray-900 text-xs">Auditory Signals</p>
+                  <p className="text-[10px] text-gray-400 font-medium">Operational sound feedback</p>
                 </div>
               </div>
               <button
                 onClick={() => handleToggle('soundAlerts')}
-                className={`relative w-11 h-6 rounded-full transition-all duration-300 p-0.5 shrink-0 ${settings.soundAlerts ? 'bg-blue-600 shadow shadow-blue-200' : 'bg-gray-200'}`}
+                className={`relative w-10 h-5 rounded-full transition-all duration-300 p-0.5 shrink-0 cursor-pointer ${settings.soundAlerts ? 'bg-blue-600 shadow-2xs' : 'bg-gray-200'}`}
               >
                 <motion.span
                   animate={{ x: settings.soundAlerts ? 20 : 0 }}
-                  className="block w-5 h-5 bg-white rounded-full shadow-sm"
+                  className="block w-4 h-4 bg-white rounded-full shadow-2xs"
                 />
               </button>
             </div>
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div className="space-y-3">
+        {/* Quick Links Section */}
+        <div className="space-y-2.5">
           <button
             onClick={() => navigate('/vendor/address-management')}
-            className="w-full bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between group hover:shadow-md transition-all shadow-sm"
+            className="w-full bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between group hover:border-gray-200 shadow-2xs transition-all cursor-pointer"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-colors shrink-0">
-                <FiMapPin className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors shrink-0">
+                <FiMapPin className="w-4 h-4" />
               </div>
-              <div className="text-left">
-                <p className="font-normal text-gray-800 tracking-tight capitalize text-xs">Operational Base</p>
-                <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest mt-0.5">Manage business location</p>
+              <div className="text-left min-w-0">
+                <p className="font-bold text-gray-900 text-xs truncate">Operational Base</p>
+                <p className="text-[10px] text-gray-400 font-medium truncate">Manage business location & service zone</p>
               </div>
             </div>
-            <FiChevronRight className="w-4 h-4 text-gray-300 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
+            <FiChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
           </button>
 
           <button
             onClick={() => navigate('/vendor/support')}
-            className="w-full bg-white rounded-2xl p-4 border border-gray-100 flex items-center justify-between group hover:shadow-md transition-all shadow-sm"
+            className="w-full bg-white rounded-xl p-3.5 border border-gray-100 flex items-center justify-between group hover:border-gray-200 shadow-2xs transition-all cursor-pointer"
           >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center group-hover:bg-indigo-50 transition-colors shrink-0">
-                <FiInfo className="w-5 h-5 text-gray-400 group-hover:text-indigo-600" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors shrink-0">
+                <FiInfo className="w-4 h-4" />
               </div>
-              <div className="text-left">
-                <p className="font-normal text-gray-800 tracking-tight capitalize text-xs">Deployment Support</p>
-                <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest mt-0.5">Direct uplink to helpdesk</p>
+              <div className="text-left min-w-0">
+                <p className="font-bold text-gray-900 text-xs truncate">Deployment Support</p>
+                <p className="text-[10px] text-gray-400 font-medium truncate">Direct helpdesk support & FAQ</p>
               </div>
             </div>
-            <FiChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-900 group-hover:translate-x-1 transition-all" />
+            <FiChevronRight className="w-4 h-4 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all shrink-0" />
           </button>
         </div>
       </div>
 
-      <div className="bg-gray-100/50 rounded-[28px] p-6 border border-gray-100 flex items-center gap-5">
-        <div className="w-12 h-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center shadow-sm">
-          <FiInfo className="w-5 h-5 text-gray-400" />
+      {/* System Architecture Version Card */}
+      <div className="bg-white rounded-xl p-3.5 border border-gray-100 flex items-center gap-3 shadow-2xs">
+        <div className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 shrink-0">
+          <FiInfo className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="font-normal text-[10px] text-gray-400 capitalize tracking-widest">System Architecture</h3>
-          <p className="text-[9px] font-normal text-gray-600 capitalize tracking-widest mt-1">v2.4.0-PREMIUM · ENCRYPTED BUILD 2026</p>
+          <h3 className="font-bold text-[10px] text-gray-400 uppercase tracking-widest">Nexora System Engine</h3>
+          <p className="text-[10px] font-bold text-gray-800 uppercase tracking-wider mt-0.5">v2.4.0 Premium · Encrypted Build 2026</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Danger Zone Actions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
         <button
           onClick={handleLogout}
-          className="py-5 rounded-3xl bg-white border border-gray-200 text-gray-600 font-normal text-[11px] capitalize tracking-widest hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-sm group"
+          className="py-3 px-4 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold text-xs uppercase tracking-wider hover:bg-gray-50 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-2xs group cursor-pointer"
         >
-          <FiLogOut className="w-5 h-5 text-gray-400 group-hover:text-gray-900 group-hover:-translate-x-1 transition-all" />
-          Logout Secure Session
+          <FiLogOut className="w-4 h-4 text-gray-400 group-hover:text-gray-900 transition-all" />
+          <span>Logout Session</span>
         </button>
 
         <button
           onClick={handleDeleteAccount}
-          className="py-5 rounded-3xl bg-rose-50 border border-rose-100 text-rose-600 font-normal text-[11px] capitalize tracking-widest hover:bg-rose-100 transition-all active:scale-95 flex items-center justify-center gap-4 shadow-sm group"
+          className="py-3 px-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 font-bold text-xs uppercase tracking-wider hover:bg-rose-100 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-2xs group cursor-pointer"
         >
-          <FiTrash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-          De-authorize Identity
+          <FiTrash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <span>Delete Account</span>
         </button>
       </div>
 
@@ -267,4 +261,3 @@ const Settings = () => {
 };
 
 export default Settings;
-

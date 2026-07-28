@@ -1,9 +1,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiBell, FiSearch } from 'react-icons/fi';
+import { FiArrowLeft, FiBell, FiSearch, FiMenu } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-import { vendorTheme as themeColors } from '../../../../theme';
-import Logo from '../../../../components/common/Logo';
 import api from '../../../../services/api';
 import { toast } from 'react-hot-toast';
 
@@ -106,86 +104,92 @@ const Header = memo(({
     navigate('/vendor/notifications');
   };
 
-  const handleLogoClick = () => {
-    navigate('/vendor/dashboard');
-  };
-
   return (
     <header
-      className="bg-white fixed top-0 left-0 right-0 z-[100] transition-all duration-300 lg:left-[278px] border-b border-gray-100 shadow-sm"
+      className="bg-white/95 backdrop-blur-md fixed top-0 left-0 right-0 z-[100] transition-all duration-300 lg:left-[278px] border-b border-gray-100 shadow-2xs h-14 sm:h-16 flex items-center"
       style={{
         paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div className="flex items-center justify-between px-4 lg:px-6 py-5">
-        {/* Left: Back button & Page Title */}
-        <div className="flex items-center gap-4">
+      <div className="w-full flex items-center justify-between px-3.5 sm:px-6">
+        {/* Left: Back / Menu Toggle & Title */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
           {!showBack && (
             <button
               onClick={onMenuClick}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 active:scale-95 lg:hidden"
+              className="w-9 h-9 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition-all border border-gray-100 active:scale-95 lg:hidden shrink-0 cursor-pointer"
+              aria-label="Toggle navigation menu"
             >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <FiMenu className="w-4 h-4" />
             </button>
           )}
+
           {showBack && (
             <button
               onClick={handleBack}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 active:scale-95"
+              className="w-9 h-9 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition-all border border-gray-100 active:scale-95 shrink-0 cursor-pointer"
+              aria-label="Go back"
             >
-              <FiArrowLeft className="w-6 h-6" />
+              <FiArrowLeft className="w-4 h-4" />
             </button>
           )}
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base font-bold text-gray-900 leading-tight tracking-tight truncate">
               {title || 'Vendor Hub'}
             </h1>
-            <p className="text-[10px] sm:text-xs text-gray-500 font-semibold hidden sm:block">
-              Manage your business operations and performance
+            <p className="text-[9px] sm:text-[10px] text-gray-400 font-semibold tracking-wider uppercase hidden sm:block">
+              Nexora Operations Management
             </p>
           </div>
         </div>
 
-        {/* Right: Notifications */}
-        <div className="flex items-center gap-4">
-          {/* Online Toggle Switch (Only on main screens) */}
+        {/* Right Actions: Online Toggle, Search, Notifications */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Online Toggle Switch */}
           {showOnlineToggle && (
-            <div className="flex items-center gap-2 lg:hidden px-1">
-              <span className="text-[10px] font-normal text-gray-500 capitalize tracking-wider">{isOnline ? 'Online' : 'Offline'}</span>
+            <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
+              <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider hidden sm:inline">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={handleToggleOnline}
                 disabled={isToggling}
-                className={`w-10 h-5.5 rounded-full relative transition-all duration-300 focus:outline-none ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                className={`w-9 h-5 rounded-full relative transition-all duration-300 focus:outline-none cursor-pointer ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`}
+                aria-label="Toggle online status"
               >
-                <div className={`absolute top-0.75 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${isOnline ? 'left-5.5' : 'left-0.75'}`} />
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-2xs transition-all duration-300 ${isOnline ? 'left-4.5' : 'left-0.5'}`} />
               </motion.button>
             </div>
           )}
 
+          {/* Search Button */}
           {showSearch && (
             <button
-              className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors text-gray-600"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-600 transition-all border border-gray-100 active:scale-95 cursor-pointer"
               onClick={() => navigate('/vendor/jobs')}
+              aria-label="Search jobs"
             >
-              <FiSearch className="w-6 h-6" />
+              <FiSearch className="w-4 h-4" />
             </button>
           )}
           
+          {/* Notifications Button */}
           {showNotifications && (
             <div className="relative">
               <button
                 onClick={handleNotifications}
-                className="p-2.5 hover:bg-gray-100 rounded-xl transition-colors text-gray-600"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-600 transition-all border border-gray-100 active:scale-95 cursor-pointer"
+                aria-label="View notifications"
               >
-                <FiBell className="w-6 h-6" />
+                <FiBell className="w-4 h-4" />
               </button>
               
               {count > 0 && (
                 <span
-                  className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-normal rounded-full flex items-center justify-center min-w-[18px] h-[18px] px-1 border-2 border-white shadow-sm"
+                  className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center min-w-[18px] h-[18px] px-1 border-2 border-white shadow-2xs animate-pulse"
                 >
                   {count > 99 ? '99+' : count}
                 </span>

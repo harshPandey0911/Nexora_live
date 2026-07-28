@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { 
   FiPackage, FiPlus, FiTrash2, FiEye, FiSearch, 
-  FiDownload, FiFilter, FiMoreVertical, FiChevronDown, FiBox,
-  FiUser, FiMapPin, FiClock, FiChevronRight, FiCheckCircle, FiTruck, FiUsers, FiPhone
+  FiChevronDown, FiBox, FiUser, FiMapPin, FiClock, 
+  FiChevronRight, FiCheckCircle, FiTruck, FiUsers, FiPhone
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import vendorService from '../../services/vendorService';
@@ -69,7 +69,6 @@ const ProductOrders = memo(() => {
     }
   }, []);
 
-  // Real-time socket listener for incoming product orders
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
     const socket = io(socketUrl, {
@@ -155,7 +154,7 @@ const ProductOrders = memo(() => {
 
   return (
     <div className="space-y-3 sm:space-y-4 pb-14">
-      {/* Header Banner - Compact */}
+      {/* Header Banner */}
       <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
           <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight">
@@ -170,7 +169,7 @@ const ProductOrders = memo(() => {
         </div>
       </div>
 
-      {/* Pending Incoming Order Alerts Banner - Ultra Compact */}
+      {/* Pending Alerts Banner */}
       {pendingAlerts.length > 0 && (
         <div className="bg-gradient-to-br from-amber-50 to-orange-50/40 border border-amber-200/80 rounded-xl p-3 space-y-2 shadow-2xs">
           <div className="flex items-center justify-between">
@@ -223,7 +222,7 @@ const ProductOrders = memo(() => {
         </div>
       )}
 
-      {/* Stats & Filters Row - Compact */}
+      {/* Stats & Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-2xs overflow-x-auto scrollbar-none max-w-full">
           {['all', 'accepted', 'packing', 'out_for_delivery', 'delivered'].map((f) => (
@@ -257,7 +256,7 @@ const ProductOrders = memo(() => {
         </div>
       </div>
 
-      {/* Mobile Card List View (visible on screens < 768px) - Compact */}
+      {/* Mobile Card List View (< 768px) */}
       <div className="block md:hidden space-y-2">
         {loading ? (
           <div className="bg-white rounded-xl p-8 text-center border border-gray-100 shadow-2xs">
@@ -273,122 +272,124 @@ const ProductOrders = memo(() => {
         ) : (
           filteredOrders
             .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-            .map((order) => (
-            <div key={order._id} className="bg-white rounded-xl border border-gray-100 shadow-2xs p-3 space-y-2 hover:border-gray-200 transition-all">
-              {/* Card Header: Order ID + Payment + Status */}
-              <div className="flex items-center justify-between border-b border-gray-100/80 pb-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-blue-600">#{order.orderId}</span>
-                  <span className="text-[9px] text-gray-400 font-medium uppercase">
-                    • {order.paymentMethod?.toUpperCase() || 'ONLINE'}
-                  </span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(order.status)}`}>
-                  {order.status?.replace(/_/g, ' ')}
-                </span>
-              </div>
-
-              {/* Items & Earnings */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-gray-900 truncate uppercase">
-                    {order.items?.[0]?.title || 'Product Order'}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[9px] text-gray-400">
-                      {order.items?.length || 1} item{(order.items?.length || 1) > 1 ? 's' : ''}
+            .map((order) => {
+              const isClosed = order.status === 'DELIVERED' || order.status === 'CANCELLED';
+              return (
+                <div key={order._id} className="bg-white rounded-xl border border-gray-100 shadow-2xs p-3 space-y-2 hover:border-gray-200 transition-all">
+                  <div className="flex items-center justify-between border-b border-gray-100/80 pb-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-blue-600">#{order.orderId}</span>
+                      <span className="text-[9px] text-gray-400 font-medium uppercase">
+                        • {order.paymentMethod?.toUpperCase() || 'ONLINE'}
+                      </span>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadgeClass(order.status)}`}>
+                      {order.status?.replace(/_/g, ' ')}
                     </span>
-                    {formatOrderTime(order.createdAt || order.bookingDate || order.date) && (
-                      <>
-                        <span className="text-gray-300">•</span>
-                        <span className="text-[9px] text-gray-500 font-medium flex items-center gap-1">
-                          <FiClock className="w-2.5 h-2.5 text-gray-400 shrink-0" />
-                          {formatOrderTime(order.createdAt || order.bookingDate || order.date)}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-bold text-gray-900 truncate uppercase">
+                        {order.items?.[0]?.title || 'Product Order'}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[9px] text-gray-400">
+                          {order.items?.length || 1} item{(order.items?.length || 1) > 1 ? 's' : ''}
                         </span>
-                      </>
+                        {formatOrderTime(order.createdAt || order.bookingDate || order.date) && (
+                          <>
+                            <span className="text-gray-300">•</span>
+                            <span className="text-[9px] text-gray-500 font-medium flex items-center gap-1">
+                              <FiClock className="w-2.5 h-2.5 text-gray-400 shrink-0" />
+                              {formatOrderTime(order.createdAt || order.bookingDate || order.date)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-bold text-emerald-600">₹{order.financialBreakdown?.vendorEarnings || 0}</span>
+                      <span className="text-[9px] text-gray-400 block font-medium">(+₹{order.financialBreakdown?.deliveryCharge || 0} Fee)</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-gray-600 bg-gray-50/70 px-2 py-1.5 rounded-lg border border-gray-100/70">
+                    <div className="flex items-center gap-1 truncate">
+                      <FiUser className="w-3 h-3 text-gray-400 shrink-0" />
+                      <span className="font-semibold text-gray-800 truncate">{order.contactDetails?.name || order.userId?.name || 'Customer'}</span>
+                      <span className="text-gray-300">•</span>
+                      <span className="text-gray-500 truncate">{order.deliveryAddress?.city || 'Location'}</span>
+                    </div>
+                    {order.contactDetails?.phone && (
+                      <a 
+                        href={`tel:${order.contactDetails.phone}`} 
+                        className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-100 shrink-0 transition-colors"
+                      >
+                        <FiPhone className="w-2.5 h-2.5" />
+                        Call
+                      </a>
                     )}
                   </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-xs font-bold text-emerald-600">₹{order.financialBreakdown?.vendorEarnings || 0}</span>
-                  <span className="text-[9px] text-gray-400 block font-medium">(+₹{order.financialBreakdown?.deliveryCharge || 0} Fee)</span>
-                </div>
-              </div>
 
-              {/* Customer Info Bar */}
-              <div className="flex items-center justify-between text-[10px] text-gray-600 bg-gray-50/70 px-2 py-1.5 rounded-lg border border-gray-100/70">
-                <div className="flex items-center gap-1 truncate">
-                  <FiUser className="w-3 h-3 text-gray-400 shrink-0" />
-                  <span className="font-semibold text-gray-800 truncate">{order.contactDetails?.name || order.userId?.name || 'Customer'}</span>
-                  <span className="text-gray-300">•</span>
-                  <span className="text-gray-500 truncate">{order.deliveryAddress?.city || 'Location'}</span>
-                </div>
-                {order.contactDetails?.phone && (
-                  <a 
-                    href={`tel:${order.contactDetails.phone}`} 
-                    className="flex items-center gap-1 text-[9px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-1.5 py-0.5 rounded border border-blue-100 shrink-0 transition-colors"
-                  >
-                    <FiPhone className="w-2.5 h-2.5" />
-                    Call
-                  </a>
-                )}
-              </div>
-
-              {/* Card Footer: Status Select & Actions */}
-              <div className="pt-1 flex items-center justify-between gap-1.5 border-t border-gray-100/80">
-                <select 
-                  value={order.status}
-                  onChange={(e) => handleUpdateStatus(e, order._id, e.target.value)}
-                  className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-gray-800 cursor-pointer focus:outline-none"
-                >
-                  <option value="ACCEPTED">Accepted</option>
-                  <option value="PACKING">Packing</option>
-                  <option value="OUT_FOR_DELIVERY">Out For Delivery</option>
-                  <option value="DELIVERED">Delivered</option>
-                  <option value="CANCELLED">Cancelled</option>
-                </select>
-
-                <div className="flex items-center gap-1">
-                  <button 
-                    onClick={() => navigate(`/vendor/booking/${order._id}/assign-worker`)}
-                    className="px-2 py-1 bg-gray-800 hover:bg-gray-900 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <FiUsers className="w-2.5 h-2.5" />
-                    {order.workerId ? 'Reassign' : 'Forward'}
-                  </button>
-
-                  {order.status === 'ACCEPTED' && (
-                    <button 
-                      onClick={(e) => handleUpdateStatus(e, order._id, 'PACKING')}
-                      className="px-2 py-1 bg-[#00246b] text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                  {/* Card Footer */}
+                  <div className="pt-1 flex items-center justify-between gap-1.5 border-t border-gray-100/80">
+                    <select 
+                      value={order.status}
+                      onChange={(e) => handleUpdateStatus(e, order._id, e.target.value)}
+                      className="text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-gray-800 cursor-pointer focus:outline-none"
                     >
-                      Pack
-                    </button>
-                  )}
-                  {order.status === 'PACKING' && (
-                    <button 
-                      onClick={(e) => handleUpdateStatus(e, order._id, 'OUT_FOR_DELIVERY')}
-                      className="px-2 py-1 bg-indigo-600 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                    >
-                      Dispatch
-                    </button>
-                  )}
-                  {order.status === 'OUT_FOR_DELIVERY' && (
-                    <button 
-                      onClick={(e) => handleUpdateStatus(e, order._id, 'DELIVERED')}
-                      className="px-2 py-1 bg-emerald-600 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
-                    >
-                      Delivered
-                    </button>
-                  )}
+                      <option value="ACCEPTED">Accepted</option>
+                      <option value="PACKING">Packing</option>
+                      <option value="OUT_FOR_DELIVERY">Out For Delivery</option>
+                      <option value="DELIVERED">Delivered</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+
+                    <div className="flex items-center gap-1">
+                      {!isClosed && (
+                        <button 
+                          onClick={() => navigate(`/vendor/booking/${order._id}/assign-worker`)}
+                          className="px-2 py-1 bg-gray-800 hover:bg-gray-900 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs flex items-center gap-1 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <FiUsers className="w-2.5 h-2.5" />
+                          {order.workerId ? 'Reassign' : 'Forward'}
+                        </button>
+                      )}
+
+                      {order.status === 'ACCEPTED' && (
+                        <button 
+                          onClick={(e) => handleUpdateStatus(e, order._id, 'PACKING')}
+                          className="px-2 py-1 bg-[#00246b] text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                        >
+                          Pack
+                        </button>
+                      )}
+                      {order.status === 'PACKING' && (
+                        <button 
+                          onClick={(e) => handleUpdateStatus(e, order._id, 'OUT_FOR_DELIVERY')}
+                          className="px-2 py-1 bg-indigo-600 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                        >
+                          Dispatch
+                        </button>
+                      )}
+                      {order.status === 'OUT_FOR_DELIVERY' && (
+                        <button 
+                          onClick={(e) => handleUpdateStatus(e, order._id, 'DELIVERED')}
+                          className="px-2 py-1 bg-emerald-600 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs active:scale-95 transition-all cursor-pointer"
+                        >
+                          Delivered
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
+              );
+            })
         )}
       </div>
 
-      {/* Desktop Table View (visible on screens >= 768px) */}
+      {/* Desktop Table View (>= 768px) */}
       <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -424,99 +425,106 @@ const ProductOrders = memo(() => {
               ) : (
                 filteredOrders
                   .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                  .map((order) => (
-                  <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-blue-600">#{order.orderId}</span>
-                          <span className="text-[9px] text-gray-400 font-medium uppercase">
-                            • {order.paymentMethod?.toUpperCase()}
-                          </span>
-                        </div>
-                        <p className="text-xs font-bold text-gray-900 uppercase mt-0.5">{order.items?.[0]?.title || 'Product Order'}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] text-gray-400 font-semibold uppercase">
-                            {order.items?.length} {order.items?.length === 1 ? 'item' : 'items'}
-                          </span>
-                          {formatOrderTime(order.createdAt || order.bookingDate || order.date) && (
-                            <>
-                              <span className="text-gray-300">•</span>
-                              <span className="text-[9px] text-gray-500 font-medium flex items-center gap-1">
-                                <FiClock className="w-2.5 h-2.5 text-gray-400" />
-                                {formatOrderTime(order.createdAt || order.bookingDate || order.date)}
+                  .map((order) => {
+                    const isClosed = order.status === 'DELIVERED' || order.status === 'CANCELLED';
+                    return (
+                      <tr key={order._id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-blue-600">#{order.orderId}</span>
+                              <span className="text-[9px] text-gray-400 font-medium uppercase">
+                                • {order.paymentMethod?.toUpperCase()}
                               </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-800">{order.contactDetails?.name || order.userId?.name}</span>
-                        <span className="text-[9px] text-gray-400 font-semibold">{order.deliveryAddress?.city}</span>
-                        <span className="text-[9px] text-gray-500">{order.contactDetails?.phone}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-bold text-emerald-600">₹{order.financialBreakdown?.vendorEarnings} Earned</span>
-                        <span className="text-[9px] text-gray-400">
-                          (Includes ₹{order.financialBreakdown?.deliveryCharge} 100% Delivery Fee)
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <select 
-                        value={order.status}
-                        onChange={(e) => handleUpdateStatus(e, order._id, e.target.value)}
-                        className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none ${getStatusBadgeClass(order.status)}`}
-                      >
-                        <option value="ACCEPTED">Accepted</option>
-                        <option value="PACKING">Packing</option>
-                        <option value="OUT_FOR_DELIVERY">Out For Delivery</option>
-                        <option value="DELIVERED">Delivered</option>
-                        <option value="CANCELLED">Cancelled</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={() => navigate(`/vendor/booking/${order._id}/assign-worker`)}
-                          className="px-2 py-1 bg-gray-800 hover:bg-gray-900 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                          title="Forward to Delivery Boy"
-                        >
-                          <FiUsers className="w-2.5 h-2.5" />
-                          {order.workerId ? 'Reassign' : 'Forward'}
-                        </button>
-                        {order.status === 'ACCEPTED' && (
-                          <button 
-                            onClick={(e) => handleUpdateStatus(e, order._id, 'PACKING')}
-                            className="px-2 py-1 bg-[#00246b] hover:bg-[#001c54] text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
+                            </div>
+                            <p className="text-xs font-bold text-gray-900 uppercase mt-0.5">{order.items?.[0]?.title || 'Product Order'}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] text-gray-400 font-semibold uppercase">
+                                {order.items?.length} {order.items?.length === 1 ? 'item' : 'items'}
+                              </span>
+                              {formatOrderTime(order.createdAt || order.bookingDate || order.date) && (
+                                <>
+                                  <span className="text-gray-300">•</span>
+                                  <span className="text-[9px] text-gray-500 font-medium flex items-center gap-1">
+                                    <FiClock className="w-2.5 h-2.5 text-gray-400" />
+                                    {formatOrderTime(order.createdAt || order.bookingDate || order.date)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex flex-col">
+                            <p className="text-xs font-bold text-gray-800 capitalize">{order.contactDetails?.name || order.userId?.name || 'Customer'}</p>
+                            <p className="text-[10px] text-gray-500 font-medium mt-0.5">{order.deliveryAddress?.city || 'Location'}</p>
+                            {order.contactDetails?.phone && (
+                              <a href={`tel:${order.contactDetails.phone}`} className="text-[9px] text-blue-600 font-bold hover:underline mt-0.5">
+                                📞 {order.contactDetails.phone}
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-emerald-600">₹{order.financialBreakdown?.vendorEarnings || 0}</span>
+                            <span className="text-[9px] text-gray-400 font-medium">+₹{order.financialBreakdown?.deliveryCharge || 0} Delivery Fee</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <select 
+                            value={order.status}
+                            onChange={(e) => handleUpdateStatus(e, order._id, e.target.value)}
+                            className={`text-[9px] font-bold uppercase tracking-wider px-2 py-1 rounded-lg border outline-none cursor-pointer ${getStatusBadgeClass(order.status)}`}
                           >
-                            Start Packing
-                          </button>
-                        )}
-                        {order.status === 'PACKING' && (
-                          <button 
-                            onClick={(e) => handleUpdateStatus(e, order._id, 'OUT_FOR_DELIVERY')}
-                            className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
-                          >
-                            Dispatch
-                          </button>
-                        )}
-                        {order.status === 'OUT_FOR_DELIVERY' && (
-                          <button 
-                            onClick={(e) => handleUpdateStatus(e, order._id, 'DELIVERED')}
-                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
-                          >
-                            Mark Delivered
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                            <option value="ACCEPTED">Accepted</option>
+                            <option value="PACKING">Packing</option>
+                            <option value="OUT_FOR_DELIVERY">Out For Delivery</option>
+                            <option value="DELIVERED">Delivered</option>
+                            <option value="CANCELLED">Cancelled</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {!isClosed && (
+                              <button 
+                                onClick={() => navigate(`/vendor/booking/${order._id}/assign-worker`)}
+                                className="px-2 py-1 bg-gray-800 hover:bg-gray-900 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                title="Forward to Delivery Boy"
+                              >
+                                <FiUsers className="w-2.5 h-2.5" />
+                                {order.workerId ? 'Reassign' : 'Forward'}
+                              </button>
+                            )}
+                            {order.status === 'ACCEPTED' && (
+                              <button 
+                                onClick={(e) => handleUpdateStatus(e, order._id, 'PACKING')}
+                                className="px-2 py-1 bg-[#00246b] hover:bg-[#001c54] text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
+                              >
+                                Start Packing
+                              </button>
+                            )}
+                            {order.status === 'PACKING' && (
+                              <button 
+                                onClick={(e) => handleUpdateStatus(e, order._id, 'OUT_FOR_DELIVERY')}
+                                className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
+                              >
+                                Dispatch
+                              </button>
+                            )}
+                            {order.status === 'OUT_FOR_DELIVERY' && (
+                              <button 
+                                onClick={(e) => handleUpdateStatus(e, order._id, 'DELIVERED')}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs cursor-pointer transition-all active:scale-95"
+                              >
+                                Mark Delivered
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>
