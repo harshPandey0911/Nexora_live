@@ -75,29 +75,29 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify, onResend, loading }) 
           className="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative border border-gray-100 flex flex-col"
         >
           {/* Header */}
-          <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-6 pt-7 text-center flex flex-col items-center">
+          <div className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 p-4 pt-5 text-center flex flex-col items-center">
             <button
               onClick={onClose}
-              className="absolute top-5 right-5 p-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full text-white transition-all active:scale-95 border border-white/10"
+              className="absolute top-3.5 right-3.5 p-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-full text-white transition-all active:scale-95 border border-white/10 cursor-pointer"
             >
-              <FiX className="w-5 h-5" />
+              <FiX className="w-4 h-4" />
             </button>
 
-            <div className="w-14 h-14 bg-white/15 backdrop-blur-xl rounded-2xl border border-white/20 flex items-center justify-center shadow-lg mb-3">
-              <FiShield className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 bg-white/15 backdrop-blur-xl rounded-xl border border-white/20 flex items-center justify-center shadow-md mb-2">
+              <FiShield className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-white text-[11px] font-bold uppercase tracking-[0.25em] opacity-85 mb-0.5">Cash Collection</h2>
-            <p className="text-white text-lg font-black tracking-tight">Enter Verification Code</p>
+            <h2 className="text-white text-[9px] font-bold uppercase tracking-[0.2em] opacity-85 mb-0.5">Cash Collection</h2>
+            <p className="text-white text-base font-bold tracking-tight">Enter Verification Code</p>
           </div>
 
           {/* Body */}
-          <div className="p-6 md:p-8 bg-white text-center">
-            <p className="text-gray-500 text-xs font-semibold leading-relaxed mb-6">
+          <div className="p-4 sm:p-6 bg-white text-center">
+            <p className="text-gray-500 text-xs font-semibold leading-snug mb-4">
               Ask customer for the 4-digit Cash Code shown on their screen
             </p>
 
             {/* Hidden Input with 4 Styled PIN Boxes */}
-            <div className="relative mb-6 cursor-pointer" onClick={() => inputRef.current?.focus()}>
+            <div className="relative mb-4 cursor-pointer" onClick={() => inputRef.current?.focus()}>
               <input
                 ref={inputRef}
                 type="number"
@@ -108,18 +108,18 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify, onResend, loading }) 
                 className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20"
                 autoComplete="one-time-code"
               />
-              <div className="flex justify-center gap-2.5 md:gap-3">
+              <div className="flex justify-center gap-2">
                 {[0, 1, 2, 3].map((idx) => {
                   const digit = otp[idx] || '';
                   const isFocused = otp.length === idx;
                   return (
                     <div
                       key={idx}
-                      className={`w-13 h-15 md:w-14 md:h-16 rounded-2xl border-2 flex items-center justify-center text-3xl font-black transition-all shadow-sm ${
+                      className={`w-10 h-12 sm:w-12 sm:h-14 rounded-xl border-2 flex items-center justify-center text-xl sm:text-2xl font-bold transition-all shadow-2xs ${
                         digit
                           ? 'border-blue-600 bg-blue-50/60 text-blue-950 scale-105'
                           : isFocused
-                          ? 'border-blue-500 bg-white ring-4 ring-blue-500/10'
+                          ? 'border-blue-500 bg-white ring-2 ring-blue-500/10'
                           : 'border-gray-200 bg-gray-50 text-gray-300'
                       }`}
                     >
@@ -131,7 +131,7 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify, onResend, loading }) 
             </div>
 
             {/* Loader / Resend Section */}
-            <div className="flex flex-col items-center gap-2 min-h-[48px] justify-center">
+            <div className="flex flex-col items-center gap-1 min-h-[36px] justify-center">
               {loading ? (
                 <div className="flex items-center gap-2 text-blue-600 font-bold text-xs">
                   <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping" />
@@ -139,8 +139,8 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify, onResend, loading }) 
                 </div>
               ) : (
                 <>
-                  <div className="text-[11px] font-semibold text-gray-400 flex items-center gap-1.5">
-                    <FiSmartphone className="w-3.5 h-3.5 text-blue-600" />
+                  <div className="text-[10px] font-semibold text-gray-400 flex items-center gap-1">
+                    <FiSmartphone className="w-3 h-3 text-blue-600" />
                     Auto-verifies on 4th digit
                   </div>
 
@@ -149,7 +149,7 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerify, onResend, loading }) 
                       type="button"
                       onClick={handleResendClick}
                       disabled={cooldown > 0}
-                      className="mt-1 text-xs font-bold text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                      className="mt-0.5 text-[11px] font-bold text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-1 cursor-pointer"
                     >
                       <FiRefreshCw className={`w-3 h-3 ${cooldown > 0 ? 'animate-spin' : ''}`} />
                       {cooldown > 0 ? `Resend SMS OTP in ${cooldown}s` : 'Resend SMS OTP'}

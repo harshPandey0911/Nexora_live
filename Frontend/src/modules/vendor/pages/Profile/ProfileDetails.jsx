@@ -1,22 +1,11 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiArrowLeft } from 'react-icons/fi';
+import { FiUser, FiEdit2, FiMapPin, FiPhone, FiMail, FiBriefcase, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import { vendorAuthService } from '../../../../services/authService';
-import { vendorTheme as themeColors } from '../../../../theme';
 import Header from '../../components/layout/Header';
-import BottomNav from '../../components/layout/BottomNav';
 
 const ProfileDetails = () => {
   const navigate = useNavigate();
-
-  // Helper function to convert hex to rgba
-  const hexToRgba = (hex, alpha) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
 
   const [profile, setProfile] = useState({
     name: '',
@@ -28,35 +17,15 @@ const ProfileDetails = () => {
     profilePhoto: '',
   });
 
-  useLayoutEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-    const bgStyle = themeColors.backgroundGradient;
-
-    if (html) html.style.background = bgStyle;
-    if (body) body.style.background = bgStyle;
-    if (root) root.style.background = bgStyle;
-
-    return () => {
-      if (html) html.style.background = '';
-      if (body) body.style.background = '';
-      if (root) root.style.background = '';
-    };
-  }, []);
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        // Optimistic load from local storage
         const localVendorData = JSON.parse(localStorage.getItem('vendorData') || '{}');
         const vendorProfile = JSON.parse(localStorage.getItem('vendorProfile') || '{}');
 
-        // Merge sources, preferring vendorData (which might be fresher from other pages)
         const storedData = { ...vendorProfile, ...localVendorData };
 
         if (Object.keys(storedData).length > 0) {
-          // Format address if object
           let addressString = storedData.address;
           if (typeof storedData.address === 'object' && storedData.address !== null) {
             if (storedData.address.fullAddress) {
@@ -78,12 +47,10 @@ const ProfileDetails = () => {
           }));
         }
 
-        // Fetch fresh data from API
         const response = await vendorAuthService.getProfile();
         if (response.success) {
           const apiData = response.vendor;
 
-          // Format address
           let formattedAddress = apiData.address;
           if (typeof apiData.address === 'object' && apiData.address !== null) {
             if (apiData.address.fullAddress) {
@@ -105,7 +72,6 @@ const ProfileDetails = () => {
 
           setProfile(prev => ({ ...prev, ...newProfile }));
 
-          // Update local storage
           localStorage.setItem('vendorData', JSON.stringify(apiData));
           localStorage.setItem('vendorProfile', JSON.stringify({ ...storedData, ...apiData }));
         }
@@ -124,144 +90,130 @@ const ProfileDetails = () => {
   }, []);
 
   return (
-    <div className="p-4 lg:p-6 min-h-screen pb-28 relative" style={{ background: '#FFFFFF' }}>
-      {/* Premium Background Pattern */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0"
-          style={{
-            background: `
-              radial-gradient(at 0% 0%, rgba(13, 148, 136, 0.1) 0%, transparent 70%),
-              radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.05) 0%, transparent 75%),
-              #F8FAFC
-            `
-          }}
-        />
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header Bar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors shrink-0 cursor-pointer"
+          >
+            <FiArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize truncate">
+              Partner Identity Profile
+            </h2>
+            <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5 truncate">
+              View verified store details and credentials
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/vendor/profile/edit')}
+          className="px-3 py-1.5 bg-[#00246b] hover:bg-[#001c54] text-white text-xs font-bold rounded-xl uppercase tracking-wider shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <FiEdit2 className="w-3.5 h-3.5" />
+          <span>Edit</span>
+        </button>
       </div>
 
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/40 border-b border-black/[0.03] px-6 py-5 flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-4">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-xl bg-white shadow-sm border border-black/[0.02] flex items-center justify-center"
-          >
-            <FiArrowLeft className="w-5 h-5 text-gray-900" />
-          </motion.button>
-          <h1 className="text-xl font-[1000] text-gray-900 tracking-tight">Identity Details</h1>
-        </div>
-        <div className="w-10 h-10 bg-white rounded-xl shadow-sm border border-black/[0.02] flex items-center justify-center">
-          <FiBriefcase className="w-5 h-5 text-teal-600" />
-        </div>
-      </header>
-
-      <main className="px-5 pt-8 relative z-10 max-w-lg mx-auto">
-        {/* Header Section with Master Edit Trigger */}
-        <div className="flex items-center justify-between mb-8 px-2">
-          <div>
-            <h3 className="text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.25em]">Master Profile</h3>
-            <p className="text-[8px] font-medium text-teal-600 capitalize tracking-widest mt-0.5">Verified Data Architecture</p>
+      <main className="space-y-3 sm:space-y-4 max-w-xl mx-auto">
+        {/* Profile Card Summary */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-2xs flex items-center gap-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-200 shadow-2xs bg-gray-50 flex items-center justify-center shrink-0">
+            {profile.profilePhoto ? (
+              <img src={profile.profilePhoto} alt={profile.name} className="w-full h-full object-cover" />
+            ) : (
+              <FiUser className="w-8 h-8 text-gray-400" />
+            )}
           </div>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/vendor/profile/edit')}
-            className="px-6 py-2.5 rounded-full bg-black text-white text-[10px] font-[1000] capitalize tracking-widest shadow-xl shadow-black/10 flex items-center gap-2"
-          >
-            <FiEdit2 className="w-3.5 h-3.5" />
-            Update
-          </motion.button>
-        </div>
-
-        {/* Master Avatar Hub */}
-        <div className="flex justify-center mb-10">
-          <div className="relative group">
-            <div className="w-32 h-32 rounded-[44px] p-1 bg-white shadow-2xl relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-              <div className="w-full h-full rounded-[40px] overflow-hidden bg-gray-50 flex items-center justify-center border border-black/[0.03]">
-                {profile.profilePhoto ? (
-                  <img
-                    src={profile.profilePhoto}
-                    alt={profile.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-teal-50 flex items-center justify-center">
-                    <FiUser className="w-12 h-12 text-teal-200" />
-                  </div>
-                )}
-              </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-gray-900 truncate">{profile.name}</h3>
+              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">
+                Verified
+              </span>
             </div>
-            <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-teal-600 shadow-xl flex items-center justify-center border-4 border-white text-white">
-              <FiUser className="w-4 h-4" />
-            </div>
+            {profile.businessName && (
+              <p className="text-xs text-gray-500 font-medium truncate mt-0.5">{profile.businessName}</p>
+            )}
+            <p className="text-[10px] text-blue-600 font-bold mt-1 uppercase tracking-wider">{profile.serviceCategory || 'Partner'}</p>
           </div>
         </div>
 
-        <div className="space-y-6 mb-12">
-          {/* Data Clusters */}
-          {[
-            {
-              group: 'Corporate Identity',
-              items: [
-                { label: 'Master Identity', value: profile.name, icon: FiUser },
-                { label: 'Corporate Entity', value: profile.businessName, icon: FiBriefcase }
-              ]
-            },
-            {
-              group: 'Communication Channels',
-              items: [
-                { label: 'Encryption Link (Mobile)', value: profile.phone, icon: FiPhone },
-                { label: 'Network Access (Email)', value: profile.email, icon: FiMail },
-                { label: 'Geospatial Coordinates', value: profile.address, icon: FiMapPin }
-              ]
-            }
-          ].map((cluster, cIdx) => (
-            <div key={cIdx} className="bg-white/70 backdrop-blur-md rounded-[36px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-white/60">
-              <h4 className="text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-6 opacity-60 px-1">{cluster.group}</h4>
-              <div className="space-y-6">
-                {cluster.items.map((item, iIdx) => (
-                  <div key={iIdx} className="flex items-start gap-5 group">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center shrink-0 border border-black/[0.02] group-hover:bg-teal-600 group-hover:text-white transition-all duration-500">
-                      <item.icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0 pt-1">
-                      <p className="text-[9px] font-medium text-gray-400 capitalize tracking-widest mb-1 opacity-50">{item.label}</p>
-                      <p className="text-gray-900 font-[1000] text-sm tracking-tight leading-relaxed">{item.value || 'NOT_ASSIGNED'}</p>
-                    </div>
-                  </div>
-                ))}
+        {/* Details Grid */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-2xs space-y-3.5">
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+            Contact & Address Details
+          </h4>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex items-start gap-3">
+              <FiUser className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Full Name</span>
+                <span className="font-bold text-gray-900">{profile.name}</span>
               </div>
             </div>
-          ))}
 
-          {/* Professional Competencies */}
-          <div className="bg-white/70 backdrop-blur-md rounded-[36px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] border border-white/60">
-            <h4 className="text-[10px] font-[1000] text-gray-400 capitalize tracking-[0.2em] mb-6 opacity-60 px-1">Active Specializations</h4>
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center shrink-0 border border-teal-100/50 text-teal-600">
-                <FiBriefcase className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0 pt-1">
-                <p className="text-[9px] font-medium text-gray-400 capitalize tracking-widest mb-3 opacity-50">Operational Categories</p>
-                <div className="flex flex-wrap gap-2">
-                  {profile.serviceCategory && (Array.isArray(profile.serviceCategory) ? profile.serviceCategory : profile.serviceCategory.split(', ')).filter(Boolean).length > 0 ? (
-                    (Array.isArray(profile.serviceCategory) ? profile.serviceCategory : profile.serviceCategory.split(', ')).filter(Boolean).map((cat, i) => (
-                      <span key={i} className="inline-flex items-center px-4 py-2 rounded-xl bg-teal-600 text-white text-[10px] font-[1000] capitalize tracking-widest shadow-lg shadow-teal-900/10">
-                        {cat}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-300 text-[10px] font-medium capitalize tracking-widest italic">Provision Pending</span>
-                  )}
+            {profile.businessName && (
+              <div className="flex items-start gap-3">
+                <FiBriefcase className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Business Entity</span>
+                  <span className="font-bold text-gray-900">{profile.businessName}</span>
                 </div>
               </div>
+            )}
+
+            <div className="flex items-start gap-3">
+              <FiPhone className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Mobile Phone</span>
+                <span className="font-bold text-gray-900">{profile.phone || 'Not set'}</span>
+              </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <FiMail className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Email Address</span>
+                <span className="font-bold text-gray-900">{profile.email || 'Not set'}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <FiMapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Store Base Location</span>
+                <span className="font-bold text-gray-900">{profile.address || 'Not set'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Specialization Categories */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-2xs space-y-2">
+          <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+            Active Specializations
+          </h4>
+
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {profile.serviceCategory && (Array.isArray(profile.serviceCategory) ? profile.serviceCategory : profile.serviceCategory.split(', ')).filter(Boolean).length > 0 ? (
+              (Array.isArray(profile.serviceCategory) ? profile.serviceCategory : profile.serviceCategory.split(', ')).filter(Boolean).map((cat, i) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-100">
+                  {cat}
+                </span>
+              ))
+            ) : (
+              <span className="text-gray-400 text-xs italic">No categories opted</span>
+            )}
           </div>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 };
 
 export default ProfileDetails;
-

@@ -1,19 +1,14 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FiHome, FiGift, FiShoppingCart, FiUser, FiTrash2, FiCalendar, FiShoppingBag } from 'react-icons/fi';
-import { HiHome, HiGift, HiShoppingCart, HiUser, HiTrash, HiCalendar } from 'react-icons/hi';
+import { FiHome, FiShoppingCart, FiUser, FiCalendar } from 'react-icons/fi';
+import { HiHome, HiShoppingCart, HiUser, HiCalendar } from 'react-icons/hi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../../../context/CartContext';
-import { userTheme as themeColors } from '../../../../theme';
-
-
 
 const BottomNav = React.memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
-  const navRef = useRef(null);
   const { cartCount } = useCart();
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
 
   const navItems = useMemo(() => [
     { id: 'home', label: 'Home', icon: FiHome, filledIcon: HiHome, path: '/user' },
@@ -32,16 +27,15 @@ const BottomNav = React.memo(() => {
   };
 
   const activeTab = getActiveTab();
-  const activeIndex = navItems.findIndex(item => item.id === activeTab);
 
   const handleTabClick = (path) => {
     navigate(path);
   };
 
   return (
-    <nav className="fixed bottom-6 left-0 right-0 z-50 flex justify-center lg:hidden px-4 pointer-events-none">
+    <nav className="fixed bottom-4 left-0 right-0 z-50 flex justify-center lg:hidden px-4 pointer-events-none">
       <div
-        className="flex items-center justify-between bg-white/90 backdrop-blur-xl px-2 py-2 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-gray-100/50 w-full max-w-sm pointer-events-auto"
+        className="flex items-center justify-between bg-white/95 backdrop-blur-xl px-2 py-1.5 rounded-full shadow-lg border border-gray-100/80 w-full max-w-sm pointer-events-auto"
       >
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
@@ -51,23 +45,23 @@ const BottomNav = React.memo(() => {
             <button
               key={item.id}
               onClick={() => handleTabClick(item.path)}
-              className="relative flex items-center justify-center transition-all duration-300"
+              className="relative flex items-center justify-center transition-all duration-300 cursor-pointer"
             >
               <motion.div
                 layout
                 initial={false}
                 animate={{
-                  width: isActive ? 'auto' : '48px',
-                  backgroundColor: isActive ? themeColors.primary : 'transparent',
+                  width: isActive ? 'auto' : '44px',
+                  backgroundColor: isActive ? '#00246b' : 'transparent',
                 }}
-                className="flex items-center gap-2 px-4 h-12 rounded-full overflow-hidden"
+                className="flex items-center gap-1.5 px-3.5 h-10 rounded-full overflow-hidden"
               >
                 <div className="relative">
                   <Icon
-                    className={`w-5 h-5 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-400'}`}
+                    className={`w-4 h-4 transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-400'}`}
                   />
                   {item.isCart && cartCount > 0 && (
-                    <span className="absolute -top-2 -right-3 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+                    <span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border border-white shadow-2xs">
                       {cartCount > 9 ? '9+' : cartCount}
                     </span>
                   )}
@@ -75,27 +69,14 @@ const BottomNav = React.memo(() => {
                 
                 {isActive && (
                   <motion.span
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="text-xs font-bold text-white whitespace-nowrap"
+                    className="text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap"
                   >
                     {item.label}
                   </motion.span>
                 )}
               </motion.div>
-
-              {/* Bottom Dot indicator if not expanded */}
-              {!isActive && (
-                <AnimatePresence>
-                  {activeTab === item.id && (
-                    <motion.div
-                      layoutId="active-dot"
-                      className="absolute -bottom-1 w-1 h-1 rounded-full"
-                      style={{ backgroundColor: themeColors.primary }}
-                    />
-                  )}
-                </AnimatePresence>
-              )}
             </button>
           );
         })}
@@ -103,7 +84,6 @@ const BottomNav = React.memo(() => {
     </nav>
   );
 });
-
 
 BottomNav.displayName = 'BottomNav';
 

@@ -73,6 +73,32 @@ const BottomNav = memo(() => {
     return location.pathname.startsWith(itemPath);
   };
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkIfModalIsOpen = () => {
+      // Check if any modal backdrop or fixed z-[9999]/z-[100] modal is visible or body overflow is hidden
+      const modalElements = document.querySelectorAll('.fixed.inset-0, [class*="z-[9999]"]');
+      const hasVisibleModal = Array.from(modalElements).some(el => {
+        // Ignore bottom nav container itself
+        if (el.tagName.toLowerCase() === 'nav') return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      setIsModalOpen(hasVisibleModal);
+    };
+
+    checkIfModalIsOpen();
+    const observer = new MutationObserver(checkIfModalIsOpen);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (isModalOpen) {
+    return null;
+  }
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-[100] safe-area-bottom md:hidden">
       <div className="mx-4 mb-4 bg-white/80 backdrop-blur-xl border border-white/40 rounded-[28px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] overflow-hidden h-[72px]">

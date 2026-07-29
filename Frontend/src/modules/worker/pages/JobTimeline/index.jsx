@@ -331,16 +331,16 @@ const JobTimeline = () => {
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
       <Header title="Job Timeline" onBack={() => navigate(`/worker/job/${id}`, { replace: true })} />
 
-      <main className="px-4 py-8">
+      <main className="px-3.5 py-4 max-w-lg mx-auto">
         <div
-          className="bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl relative overflow-hidden"
+          className="bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden"
           style={{
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.4)',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
           }}
         >
           {/* Decorative background element */}
-          <div className="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 right-0 -mr-10 -mt-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
 
           <div className="relative">
             {timelineStages.map((stage, index) => {
@@ -349,10 +349,10 @@ const JobTimeline = () => {
               const isCurrent = stage.id === currentStage;
 
               return (
-                <div key={stage.id} className="relative pb-10 last:pb-0">
+                <div key={stage.id} className="relative pb-6 last:pb-0">
                   {index < timelineStages.length - 1 && (
                     <div
-                      className="absolute left-[23px] top-12 w-0.5 h-full opacity-20"
+                      className="absolute left-[17px] top-9 w-0.5 h-full opacity-20"
                       style={{
                         background: isCompleted ? `linear-gradient(to bottom, ${themeColors.button}, #E5E7EB)` : '#E5E7EB',
                         backgroundColor: isCompleted ? themeColors.button : '#E5E7EB'
@@ -360,35 +360,35 @@ const JobTimeline = () => {
                     />
                   )}
 
-                  <div className="flex items-start gap-6 relative">
+                  <div className="flex items-start gap-3.5 relative">
                     {/* Ripple effect for current stage */}
                     {isCurrent && (
-                      <div className="absolute left-0 top-0 w-12 h-12 rounded-full animate-ping bg-blue-400/20"></div>
+                      <div className="absolute left-0 top-0 w-9 h-9 rounded-full animate-ping bg-blue-400/20"></div>
                     )}
 
                     <div
-                      className="relative z-10 w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ease-out"
+                      className="relative z-10 w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 ease-out mt-0.5"
                       style={{
                         background: isCompleted ? themeColors.button : isCurrent ? '#fff' : '#F9FAFB',
-                        border: `2px solid ${isCompleted || isCurrent ? themeColors.button : '#F3F4F6'}`,
-                        boxShadow: isCurrent ? `0 10px 20px ${themeColors.button}30` : 'none',
+                        border: `1.5px solid ${isCompleted || isCurrent ? themeColors.button : '#F3F4F6'}`,
+                        boxShadow: isCurrent ? `0 6px 14px ${themeColors.button}30` : 'none',
                         color: isCompleted ? '#fff' : isCurrent ? themeColors.button : '#9CA3AF',
-                        transform: isCurrent ? 'scale(1.1) translateY(-2px)' : 'scale(1)',
+                        transform: isCurrent ? 'scale(1.05)' : 'scale(1)',
                       }}
                     >
-                      {isCompleted ? <FiCheck className="w-6 h-6" /> : <IconComponent className="w-6 h-6" />}
+                      {isCompleted ? <FiCheck className="w-4 h-4" /> : <IconComponent className="w-4 h-4" />}
                     </div>
 
-                    <div className="flex-1 pt-1">
-                      <h3 className={`font-bold text-lg tracking-tight ${isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'}`}>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-bold text-sm tracking-tight leading-snug ${isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'}`}>
                         {stage.title}
                       </h3>
-                      <p className={`text-sm leading-relaxed transition-colors duration-300 ${isCurrent ? 'text-gray-600 font-medium' : 'text-gray-500'}`}>
+                      <p className={`text-xs leading-relaxed transition-colors duration-300 mt-0.5 ${isCurrent ? 'text-gray-600 font-medium' : 'text-gray-500'}`}>
                         {stage.description}
                       </p>
 
                       {stage.timestamp && (
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-gray-400 mt-2 flex items-center gap-1">
+                        <p className="text-[9px] uppercase tracking-wider font-bold text-gray-400 mt-1 flex items-center gap-1">
                           <FiClock className="w-3 h-3" />
                           {new Date(stage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(stage.timestamp).toLocaleDateString()}
                         </p>
@@ -398,13 +398,13 @@ const JobTimeline = () => {
                         <button
                           onClick={stage.action}
                           disabled={actionLoading}
-                          className="group relative px-6 py-2.5 rounded-xl font-bold text-white text-sm shadow-lg overflow-hidden transition-all duration-300 active:scale-95 hover:shadow-xl mt-4 inline-flex items-center gap-2"
+                          className="group relative px-4 py-2 rounded-xl font-bold text-white text-xs shadow-md overflow-hidden transition-all duration-300 active:scale-95 hover:shadow-lg mt-2.5 inline-flex items-center gap-1.5 cursor-pointer"
                           style={{ background: themeColors.button }}
                         >
                           <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                           {actionLoading ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          ) : stage.id === 9 ? <FiCheckCircle /> : null}
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          ) : stage.id === 9 ? <FiCheckCircle className="w-3.5 h-3.5" /> : null}
                           <span className="relative z-10">{actionLoading ? 'Processing...' : stage.actionLabel}</span>
                         </button>
                       )}

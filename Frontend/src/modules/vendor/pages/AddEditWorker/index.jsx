@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiSave, FiX, FiChevronDown, FiCamera, FiUpload, FiMapPin, FiPlusCircle, FiCheck, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
+import {
+  FiCamera, FiUpload, FiMapPin, FiCheck, FiUser, FiEye, FiEyeOff,
+  FiArrowLeft, FiPhone, FiMail, FiLock, FiChevronDown, FiX, FiShield
+} from 'react-icons/fi';
 import AddressSelectionModal from '../../../user/pages/Checkout/components/AddressSelectionModal';
-import { vendorTheme as themeColors } from '../../../../theme';
-import Header from '../../components/layout/Header';
 import { createWorker, updateWorker, getWorkerById } from '../../services/workerService';
 import vendorService from '../../services/vendorService';
-import { publicCatalogService } from '../../../../services/catalogService';
 import { toast } from 'react-hot-toast';
 import { z } from "zod";
 
@@ -20,7 +20,6 @@ const addWorkerSchema = z.object({
   serviceCategories: z.array(z.string()).min(1, "Select at least one category"),
   aadhar: z.object({
     number: z.string().regex(/^\d{12}$/, "Aadhar must be 12 digits"),
-    // document: z.any() 
   }),
   address: z.object({
     addressLine1: z.string().trim().min(1, "Please set location coordinates"),
@@ -45,7 +44,6 @@ const AddEditWorker = () => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isServicesOpen, setIsServicesOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -54,7 +52,7 @@ const AddEditWorker = () => {
     password: '',
     aadhar: {
       number: '',
-      document: '' // Base64 string ideally
+      document: ''
     },
     serviceCategories: [],
     address: {
@@ -64,7 +62,7 @@ const AddEditWorker = () => {
       pincode: ''
     },
     status: 'active',
-    profilePhoto: '', // URL
+    profilePhoto: '',
   });
 
   const [photoPreview, setPhotoPreview] = useState(null);
@@ -73,32 +71,11 @@ const AddEditWorker = () => {
   const [aadharPreview, setAadharPreview] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-
-  const [linkPhone, setLinkPhone] = useState('');
-
   const [errors, setErrors] = useState({});
-
-  useLayoutEffect(() => {
-    const html = document.documentElement;
-    const body = document.body;
-    const root = document.getElementById('root');
-    const bgStyle = themeColors.backgroundGradient;
-
-    if (html) html.style.background = bgStyle;
-    if (body) body.style.background = bgStyle;
-    if (root) root.style.background = bgStyle;
-
-    return () => {
-      if (html) html.style.background = '';
-      if (body) body.style.background = '';
-      if (root) root.style.background = '';
-    };
-  }, []);
 
   useEffect(() => {
     const initData = async () => {
       try {
-        // Fetch services opted by the vendor in Manage Services
         const customRes = await vendorService.getMyCustomContent();
         let optedList = [];
         const seenTitles = new Set();
@@ -112,7 +89,6 @@ const AddEditWorker = () => {
               seenTitles.add(s.title.toLowerCase().trim());
               optedList.push({ _id: s._id || s.id, title: s.title, offeringType: type });
             }
-            // Add parent category title for broader category matching
             const catTitle = s.category || s.categoryId?.title;
             if (catTitle && typeof catTitle === 'string' && !seenTitles.has(catTitle.toLowerCase().trim())) {
               seenTitles.add(catTitle.toLowerCase().trim());
@@ -128,7 +104,6 @@ const AddEditWorker = () => {
             const w = res.data;
             const existingCats = w.serviceCategories || (w.serviceCategory ? [w.serviceCategory] : []);
 
-            // Ensure worker's existing specializations remain available in edit mode
             existingCats.forEach(catName => {
               if (catName && !seenTitles.has(catName.toLowerCase().trim())) {
                 seenTitles.add(catName.toLowerCase().trim());
@@ -176,7 +151,6 @@ const AddEditWorker = () => {
     initData();
   }, [id, isEdit]);
 
-  // Upload file helper
   const uploadFile = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -304,21 +278,16 @@ const AddEditWorker = () => {
     setIsAddressModalOpen(false);
   };
 
-  // toggleSkill removed
-
-
   const handleSubmit = async () => {
-    // Zod Validation depending on mode
     const schema = isEdit ? editWorkerSchema : addWorkerSchema;
 
-    // Construct validation object
     const validationData = {
       name: formData.name,
       phone: formData.phone,
       email: formData.email,
       serviceCategories: formData.serviceCategories,
-      ...(isEdit ? { email: formData.email } : { 
-        password: formData.password, 
+      ...(isEdit ? { email: formData.email } : {
+        password: formData.password,
         aadhar: { number: formData.aadhar.number },
         address: {
           addressLine1: formData.address.addressLine1,
@@ -336,7 +305,6 @@ const AddEditWorker = () => {
       return;
     }
 
-    // Additional manual check for Aadhar doc on 'new'
     if (!isEdit && !formData.aadhar.document && !aadharFile) {
       toast.error("Aadhar document is required");
       return;
@@ -349,7 +317,6 @@ const AddEditWorker = () => {
       let photoUrl = formData.profilePhoto;
       let aadharUrl = formData.aadhar.document;
 
-      // Upload photo if selected
       if (photoFile) {
         try {
           photoUrl = await uploadFile(photoFile);
@@ -362,7 +329,6 @@ const AddEditWorker = () => {
         }
       }
 
-      // Upload Aadhar if selected
       if (aadharFile) {
         try {
           aadharUrl = await uploadFile(aadharFile);
@@ -375,21 +341,14 @@ const AddEditWorker = () => {
         }
       }
 
-      // Clean payload
       const payload = {
         ...formData,
         profilePhoto: photoUrl,
         aadhar: {
           ...formData.aadhar,
-          document: aadharUrl || 'pending_upload' // Ensure strictly that we have something
+          document: aadharUrl || 'pending_upload'
         }
       };
-
-      if (!payload.aadhar.document && !isEdit) {
-        // Should have been caught by validation, but double check
-        // If still empty and no file, maybe error?
-        // For now let backend handle it or user re-try
-      }
 
       if (isEdit) {
         await updateWorker(id, payload);
@@ -402,7 +361,7 @@ const AddEditWorker = () => {
       navigate('/vendor/workers');
     } catch (error) {
       console.error('Save error:', error);
-      const validationErrorMsg = error.response?.data?.errors?.[0]?.msg 
+      const validationErrorMsg = error.response?.data?.errors?.[0]?.msg
         ? `${error.response.data.errors[0].path ? error.response.data.errors[0].path + ': ' : ''}${error.response.data.errors[0].msg}`
         : null;
       toast.error(validationErrorMsg || error.response?.data?.message || 'Failed to save');
@@ -413,337 +372,353 @@ const AddEditWorker = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 bg-white">
-      <main className="px-4 pt-6 max-w-lg mx-auto">
-        <div className="space-y-6">
-          
-          {/* Profile Photo Upload */}
-            <div className="flex flex-col items-center justify-center">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header Bar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => navigate('/vendor/workers')}
+            className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors shrink-0 cursor-pointer"
+          >
+            <FiArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize truncate">
+              {isEdit ? 'Configure Operative Credentials' : 'Register New Operative'}
+            </h2>
+            <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5 truncate">
+              {isEdit ? 'Update worker specializations and phone number' : 'Create new worker account for task deployments'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Form Container */}
+      <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-2xs space-y-4 max-w-xl mx-auto">
+
+        {/* Profile Photo Avatar Dropzone */}
+        <div className="flex flex-col items-center justify-center py-2">
+          <div className="relative">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-gray-200 shadow-2xs bg-gray-50 flex items-center justify-center group relative cursor-pointer">
+              {photoPreview || formData.profilePhoto ? (
+                <img
+                  src={photoPreview || formData.profilePhoto}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center text-gray-400">
+                  <FiUser className="w-7 h-7" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gray-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
+                <FiCamera className="text-white w-5 h-5" />
+              </div>
+              <input
+                id="worker-photo-upload"
+                type="file"
+                accept="image/*"
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                onChange={handlePhotoChange}
+              />
+            </div>
+          </div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Operative Photo</p>
+        </div>
+
+        {/* Personal Details Section */}
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+            Personal Credentials
+          </h3>
+
+          <div className="space-y-3">
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Full Name *</label>
               <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 shadow-sm bg-white flex items-center justify-center group relative">
-                  {photoPreview || formData.profilePhoto ? (
-                    <img
-                      src={photoPreview || formData.profilePhoto}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-blue-900">
-                      <FiUser className="w-8 h-8" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-blue-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                    <FiCamera className="text-white w-5 h-5" />
-                  </div>
-                  <input
-                    id="worker-photo-upload"
-                    type="file"
-                    accept="image/*"
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    onChange={handlePhotoChange}
-                  />
-                </div>
-              </div>
-              <p className="text-gray-500 text-xs mt-3">Worker Photo</p>
-            </div>
-
-            {/* Basic Info */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Personal Details</h4>
-
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500 ml-1">Name</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="Enter full name"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500 ml-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="Enter phone number"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
-                    maxLength={10}
-                  />
-                </div>
-
-                {!isEdit && (
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-500 ml-1">Password</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={formData.password}
-                        onChange={(e) => handleInputChange('password', e.target.value)}
-                        placeholder="Set password (min 6 characters)"
-                        className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
-                      >
-                        {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500 ml-1">Email <span className="text-red-500">*</span></label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="Enter email address"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter full name"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-gray-900 font-medium transition-all"
+                />
+                <FiUser className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
-            {/* Address Info */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Operational Location</h4>
-
-              {(() => {
-                const addr = formData.address || {};
-                const parts = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.pincode ? `PIN: ${addr.pincode}` : null].filter(Boolean);
-                const displayAddress = (addr.fullAddress && addr.fullAddress.length > 5)
-                  ? addr.fullAddress 
-                  : (parts.length > 0 ? parts.join(', ') : 'No address assigned');
-                const hasCoordinates = addr.lat !== undefined && addr.lat !== null && addr.lng !== undefined && addr.lng !== null;
-
-                return (
-                  <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-50 text-blue-900 rounded-lg shrink-0 mt-0.5">
-                        <FiMapPin className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-gray-900 leading-snug">
-                          {displayAddress}
-                        </p>
-                        {parts.length > 0 && (
-                          <div className="mt-2 text-[11px] text-gray-500 font-medium grid grid-cols-2 gap-x-4 gap-y-1 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                            {addr.addressLine1 && (
-                              <div><span className="text-gray-400">Address:</span> {addr.addressLine1}</div>
-                            )}
-                            {addr.city && (
-                              <div><span className="text-gray-400">City:</span> {addr.city}</div>
-                            )}
-                            {addr.state && (
-                              <div><span className="text-gray-400">State:</span> {addr.state}</div>
-                            )}
-                            {addr.pincode && (
-                              <div><span className="text-gray-400">Pincode:</span> {addr.pincode}</div>
-                            )}
-                          </div>
-                        )}
-                        {hasCoordinates && (
-                          <p className="text-[10px] text-emerald-600 font-semibold mt-2 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            GPS: {Number(addr.lat).toFixed(4)}, {Number(addr.lng).toFixed(4)}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <button
-                onClick={() => setIsAddressModalOpen(true)}
-                className="w-full py-2.5 bg-gray-50 text-gray-700 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
-              >
-                <FiMapPin className="w-4 h-4 text-blue-900" />
-                Set Location Coordinates
-              </button>
-            </div>
-
-            {/* Work Profile */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Expertise Profile</h4>
-
-              {/* Category Dropdown */}
-              <div>
-                <label className="text-xs font-medium text-gray-500 mb-2 block ml-1">Specializations</label>
-                <div className="relative">
-                  <button
-                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                    className="w-full px-4 py-2.5 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between focus:border-blue-900 outline-none"
-                  >
-                    <span className={`text-xs font-medium truncate ${formData.serviceCategories.length > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                      {formData.serviceCategories.length > 0
-                        ? `${formData.serviceCategories.length} Selected`
-                        : 'Select Skillsets'}
-                    </span>
-                    <FiChevronDown className={`w-4 h-4 text-blue-900 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {isCategoryOpen && (
-                    <React.Fragment>
-                      <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setIsCategoryOpen(false)} />
-                      <div className="absolute z-20 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto p-2">
-                        {categories.length > 0 ? (
-                          categories.map(cat => (
-                            <button
-                              key={cat._id || cat.title}
-                              type="button"
-                              onClick={() => toggleCategory(cat.title)}
-                              className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50/50 rounded-lg transition-all border-b border-gray-50 last:border-0 flex items-center justify-between group"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-gray-700 group-hover:translate-x-0.5 transition-transform">{cat.title}</span>
-                                {cat.offeringType && (
-                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold tracking-wider ${cat.offeringType === 'PRODUCT' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
-                                    {cat.offeringType}
-                                  </span>
-                                )}
-                              </div>
-                              {formData.serviceCategories.includes(cat.title) && (
-                                <div className="w-2 h-2 rounded-full bg-blue-900 shadow-sm" />
-                              )}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-4 py-4 text-gray-400 text-xs text-center space-y-2">
-                            <p>No products or services found in portfolio.</p>
-                            <div className="flex justify-center gap-3">
-                              <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); navigate('/vendor/my-services'); }}
-                                className="text-blue-600 font-semibold underline text-[11px] hover:text-blue-800"
-                              >
-                                + Add Services
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); navigate('/vendor/my-products'); }}
-                                className="text-purple-600 font-semibold underline text-[11px] hover:text-purple-800"
-                              >
-                                + Add Products
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </React.Fragment>
-                  )}
-                </div>
-
-                {/* Selected Categories Tags */}
-                {formData.serviceCategories.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {formData.serviceCategories.map((cat, idx) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center px-3 py-1 bg-blue-50 text-blue-900 rounded-md text-xs font-medium border border-blue-100"
-                      >
-                        {cat}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); toggleCategory(cat); }}
-                          className="ml-2 text-blue-300 hover:text-blue-900 transition-colors"
-                        >
-                          <FiX className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Phone Number *</label>
+              <div className="relative">
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="Enter 10-digit mobile number"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-gray-900 font-medium transition-all"
+                  maxLength={10}
+                />
+                <FiPhone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
 
-            {/* Documents */}
             {!isEdit && (
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-gray-700 border-b border-gray-100 pb-2">Identity Verification</h4>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500 ml-1">Aadhar Identification</label>
+              <div>
+                <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Set Password *</label>
+                <div className="relative">
                   <input
-                    type="text"
-                    value={formData.aadhar.number}
-                    onChange={(e) => handleInputChange('aadhar.number', e.target.value)}
-                    placeholder="Enter 12-digit Aadhar number"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:border-blue-900 focus:bg-white outline-none text-sm text-gray-900 transition-all"
-                    maxLength={12}
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Min 6 characters"
+                    className="w-full pl-9 pr-9 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-gray-900 font-medium transition-all"
                   />
-                </div>
-
-                <div 
-                  onClick={() => document.getElementById('worker-aadhar-upload').click()}
-                  className="border border-dashed border-gray-300 rounded-lg p-6 text-center transition-all hover:border-blue-900 bg-gray-50/50 group cursor-pointer relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-blue-900/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <input
-                    id="worker-aadhar-upload"
-                    type="file"
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    onChange={handleAadharChange}
-                  />
-                  <div className="flex flex-col items-center relative z-10 w-full">
-                    {aadharPreview || (formData.aadhar.document && !formData.aadhar.document.toLowerCase().endsWith('.pdf') && formData.aadhar.document !== 'data:image/png;base64,placeholder') ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <img 
-                          src={aadharPreview || formData.aadhar.document} 
-                          alt="Digital Identity Preview" 
-                          className="w-[80%] max-h-52 rounded-lg object-contain shadow-sm border border-gray-200 bg-white"
-                        />
-                        <span className="text-[10px] text-gray-500 font-medium">
-                          {aadharFile ? aadharFile.name : "Uploaded Document"} (Click to change)
-                        </span>
-                      </div>
-                    ) : aadharFile ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 bg-blue-900 text-white rounded-lg flex items-center justify-center shadow-sm">
-                          <FiCheck className="w-4 h-4" />
-                        </div>
-                        <span className="text-xs text-gray-800 truncate max-w-[180px]">{aadharFile.name}</span>
-                        <span className="text-[10px] text-gray-500">(Click to change)</span>
-                      </div>
-                    ) : (formData.aadhar.document && formData.aadhar.document !== 'data:image/png;base64,placeholder') ? (
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 bg-white border border-blue-100 text-blue-900 rounded-lg flex items-center justify-center shadow-sm">
-                          <FiCheck className="w-4 h-4 text-blue-900" />
-                        </div>
-                        <span className="text-xs text-blue-900 font-medium">Document Verified (PDF)</span>
-                        <span className="text-[10px] text-gray-500">(Click to change)</span>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-10 h-10 bg-white border border-gray-200 text-gray-400 rounded-lg flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-sm">
-                          <FiUpload className="w-4 h-4" />
-                        </div>
-                        <span className="text-xs text-gray-500">Upload Digital Identity</span>
-                        <span className="text-[10px] text-gray-400 mt-1">Government Issued ID</span>
-                      </>
-                    )}
-                  </div>
+                  <FiLock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer"
+                  >
+                    {showPassword ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full py-3.5 text-white rounded-lg text-sm font-semibold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 bg-blue-900 hover:bg-blue-800"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (isEdit ? 'Update Credentials' : 'Add Worker')}
-            </button>
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Email Address *</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  placeholder="Enter email address"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-gray-900 font-medium transition-all"
+                />
+                <FiMail className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
           </div>
-        </main >
+        </div>
+
+        {/* Operational Location Section */}
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+            Operational Base
+          </h3>
+
+          {(() => {
+            const addr = formData.address || {};
+            const parts = [addr.addressLine1, addr.addressLine2, addr.city, addr.state, addr.pincode ? `PIN: ${addr.pincode}` : null].filter(Boolean);
+            const displayAddress = (addr.fullAddress && addr.fullAddress.length > 5)
+              ? addr.fullAddress
+              : (parts.length > 0 ? parts.join(', ') : 'No location coordinates set');
+            const hasCoordinates = addr.lat !== undefined && addr.lat !== null && addr.lng !== undefined && addr.lng !== null;
+
+            return (
+              <div className="bg-gray-50 rounded-xl border border-gray-100 p-3 shadow-2xs space-y-2">
+                <div className="flex items-start gap-2.5">
+                  <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
+                    <FiMapPin className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-gray-900 leading-snug">
+                      {displayAddress}
+                    </p>
+                    {hasCoordinates && (
+                      <p className="text-[9px] font-bold text-emerald-600 mt-1 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        GPS: {Number(addr.lat).toFixed(4)}, {Number(addr.lng).toFixed(4)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          <button
+            onClick={() => setIsAddressModalOpen(true)}
+            className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-xs font-bold border border-gray-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <FiMapPin className="w-3.5 h-3.5 text-blue-600" />
+            <span>Set Location Coordinates</span>
+          </button>
+        </div>
+
+        {/* Expertise Profile Section */}
+        <div className="space-y-3 pt-2">
+          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+            Specialization Skillsets
+          </h3>
+
+          <div>
+            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">Selected Categories *</label>
+            <div className="relative">
+              <button
+                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                className="w-full px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between focus:outline-none text-xs font-medium cursor-pointer"
+              >
+                <span className={`truncate ${formData.serviceCategories.length > 0 ? 'text-gray-900 font-bold' : 'text-gray-400'}`}>
+                  {formData.serviceCategories.length > 0
+                    ? `${formData.serviceCategories.length} Category Selected`
+                    : 'Select Skillsets...'}
+                </span>
+                <FiChevronDown className={`w-4 h-4 text-blue-600 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCategoryOpen && (
+                <React.Fragment>
+                  <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setIsCategoryOpen(false)} />
+                  <div className="absolute z-20 w-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto p-2">
+                    {categories.length > 0 ? (
+                      categories.map(cat => (
+                        <button
+                          key={cat._id || cat.title}
+                          type="button"
+                          onClick={() => toggleCategory(cat.title)}
+                          className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50/50 rounded-lg transition-all border-b border-gray-50 last:border-0 flex items-center justify-between group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-gray-700 group-hover:translate-x-0.5 transition-transform">{cat.title}</span>
+                            {cat.offeringType && (
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold tracking-wider ${cat.offeringType === 'PRODUCT' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                {cat.offeringType}
+                              </span>
+                            )}
+                          </div>
+                          {formData.serviceCategories.includes(cat.title) && (
+                            <div className="w-2 h-2 rounded-full bg-blue-900 shadow-sm" />
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-4 text-gray-400 text-xs text-center space-y-2">
+                        <p>No products or services found in portfolio.</p>
+                        <div className="flex justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); navigate('/vendor/my-services'); }}
+                            className="text-blue-600 font-semibold underline text-[11px] hover:text-blue-800"
+                          >
+                            + Add Services
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); navigate('/vendor/my-products'); }}
+                            className="text-purple-600 font-semibold underline text-[11px] hover:text-purple-800"
+                          >
+                            + Add Products
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </React.Fragment>
+              )}
+            </div>
+
+            {formData.serviceCategories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {formData.serviceCategories.map((cat, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-[10px] font-bold border border-blue-100"
+                  >
+                    <span>{cat}</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleCategory(cat); }}
+                      className="text-blue-400 hover:text-blue-700 cursor-pointer"
+                    >
+                      <FiX className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Identity Verification Section (for new worker) */}
+        {!isEdit && (
+          <div className="space-y-3 pt-2">
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">
+              Identity Verification
+            </h3>
+
+            <div>
+              <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">12-Digit Aadhaar Number *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.aadhar.number}
+                  onChange={(e) => handleInputChange('aadhar.number', e.target.value)}
+                  placeholder="Enter 12-digit Aadhaar number"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-xs text-gray-900 font-medium transition-all"
+                  maxLength={12}
+                />
+                <FiShield className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div
+              onClick={() => document.getElementById('worker-aadhar-upload').click()}
+              className="border border-dashed border-gray-300 rounded-xl p-4 text-center transition-all hover:border-blue-600 bg-gray-50/50 cursor-pointer relative overflow-hidden"
+            >
+              <input
+                id="worker-aadhar-upload"
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleAadharChange}
+              />
+              <div className="flex flex-col items-center relative z-10 w-full">
+                {aadharPreview || (formData.aadhar.document && !formData.aadhar.document.toLowerCase().endsWith('.pdf') && formData.aadhar.document !== 'data:image/png;base64,placeholder') ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img
+                      src={aadharPreview || formData.aadhar.document}
+                      alt="Identity Preview"
+                      className="max-h-36 rounded-lg object-contain shadow-2xs border border-gray-200 bg-white"
+                    />
+                    <span className="text-[9px] text-gray-500 font-bold">
+                      {aadharFile ? aadharFile.name : "Uploaded Document"} (Tap to change)
+                    </span>
+                  </div>
+                ) : aadharFile ? (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center shadow-2xs">
+                      <FiCheck className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-900 truncate max-w-[180px]">{aadharFile.name}</span>
+                    <span className="text-[9px] text-gray-400">(Tap to change)</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-8 h-8 bg-white border border-gray-200 text-gray-400 rounded-lg flex items-center justify-center mb-1 shadow-2xs">
+                      <FiUpload className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-bold text-gray-800">Upload Aadhaar Identification</span>
+                    <span className="text-[9px] text-gray-400 mt-0.5">Government Issued ID Document</span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <div className="pt-3">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-2.5 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-2 bg-[#00246b] hover:bg-[#001c54] cursor-pointer disabled:opacity-60"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (isEdit ? 'Update Credentials' : 'Add Operative')}
+          </button>
+        </div>
+      </div>
 
       <AddressSelectionModal
         isOpen={isAddressModalOpen}
@@ -756,7 +731,7 @@ const AddEditWorker = () => {
         onHouseNumberChange={(val) => handleInputChange('address.addressLine1', val)}
         onSave={handleAddressSave}
       />
-    </div >
+    </div>
   );
 };
 

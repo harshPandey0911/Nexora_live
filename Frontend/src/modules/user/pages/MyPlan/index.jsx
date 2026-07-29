@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiCheck, FiStar, FiCheckCircle, FiShield, FiZap, FiGift } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiStar, FiCheckCircle, FiShield, FiZap, FiGift, FiBox } from 'react-icons/fi';
 import { getPlans } from '../../services/planService';
 import { userAuthService } from '../../../../services/authService';
 import { toast } from 'react-hot-toast';
@@ -11,68 +11,58 @@ const MyPlan = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper to determine card styling based on plan name
   const getCardStyle = (name) => {
     const lower = name.toLowerCase();
 
     if (lower.includes('platinum')) {
       return {
-        container: 'bg-slate-900 border-slate-700 text-white',
-        badge: 'bg-emerald-500 text-white',
+        container: 'bg-slate-950 border-slate-800 text-white',
+        badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
         includes: 'text-slate-400',
         check: 'text-emerald-400',
         price: 'text-white',
-        button: 'bg-white text-slate-900 hover:bg-slate-100'
+        button: 'bg-white text-slate-950 hover:bg-slate-100'
       };
     }
     if (lower.includes('diamond')) {
       return {
-        container: 'bg-indigo-50 border-indigo-100 text-indigo-900',
-        badge: 'bg-emerald-500 text-white',
-        includes: 'text-indigo-600',
-        check: 'text-indigo-500',
-        price: 'text-indigo-900',
-        button: 'bg-indigo-600 text-white hover:bg-indigo-700'
-      }
+        container: 'bg-indigo-900 border-indigo-700 text-white',
+        badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        includes: 'text-indigo-200',
+        check: 'text-indigo-300',
+        price: 'text-white',
+        button: 'bg-white text-indigo-900 hover:bg-indigo-50'
+      };
     }
     if (lower.includes('gold')) {
       return {
-        container: 'bg-[#FEF9C3] border-yellow-200 text-[#854D0E]',
-        badge: 'bg-[#22C55E] text-white',
-        includes: 'text-[#854D0E] opacity-70',
-        check: 'text-[#854D0E]',
-        price: 'text-[#854D0E]',
-        button: 'bg-[#854D0E] text-white hover:bg-amber-900'
+        container: 'bg-amber-500/10 border-amber-300/60 text-amber-950',
+        badge: 'bg-emerald-500 text-white',
+        includes: 'text-amber-900',
+        check: 'text-amber-700',
+        price: 'text-amber-950',
+        button: 'bg-amber-800 text-white hover:bg-amber-900'
       };
     }
     if (lower.includes('silver')) {
       return {
-        container: 'bg-[#F1F5F9] border-slate-200 text-slate-800',
-        badge: 'bg-[#22C55E] text-white',
-        includes: 'text-slate-500',
-        check: 'text-slate-400',
+        container: 'bg-slate-50 border-slate-200 text-slate-900',
+        badge: 'bg-emerald-600 text-white',
+        includes: 'text-slate-600',
+        check: 'text-slate-600',
         price: 'text-slate-900',
-        button: 'bg-slate-800 text-white hover:bg-slate-900'
+        button: 'bg-slate-900 text-white hover:bg-slate-800'
       };
     }
 
-    // Default
     return {
-      container: 'bg-white border-gray-200 text-gray-800',
-      badge: 'bg-emerald-500 text-white',
+      container: 'bg-white border-gray-200 text-gray-900',
+      badge: 'bg-emerald-600 text-white',
       includes: 'text-gray-500',
-      check: 'text-primary-500',
+      check: 'text-blue-600',
       price: 'text-gray-900',
-      button: 'bg-primary-600 text-white hover:bg-primary-700'
+      button: 'bg-[#00246b] text-white hover:bg-[#001c54]'
     };
-  };
-
-  const getPreviousPlanNote = (name) => {
-    const lower = name.toLowerCase();
-    if (lower.includes('platinum')) return 'Everything in Diamond & More';
-    if (lower.includes('diamond')) return 'Everything in Gold & More';
-    if (lower.includes('gold')) return 'Everything in Silver & More';
-    return null;
   };
 
   useEffect(() => {
@@ -91,41 +81,49 @@ const MyPlan = () => {
 
     } catch (error) {
       console.error(error);
-      toast.error('Could not load data');
+      toast.error('Could not load subscription plans');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-transparent pb-12">
-      {/* Header */}
-      <header className="bg-transparent shadow-sm sticky top-0 z-30">
-        <div className="px-4 py-4 flex items-center gap-3 max-w-[1400px] mx-auto">
+    <div className="min-h-screen pb-24 bg-gray-50/50 space-y-3 sm:space-y-4">
+      {/* Header Bar */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 px-3.5 sm:px-4 py-3 shadow-2xs flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            className="w-8 h-8 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
           >
-            <FiArrowLeft className="w-5 h-5 text-gray-700" />
+            <FiArrowLeft className="w-4 h-4" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Subscription Plans</h1>
+          <div>
+            <h1 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight leading-tight">Membership Passes</h1>
+            <p className="text-[10px] text-gray-500 font-medium hidden sm:block">Unlock free service deployments and exclusive cashback discounts</p>
+          </div>
+        </div>
+        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center">
+          <FiZap className="w-4 h-4" />
         </div>
       </header>
 
-      <main className="px-4 py-12 max-w-[1400px] mx-auto">
-        <div className="mb-12 bg-white/40 backdrop-blur-sm p-8 rounded-[2.5rem] border border-white shadow-sm">
-          <h2 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">Pick Your Membership</h2>
-          <p className="text-slate-500 font-bold text-lg max-w-2xl leading-relaxed">
-            Choose a plan that fits your home. Higher plans automatically include benefits from the tiers below them.
+      <main className="px-3.5 sm:px-4 max-w-4xl mx-auto space-y-3 sm:space-y-4">
+        {/* Banner Hero Box */}
+        <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-gray-100 shadow-2xs space-y-1">
+          <h2 className="text-xs sm:text-sm font-bold text-gray-900 uppercase tracking-wider">Select Your VIP Membership</h2>
+          <p className="text-[10px] sm:text-xs font-medium text-gray-500 leading-relaxed">
+            Upgrade your home care plan to enjoy free annual maintenance deployments. Higher tiers inherit all benefits from lower tiers automatically.
           </p>
         </div>
 
         {loading ? (
-          <div className="flex justify-center p-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-100 shadow-2xs">
+            <div className="w-6 h-6 border-2 border-[#00246b] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading Membership Tiers...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             {plans.map((plan) => {
               const style = getCardStyle(plan.name || '');
               const currentPlan = user?.plans;
@@ -137,166 +135,106 @@ const MyPlan = () => {
               const isDisabled = isCurrent || isDowngradeOrSame;
 
               let buttonText = `Select ${plan.name}`;
-              if (isCurrent) buttonText = 'Current Plan';
-              else if (isUpgrade) buttonText = 'Upgrade';
+              if (isCurrent) buttonText = 'Active Pass';
+              else if (isUpgrade) buttonText = 'Upgrade Pass';
 
               return (
                 <div
                   key={plan._id}
                   onClick={() => navigate(`/user/my-plan/${plan._id}`)}
-                  className={`relative cursor-pointer rounded-3xl border shadow-sm transition-all flex flex-col overflow-hidden ${style.container}`}
+                  className={`rounded-xl border p-4 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between relative overflow-hidden cursor-pointer group ${style.container}`}
                 >
-                  <div className="p-8 pb-8 flex-1 relative">
-                    {/* Top Row: Name and Status */}
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex flex-col">
-                        <h3 className="text-3xl font-black tracking-tight">{plan.name}</h3>
+                  <div className="space-y-3">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between gap-2 border-b border-current/10 pb-2.5">
+                      <div>
+                        <h3 className="text-base sm:text-lg font-bold tracking-tight uppercase">{plan.name}</h3>
                         {plan.tagline && (
-                          <div className={`mt-2 flex items-center`}>
-                             <span className={`inline-block px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] shadow-sm border ${
-                               plan.name.toLowerCase().includes('platinum') 
-                               ? 'bg-white/10 border-white/20 text-white' 
-                               : 'bg-primary-50 border-primary-100 text-primary-600'
-                             }`}>
-                               {plan.tagline}
-                             </span>
-                          </div>
+                          <span className="inline-block mt-0.5 px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-current/10 border border-current/20">
+                            {plan.tagline}
+                          </span>
                         )}
                       </div>
                       {isCurrent && (
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${style.badge}`}>
+                        <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-emerald-500/30 bg-emerald-500/20 text-emerald-300">
                           Active
                         </span>
                       )}
                     </div>
 
-                    {/* Price and Duration */}
-                    <div className="flex items-baseline mb-8">
-                      <span className={`text-4xl font-black ${style.price}`}>₹{plan.price}</span>
-                      <span className="text-sm font-bold opacity-40 ml-2">/ {plan.duration || '1'} Months</span>
+                    {/* Price Tag */}
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl sm:text-3xl font-bold">₹{plan.price}</span>
+                      <span className="text-[10px] font-medium opacity-70">/ {plan.duration || '1'} Months</span>
                     </div>
 
-                    {/* Benefits Section */}
-                    <div className="space-y-6">
-                      <ul className="space-y-3.5">
-                        {(plan.freeCategories || []).map((cat, idx) => (
-                          <li key={`cat-${idx}`} className="flex items-start gap-3">
-                            <FiZap className="w-4 h-4 mt-1 shrink-0 text-amber-500 fill-amber-500" />
-                            <span className="text-[14px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Free {cat.title || cat.name}</span>
-                          </li>
-                        ))}
-                        {((() => {
-                          const groups = new Map();
-                          (plan.freeServices || []).forEach(svc => {
-                            const cid = String(svc.categoryId?._id || svc.categoryId || 'unknown');
-                            const tkey = (svc.title || '').trim().toLowerCase();
-                            const key = `${cid}_${tkey}`;
-                            if (!groups.has(key)) groups.set(key, svc);
-                          });
-                          
-                          return Array.from(groups.values()).map((svc, idx) => {
-                            const catTitle = svc.categoryId?.title || 'Service';
-                            return (
-                              <li key={`svc-${idx}`} className="flex items-start gap-3">
-                                <FiZap className="w-4 h-4 mt-1 shrink-0 text-amber-500 fill-amber-500" />
-                                <div className="flex flex-col gap-0.5">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">{catTitle}</span>
-                                    <span className="text-[14px] font-extrabold text-rose-600">Free {svc.title || svc.name}</span>
-                                  </div>
-                                </div>
-                              </li>
-                            );
-                          });
-                        })())}
+                    {/* Benefits List */}
+                    <div className="space-y-2 pt-1 text-xs">
+                      {(plan.freeCategories || []).map((cat, idx) => (
+                        <div key={`cat-${idx}`} className="flex items-center gap-2">
+                          <FiZap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                          <span className="font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px] border border-emerald-100">
+                            Free {cat.title || cat.name}
+                          </span>
+                        </div>
+                      ))}
+
+                      {((() => {
+                        const groups = new Map();
+                        (plan.freeServices || []).forEach(svc => {
+                          const cid = String(svc.categoryId?._id || svc.categoryId || 'unknown');
+                          const tkey = (svc.title || '').trim().toLowerCase();
+                          const key = `${cid}_${tkey}`;
+                          if (!groups.has(key)) groups.set(key, svc);
+                        });
                         
-                        {(() => {
-                          const planOrder = ['Silver', 'Gold', 'Platinum', 'Diamond'];
-                          const currentName = plan.name || '';
-                          const baseName = planOrder.find(p => currentName.toLowerCase().includes(p.toLowerCase()));
-                          const currentIndex = baseName ? planOrder.indexOf(baseName) : -1;
-                          const prevName = currentIndex > 0 ? planOrder[currentIndex - 1] : null;
-
-                          if (!prevName) return null;
-
+                        return Array.from(groups.values()).map((svc, idx) => {
+                          const catTitle = svc.categoryId?.title || 'Service';
                           return (
-                            <div className="mt-6 mb-2 p-3 bg-white/40 rounded-xl border border-dashed border-current opacity-80 flex items-center gap-2">
-                              <FiGift className="w-4 h-4" />
-                              <p className="text-[10px] font-black uppercase tracking-wider">
-                                Benefits from <span className="underline decoration-2">{prevName}</span> Tier Included
-                              </p>
+                            <div key={`svc-${idx}`} className="flex items-center gap-2">
+                              <FiZap className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-bold uppercase text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                                  {catTitle}
+                                </span>
+                                <span className="text-xs font-bold">Free {svc.title || svc.name}</span>
+                              </div>
                             </div>
                           );
-                        })()}
+                        });
+                      })())}
 
-                        {/* Grouped Previous Tier Benefit Display */}
-                        {(() => {
-                          const groups = new Map();
-                          (plan.bonusServices || []).forEach(bs => {
-                            const svc = bs.serviceId;
-                            if (!svc) return;
-                            const cid = String(bs.categoryId?._id || bs.categoryId || svc.categoryId?._id || svc.categoryId || 'unknown');
-                            const tkey = (svc.title || '').trim().toLowerCase();
-                            const key = `${cid}_${tkey}`;
-                            if (!groups.has(key)) {
-                              groups.set(key, bs);
-                            }
-                          });
-                          
-                          return Array.from(groups.values()).map((bs, idx) => {
-                            const svc = bs.serviceId;
-                            if (!svc) return null;
-                            const catTitle = bs.categoryId?.title || svc.categoryId?.title || 'Service';
-                            
-                            return (
-                              <li key={idx} className="flex items-start gap-3 p-3 bg-amber-50/70 rounded-xl border border-amber-100 shadow-sm">
-                                <div className="mt-1 w-5 h-5 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center shrink-0">
-                                  <FiStar className="w-3 h-3 fill-amber-600" />
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">{catTitle}</span>
-                                    <span className="text-[13px] font-extrabold text-amber-800">Free {svc.title}</span>
-                                  </div>
-                                  <span className="text-[10px] font-black uppercase tracking-[0.1em] text-[#854D0E] opacity-50 ml-1">Inherited from previous plan</span>
-                                </div>
-                              </li>
-                            );
-                          });
-                        })()}
-                      </ul>
+                      {/* Tier Inheritance Notice */}
+                      {(() => {
+                        const planOrder = ['Silver', 'Gold', 'Platinum', 'Diamond'];
+                        const currentName = plan.name || '';
+                        const baseName = planOrder.find(p => currentName.toLowerCase().includes(p.toLowerCase()));
+                        const currentIndex = baseName ? planOrder.indexOf(baseName) : -1;
+                        const prevName = currentIndex > 0 ? planOrder[currentIndex - 1] : null;
+
+                        if (!prevName) return null;
+
+                        return (
+                          <div className="p-2 rounded-lg bg-current/5 border border-dashed border-current/20 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 mt-2">
+                            <FiGift className="w-3.5 h-3.5 shrink-0" />
+                            <span>Includes all {prevName} tier benefits</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
-                  {/* Action Button */}
-                  <div className="px-8 pb-8 mt-auto">
-                    {plan.description && (
-                      <div className={`mb-8 p-4 rounded-2xl border-l-[4px] shadow-sm flex items-start gap-4 transition-all duration-300 transform group-hover:scale-[1.02] ${
-                        plan.name.toLowerCase().includes('platinum') 
-                          ? 'bg-white/5 border-emerald-400' 
-                          : 'bg-white/60 border-primary-500 backdrop-blur-md'
-                      }`}>
-                         <p className={`text-[12px] font-bold leading-relaxed ${
-                            plan.name.toLowerCase().includes('platinum') 
-                              ? 'text-slate-300' 
-                              : 'text-slate-600'
-                         }`}>
-                           {plan.description}
-                         </p>
-                      </div>
-                    )}
+                  {/* Footer Action Button */}
+                  <div className="pt-4 mt-3 border-t border-current/10">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/user/my-plan/${plan._id}`);
                       }}
-                      className={`w-full py-4 px-6 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all active:scale-95 transform hover:translate-y-[-2px] ${style.button} ${isDisabled && !isCurrent ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                      className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase tracking-wider shadow-2xs transition-all active:scale-95 cursor-pointer ${style.button} ${isDisabled && !isCurrent ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                     >
                       {buttonText}
                     </button>
-                    {isCurrent && (
-                       <p className="text-center text-[10px] font-bold uppercase tracking-widest opacity-30 mt-3">Membership In Good Standing</p>
-                    )}
                   </div>
                 </div>
               );
@@ -305,9 +243,10 @@ const MyPlan = () => {
         )}
 
         {plans.length === 0 && !loading && (
-          <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-gray-200 shadow-inner">
-            <FiStar className="h-12 w-12 text-gray-200 mx-auto mb-4" />
-            <p className="text-gray-400 font-bold">No subscription plans found at this time.</p>
+          <div className="bg-white rounded-xl p-8 text-center border border-gray-100 shadow-2xs space-y-2">
+            <FiBox className="w-8 h-8 text-gray-300 mx-auto" />
+            <h3 className="text-xs font-bold text-gray-900 uppercase">No Membership Plans Found</h3>
+            <p className="text-[10px] text-gray-400 uppercase tracking-widest">Check back later for new VIP passes</p>
           </div>
         )}
       </main>

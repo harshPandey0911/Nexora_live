@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMapPin, FiSave, FiSearch, FiHome } from 'react-icons/fi';
 import { Autocomplete, useJsApiLoader } from '@react-google-maps/api';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
 import vendorService from '../../../../services/vendorService';
 import LocationPicker from '../../../user/pages/Checkout/components/LocationPicker';
 
@@ -11,9 +10,9 @@ const libraries = ['places', 'geometry'];
 
 const AddressManagement = () => {
   const navigate = useNavigate();
-  const [address, setAddress] = useState(''); // Display address
+  const [address, setAddress] = useState('');
   const [houseNumber, setHouseNumber] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState(null); // { lat, lng, address, components... }
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [autocomplete, setAutocomplete] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,12 +23,10 @@ const AddressManagement = () => {
     libraries
   });
 
-  // Load saved address from backend
   useEffect(() => {
     const loadAddress = async () => {
       try {
         const response = await vendorService.getProfile();
-        // Check if response has vendor data
         if (response.success && response.vendor?.address) {
           const addr = response.vendor.address;
 
@@ -40,13 +37,11 @@ const AddressManagement = () => {
           if (typeof addr === 'string') {
             displayAddress = addr;
           } else {
-            // It's an object
             houseNum = addr.addressLine1 || '';
             displayAddress = addr.fullAddress ||
               addr.address ||
               '';
 
-            // If we have city/pincode but no fullAddress, try to construct
             if (!displayAddress && addr.city) {
               displayAddress = [addr.city, addr.state, addr.pincode].filter(Boolean).join(', ');
             }
@@ -76,7 +71,6 @@ const AddressManagement = () => {
 
   useEffect(() => {
     return () => {
-      // Clean up google autocomplete container when page unmounts
       const pacContainers = document.querySelectorAll('.pac-container');
       pacContainers.forEach(container => {
         container.remove();
@@ -86,8 +80,6 @@ const AddressManagement = () => {
 
   const handleLocationSelect = (location) => {
     setSelectedLocation(location);
-    // setAddress(location.address); 
-    // Usually user selects from map -> we update search query & address field
     setSearchQuery(location.address);
     setAddress(location.address);
   };
@@ -121,13 +113,11 @@ const AddressManagement = () => {
 
     setLoading(true);
 
-    // Prepare full address object similar to `AddressSelectionModal`
     let city = '';
     let state = '';
     let pincode = '';
     let addressLine2 = '';
 
-    // If we have components from Google API (either via map click or autocomplete)
     if (selectedLocation.components) {
       selectedLocation.components.forEach(comp => {
         if (comp.types.includes('locality')) city = comp.long_name;
@@ -137,8 +127,6 @@ const AddressManagement = () => {
       });
     }
 
-    // We can also re-use existing logic from updateProfile controller which expects an object
-    // consistent with what EditProfile sends.
     const addrData = {
       fullAddress: selectedLocation.address || address,
       addressLine1: houseNumber,
@@ -156,7 +144,6 @@ const AddressManagement = () => {
       });
 
       if (response.success) {
-        // Update localStorage vendorData
         const vendorDataRaw = localStorage.getItem('vendorData');
         if (vendorDataRaw) {
           const vendor = JSON.parse(vendorDataRaw);
@@ -167,14 +154,8 @@ const AddressManagement = () => {
           localStorage.setItem('vendorData', JSON.stringify(response.vendor));
         }
 
-        // Dispatch event to notify other components
         window.dispatchEvent(new Event('vendorDataUpdated'));
-
         toast.success('Address saved successfully!');
-        setTimeout(() => {
-          //   navigate('/vendor/profile'); // Stay here or go back settings? User preference.
-          //   Let's just show success. Or maybe go back.
-        }, 500);
       } else {
         toast.error(response.message || 'Failed to save address');
       }
@@ -187,50 +168,46 @@ const AddressManagement = () => {
   };
 
   return (
-    <div className="min-h-screen pb-20 relative">
-      {/* Premium Background Pattern */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gray-50" />
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header Bar */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-8 h-8 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors shrink-0 cursor-pointer"
+          >
+            <FiArrowLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0">
+            <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize truncate">
+              Deployment Base Location
+            </h2>
+            <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5 truncate">
+              Calibrate store address & GPS coordinates for dispatch accuracy
+            </p>
+          </div>
+        </div>
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+          <FiMapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+        </div>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/90 border-b border-gray-100 px-6 lg:px-10 py-4 lg:py-5 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/vendor/profile')}
-            className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all active:scale-95"
-          >
-            <FiArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Deployment Base</h1>
-            <p className="text-xs text-gray-400 font-medium hidden sm:block">Manage your operational address & coordinates</p>
-          </div>
-        </div>
-        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-          <FiMapPin className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
-        </div>
-      </header>
-
-      <main className="px-10 pt-10 relative z-10 max-w-[1600px] mx-auto">
+      <main className="space-y-3 sm:space-y-4 max-w-2xl mx-auto">
         {/* Info Card */}
-        <div className="bg-white rounded-[32px] p-6 mb-10 border border-gray-100 relative overflow-hidden group shadow-sm">
-          <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex items-start gap-5 relative z-10">
-            <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-              <FiMapPin className="w-6 h-6 text-blue-500" />
-            </div>
-            <div>
-              <h3 className="text-gray-900 font-medium text-sm capitalize tracking-widest mb-1">Geospatial Configuration</h3>
-              <p className="text-[10px] font-medium text-gray-500 capitalize tracking-widest leading-relaxed">
-                Calibrate your operational base coordinates. Precise positioning ensures optimal job matching and dispatch accuracy.
-              </p>
-            </div>
+        <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0 mt-0.5">
+            <FiMapPin className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Geospatial Configuration</h3>
+            <p className="text-[10px] font-medium text-gray-500 mt-0.5 leading-relaxed">
+              Precise pin placement improves customer distance calculations and automatic order allocation efficiency.
+            </p>
           </div>
         </div>
 
         {/* Map Section */}
-        {/* Map Section */}
-        <div className="bg-white/5 rounded-[48px] overflow-hidden mb-10 border border-white/10 shadow-2xl h-[400px]">
+        <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-2xs h-[280px] sm:h-[340px] relative">
           <LocationPicker
             onLocationSelect={handleLocationSelect}
             initialPosition={selectedLocation}
@@ -238,13 +215,11 @@ const AddressManagement = () => {
         </div>
 
         {/* Form Inputs Container */}
-        {/* Form Inputs Container */}
-        <div className="bg-white rounded-[48px] p-10 border border-gray-100 space-y-8 shadow-sm">
-
+        <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-100 shadow-2xs space-y-3.5">
           {/* Address Autocomplete */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-medium text-gray-500 capitalize tracking-[0.3em] ml-2">
-              Primary Access Coordinates (Street/Area)
+          <div>
+            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
+              Search Base Location (Street / Area) *
             </label>
             {isLoaded ? (
               <Autocomplete
@@ -256,13 +231,13 @@ const AddressManagement = () => {
                 }}
               >
                 <div className="relative">
-                  <FiSearch className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-300 w-6 h-6 z-10" />
+                  <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="ENTER OPERATIONAL VECTOR..."
+                    placeholder="Search address or landmark..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-[28px] pl-16 pr-8 py-5 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-all capitalize tracking-widest placeholder:text-gray-200"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder-gray-300"
                   />
                 </div>
               </Autocomplete>
@@ -270,47 +245,58 @@ const AddressManagement = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="SYNCHRONIZING MAPS..."
+                  placeholder="Synchronizing maps engine..."
                   disabled
-                  className="w-full bg-white/5 border border-white/10 rounded-[28px] pl-8 py-5 text-sm text-gray-800 animate-pulse"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-400 animate-pulse"
                 />
               </div>
             )}
           </div>
 
-          {/* House Number */}
-          <div className="space-y-3">
-            <label className="text-[10px] font-medium text-gray-500 capitalize tracking-[0.3em] ml-2">
-              Facility Identifier (Shop/Building)
+          {/* House Number / Shop Name */}
+          <div>
+            <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
+              Facility Identifier (Shop / Building / Flat)
             </label>
             <div className="relative">
-              <FiHome className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-300 w-6 h-6" />
+              <FiHome className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="e.g. FACILITY 101, HUB B"
+                placeholder="e.g. Shop #12, Apex Commercial Complex"
                 value={houseNumber}
                 onChange={(e) => setHouseNumber(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-[28px] pl-16 pr-8 py-5 text-sm text-gray-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-all capitalize tracking-widest placeholder:text-gray-200"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs font-medium text-gray-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all placeholder-gray-300"
               />
             </div>
           </div>
 
           {/* Coordinates Display */}
           {selectedLocation && (
-            <p className="text-[9px] font-medium text-gray-700 capitalize tracking-widest text-center">
-              Global Position: {selectedLocation.lat?.toFixed(6)} / {selectedLocation.lng?.toFixed(6)}
-            </p>
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-2 text-center">
+              <p className="text-[10px] font-bold text-emerald-700 flex items-center justify-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>GPS: {selectedLocation.lat?.toFixed(6)}, {selectedLocation.lng?.toFixed(6)}</span>
+              </p>
+            </div>
           )}
 
           {/* Save Button */}
-          <button
-            onClick={handleSave}
-            disabled={!searchQuery || !selectedLocation || loading}
-            className="w-full py-6 rounded-[28px] bg-blue-600 text-white text-[12px] font-medium capitalize tracking-[0.4em] shadow-xl shadow-blue-500/20 active:scale-95 disabled:opacity-20 transition-all flex items-center justify-center gap-4"
-          >
-            <FiSave className="w-5 h-5" />
-            {loading ? 'AUTHORIZING...' : 'AUTHORIZE LOCATION'}
-          </button>
+          <div className="pt-1">
+            <button
+              onClick={handleSave}
+              disabled={!searchQuery || !selectedLocation || loading}
+              className="w-full py-2.5 rounded-xl bg-[#00246b] hover:bg-[#001c54] text-white text-xs font-bold uppercase tracking-wider shadow-2xs active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <FiSave className="w-4 h-4" />
+                  <span>Authorize Base Location</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </main>
     </div>

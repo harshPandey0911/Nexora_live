@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBriefcase, FiMapPin, FiClock, FiUser, FiSearch, FiChevronRight } from 'react-icons/fi';
+import { FiBriefcase, FiMapPin, FiClock, FiUser, FiSearch, FiChevronRight, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
-import { getBookings, assignWorker as assignWorkerApi, acceptBooking, rejectBooking } from '../../services/bookingService';
+import { getBookings, acceptBooking, rejectBooking } from '../../services/bookingService';
 import { ConfirmDialog, RejectionReasonModal } from '../../components/common';
 import Pagination from '../../../../components/common/Pagination';
 
@@ -145,78 +144,78 @@ const ActiveJobs = memo(() => {
   };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="hidden md:flex bg-white p-5 rounded-2xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header - Compact & Modern */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
-          <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">
             Service Bookings
           </h2>
-          <p className="text-gray-500 font-medium mt-2">
-            Monitor and manage your active and pending service deployments
+          <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5">
+            Monitor and manage active service deployments and customer requests
           </p>
         </div>
-        <div className="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shadow-inner">
-          <FiBriefcase className="w-6 h-6 text-blue-600" />
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+          <FiBriefcase className="w-4 h-4 sm:w-5 sm:h-5" />
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative group max-w-2xl">
-        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
-        <input
-          type="text"
-          placeholder="Search bookings, customers, or locations..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-white border border-gray-200 rounded-2xl py-3 pl-12 pr-4 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all shadow-sm"
-        />
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
-        {[
-          { id: 'all', label: 'All Streams' },
-          { id: 'pending', label: 'New Requests' },
-          { id: 'assigned', label: 'Assigned' },
-          { id: 'in_progress', label: 'Active' },
-          { id: 'completed', label: 'Archived' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id)}
-            className={`
-              flex items-center gap-2 px-3.5 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-normal transition-all duration-300 whitespace-nowrap
-              ${filter === tab.id
-                ? "bg-[#2874F0] text-white shadow-lg shadow-blue-200 translate-y-[-1px]"
-                : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
-              }
-            `}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Jobs List */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-3xl p-8 border border-gray-100 animate-pulse h-48 shadow-sm" />
+      {/* Navigation Tabs & Search Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-2xs overflow-x-auto scrollbar-hide">
+          {[
+            { id: 'all', label: 'All Bookings' },
+            { id: 'pending', label: 'New Requests' },
+            { id: 'assigned', label: 'Assigned' },
+            { id: 'in_progress', label: 'Active' },
+            { id: 'completed', label: 'Completed' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilter(tab.id)}
+              className={`
+                px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap cursor-pointer
+                ${filter === tab.id
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
+
+        {/* Search Bar */}
+        <div className="relative group flex-1 max-w-xs">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5 group-focus-within:text-blue-600 transition-colors" />
+          <input
+            type="text"
+            placeholder="Search booking, customer..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-xl py-1.5 pl-9 pr-3 text-xs font-medium text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500/20 transition-all shadow-2xs placeholder-gray-300"
+          />
+        </div>
+      </div>
+
+      {/* Jobs Grid */}
+      {loading ? (
+        <div className="bg-white rounded-xl p-10 text-center border border-gray-100 shadow-2xs">
+          <div className="w-7 h-7 border-2 border-[#00246b] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Loading Service Bookings...</p>
+        </div>
       ) : filteredJobs.length === 0 ? (
-        <div className="bg-white rounded-[32px] p-20 text-center border border-gray-100 shadow-sm">
-          <div className="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <FiBriefcase className="w-10 h-10 text-gray-300" />
-          </div>
-          <h3 className="text-xl font-normal text-gray-800 mb-2">No Bookings Found</h3>
-          <p className="text-sm text-gray-500 font-medium max-w-xs mx-auto">
-            {searchQuery ? 'Your search query didn\'t match any records.' : 'You don\'t have any active bookings in this category.'}
+        <div className="bg-white rounded-xl p-10 text-center border border-dashed border-gray-200 shadow-2xs">
+          <FiBriefcase className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+          <h3 className="text-xs font-bold text-gray-900 uppercase">No Bookings Found</h3>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            {searchQuery ? "Your search query didn't match any records." : 'No active bookings in this stream.'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredJobs
             .slice((currentPage - 1) * pageSize, currentPage * pageSize)
             .map((job) => {
@@ -226,75 +225,82 @@ const ActiveJobs = memo(() => {
               return (
                 <div 
                   key={job.id} 
-                  className="bg-white border border-gray-100 rounded-2xl p-3.5 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col relative overflow-hidden h-fit"
+                  className="bg-white border border-gray-100 hover:border-gray-200 rounded-xl p-3.5 shadow-2xs hover:shadow-xs transition-all group cursor-pointer flex flex-col justify-between relative overflow-hidden"
                   onClick={() => navigate(`/vendor/booking/${job.id}`)}
                 >
-                  <div className={`absolute top-0 left-0 w-full h-1 ${isPending ? 'bg-orange-400' : isCompleted ? 'bg-green-400' : 'bg-blue-500'}`} />
-                  
+                  {/* Top Status Border Accent */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${isPending ? 'bg-amber-400' : isCompleted ? 'bg-emerald-500' : 'bg-blue-600'}`} />
+
                   <div>
-                    <div className="flex items-start justify-between mb-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <FiBriefcase className="w-4.5 h-4.5" />
+                    {/* Top Header Row: Icon + Price + Status Pill */}
+                    <div className="flex items-start justify-between gap-2 mb-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-2xs">
+                        <FiBriefcase className="w-4 h-4" />
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-gray-800 tracking-tight leading-none text-right">₹{job.price}</p>
-                        <span className={`text-[8px] font-medium capitalize tracking-wider px-1.5 py-0.5 rounded-md mt-1 inline-block ${
-                          job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                          isPending ? 'bg-orange-50 text-orange-600 border border-orange-100' : 
-                          isCompleted ? 'bg-green-50 text-green-600 border border-green-100' : 
-                          'bg-blue-50 text-blue-600 border border-blue-100'
+                      <div className="text-right min-w-0">
+                        <p className="text-sm font-bold text-gray-900">₹{job.price}</p>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 inline-block ${
+                          job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                          isPending ? 'bg-amber-50 text-amber-700 border border-amber-200' : 
+                          isCompleted ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 
+                          'bg-blue-50 text-blue-700 border border-blue-200'
                         }`}>
-                          {job.workerResponse === 'REJECTED' && !job.assignedTo ? 'Rejected by Worker' : job.status}
+                          {job.workerResponse === 'REJECTED' && !job.assignedTo ? 'Worker Declined' : job.status}
                         </span>
                       </div>
                     </div>
 
-                    <h3 className="text-xs font-normal text-gray-900 capitalize truncate mb-1 group-hover:text-blue-600 transition-colors tracking-tight">
+                    {/* Service Title */}
+                    <h3 className="text-xs font-bold text-gray-900 capitalize truncate mb-2 group-hover:text-blue-600 transition-colors tracking-tight">
                       {job.serviceType}
                     </h3>
                     
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <FiUser className="w-3 h-3 shrink-0 text-gray-400" />
-                        <span className="text-[10px] font-medium">{job.user.name}</span>
+                    {/* Meta Info Rows */}
+                    <div className="space-y-1.5 text-[11px] text-gray-600">
+                      <div className="flex items-center gap-1.5">
+                        <FiUser className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                        <span className="font-semibold text-gray-800 truncate">{job.user.name}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <FiMapPin className="w-3 h-3 shrink-0 text-gray-400" />
-                        <span className="text-[10px] font-medium truncate">{job.location.address}</span>
+                      <div className="flex items-center gap-1.5">
+                        <FiMapPin className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                        <span className="font-medium text-gray-600 truncate">{job.location.address}</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <FiClock className="w-3 h-3 shrink-0 text-gray-400" />
-                        <span className="text-[10px] font-medium text-gray-600 capitalize">{job.timeSlot.date} • {job.timeSlot.time}</span>
+                      <div className="flex items-center gap-1.5">
+                        <FiClock className="w-3.5 h-3.5 shrink-0 text-gray-400" />
+                        <span className="font-semibold text-blue-700 capitalize">{job.timeSlot.date} • {job.timeSlot.time}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-col gap-1.5">
+                  {/* Actions Footer */}
+                  <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between">
                     {isPending ? (
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2 w-full">
                         <button
                           onClick={(e) => { e.stopPropagation(); handleAcceptJob(job.id); }}
-                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-normal py-2 rounded-lg shadow transition-all active:scale-95"
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg shadow-2xs transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
                         >
+                          <FiCheck className="w-3 h-3" />
                           Accept
                         </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleRejectJob(job.id); }}
-                          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-normal py-2 rounded-lg transition-all active:scale-95"
+                          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-[10px] font-bold uppercase tracking-wider py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
                         >
-                          Reject
+                          <FiX className="w-3 h-3" />
+                          Skip
                         </button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                             job.workerResponse === 'REJECTED' && !job.assignedTo ? 'bg-rose-500' : 'bg-emerald-500 animate-pulse'
                           }`} />
-                          <p className="text-[9px] font-medium text-gray-500 capitalize tracking-wider">
+                          <p className="text-[10px] font-bold text-gray-600 truncate">
                             {job.workerResponse === 'REJECTED' && !job.assignedTo 
-                              ? `Declined by: ${job.rejectedWorker?.name || 'Worker'}` 
-                              : job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Ready for Assignment'}
+                              ? `Declined: ${job.rejectedWorker?.name || 'Worker'}` 
+                              : job.assignedTo ? `Assigned: ${job.assignedTo.name}` : 'Unassigned'}
                           </p>
                         </div>
                         
@@ -304,12 +310,15 @@ const ActiveJobs = memo(() => {
                               e.stopPropagation();
                               navigate(`/vendor/booking/${job.id}/assign-worker`);
                             }}
-                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider transition-all"
+                            className="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 shrink-0 cursor-pointer shadow-2xs"
                           >
+                            <FiRefreshCw className="w-2.5 h-2.5" />
                             Reassign
                           </button>
                         ) : (
-                          <FiChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors w-4 h-4" />
+                          <div className="w-6 h-6 rounded-lg bg-gray-50 group-hover:bg-blue-50 flex items-center justify-center transition-colors text-gray-400 group-hover:text-blue-600 shrink-0 ml-1">
+                            <FiChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                          </div>
                         )}
                       </div>
                     )}
@@ -332,7 +341,7 @@ const ActiveJobs = memo(() => {
             setPageSize(newSize);
             setCurrentPage(1);
           }}
-          className="mt-4"
+          className="mt-3"
         />
       )}
 

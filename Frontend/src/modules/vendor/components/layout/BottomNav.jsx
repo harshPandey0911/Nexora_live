@@ -64,7 +64,27 @@ const BottomNav = memo(() => {
     (location.pathname.includes('/map') || location.pathname.includes('/alert/'))
   );
 
-  if (shouldHideNav) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkIfModalIsOpen = () => {
+      const modalElements = document.querySelectorAll('.fixed.inset-0, [class*="z-[9999]"]');
+      const hasVisibleModal = Array.from(modalElements).some(el => {
+        if (el.tagName.toLowerCase() === 'nav') return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      setIsModalOpen(hasVisibleModal);
+    };
+
+    checkIfModalIsOpen();
+    const observer = new MutationObserver(checkIfModalIsOpen);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (shouldHideNav || isModalOpen) {
     return null;
   }
 

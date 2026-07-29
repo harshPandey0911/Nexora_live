@@ -51,7 +51,7 @@ const VendorLayout = ({ children }) => {
 
   // Check if current page is a detail/sub page (they have their own dedicated headers)
   const isDetailPage = location.pathname.includes('/vendor/booking/') || 
-                       location.pathname.includes('/vendor/profile') ||
+                       location.pathname.includes('/vendor/profile/details') ||
                        location.pathname.includes('/vendor/address-management') ||
                        location.pathname.includes('/vendor/support/ticket/') ||
                        location.pathname.includes('/vendor/wallet/') ||
@@ -102,7 +102,7 @@ const VendorLayout = ({ children }) => {
       {/* Mobile Sidebar Backdrop */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[140] lg:hidden transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -118,7 +118,7 @@ const VendorLayout = ({ children }) => {
           />
         )}
         
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-admin w-full min-w-0 ${!isDetailPage ? 'pt-24' : ''}`}>
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-admin w-full min-w-0 ${!isDetailPage ? 'pt-14 sm:pt-16' : ''}`}>
           <div className={`min-w-0 w-full ${location.pathname.includes('/vendor/booking/') ? '' : 'p-3 lg:p-6'}`}>
             {hasPermission ? children : (
               <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm">

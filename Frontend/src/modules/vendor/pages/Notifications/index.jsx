@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiBell, FiCheck, FiX, FiTrash2 } from 'react-icons/fi';
+import { FiBell, FiCheck, FiX, FiTrash2, FiClock, FiArrowRight } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
-import { vendorTheme as themeColors } from '../../../../theme';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   getNotifications,
@@ -23,8 +22,6 @@ const Notifications = () => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [filter, setFilter] = useState('all'); // all, alerts, jobs, payments
 
-  // Removed legacy layout effect background injection
-
   const fetchNotifications = async () => {
     try {
       setLoading(true);
@@ -40,7 +37,6 @@ const Notifications = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Listen for real-time updates (if implemented via window event)
     const handleUpdate = () => fetchNotifications();
     window.addEventListener('vendorNotificationsUpdated', handleUpdate);
 
@@ -52,7 +48,6 @@ const Notifications = () => {
   const handleMarkAsRead = async (id) => {
     try {
       await markAsRead(id);
-      // Update local state to reflect change immediately
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, read: true } : n)
       );
@@ -103,7 +98,6 @@ const Notifications = () => {
   };
 
   const handleNotificationClick = async (notif) => {
-    // 1. Mark as read if unread
     if (!notif.read) {
       try {
         await markAsRead(notif.id);
@@ -119,7 +113,6 @@ const Notifications = () => {
     const relatedType = (notif.relatedType || '').toLowerCase();
     const bookingId = notif.relatedId || notif.bookingId;
 
-    // 2. Redirect to specific page based on notification context
     if (type.includes('payment') || type.includes('payout') || type.includes('wallet') || type.includes('withdrawal') || type.includes('cash_limit')) {
       navigate('/vendor/wallet');
     } else if (type.includes('product') || type.includes('order')) {
@@ -160,7 +153,6 @@ const Notifications = () => {
     }
 
     if (filter === 'jobs') {
-      // Exclude financial alerts
       if (['withdrawal', 'cash_limit', 'payout', 'wallet', 'payment', 'refund'].some(keyword => type.includes(keyword))) {
         return false;
       }
@@ -184,49 +176,38 @@ const Notifications = () => {
     return '📢';
   };
 
-  const getNotificationColor = (originalType) => {
-    const type = (originalType || '').toLowerCase();
-
-    if (['payment', 'refund', 'wallet', 'payout'].some(t => type.includes(t))) return '#10B981'; // Green
-    if (['booking', 'job', 'work', 'visit', 'journey', 'vendor'].some(t => type.includes(t))) return '#3B82F6'; // Blue
-    if (['alert', 'general'].some(t => type.includes(t))) return themeColors.button;
-
-    return '#6B7280'; // Gray
-  };
-
   return (
-    <div className="space-y-5 pb-12">
-      {/* Header - Admin Style - Hidden on Mobile */}
-      <div className="hidden md:flex bg-white p-5 rounded-3xl shadow-sm flex-row items-center justify-between text-gray-900 border border-gray-100 gap-6">
+    <div className="space-y-3 sm:space-y-4 pb-16">
+      {/* Header - Compact & Modern */}
+      <div className="bg-white p-3.5 sm:p-4 rounded-xl shadow-2xs flex flex-row items-center justify-between text-gray-900 border border-gray-100 gap-3">
         <div>
-          <h2 className="text-2xl font-medium text-gray-900 tracking-tight leading-none">
+          <h2 className="text-base sm:text-xl font-bold text-gray-900 tracking-tight leading-tight capitalize">
             Alert Hub
           </h2>
-          <p className="text-gray-500 text-[11px] font-medium mt-2">
-            Consolidated intelligence and operational status updates
+          <p className="text-gray-500 text-[10px] sm:text-xs font-medium mt-0.5">
+            Real-time status updates and operational intelligence
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 shrink-0">
           {notifications.some(n => !n.read) && (
-            <motion.button 
-              whileTap={{ scale: 0.9 }}
+            <button 
               onClick={handleMarkAllRead}
-              className="px-4 py-2 rounded-xl bg-gray-50 border border-gray-100 text-[9px] font-normal capitalize tracking-widest text-gray-600 hover:bg-gray-100 transition-all flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 border border-gray-200 text-[10px] font-bold uppercase tracking-wider text-gray-700 transition-all flex items-center gap-1 cursor-pointer"
               title="Mark all as read"
             >
               <FiCheck className="w-3.5 h-3.5 text-blue-600" />
-              Mark All Read
-            </motion.button>
+              <span className="hidden sm:inline">Mark All Read</span>
+            </button>
           )}
-          <div className="w-12 h-12 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner">
-            <FiBell className="w-6 h-6 text-blue-600" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+            <FiBell className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
         </div>
       </div>
 
-      {/* Control Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-1 bg-white p-1.5 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto scrollbar-hide">
+      {/* Filter Tabs & Bulk Action Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-100 shadow-2xs overflow-x-auto scrollbar-hide">
           {[
             { id: 'all', label: 'All Alerts' },
             { id: 'jobs', label: 'Deployments' },
@@ -237,10 +218,10 @@ const Notifications = () => {
               key={option.id}
               onClick={() => setFilter(option.id)}
               className={`
-                px-3.5 py-1.5 rounded-lg text-[10px] font-normal capitalize tracking-wider transition-all duration-300 whitespace-nowrap
+                px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all duration-200 whitespace-nowrap cursor-pointer
                 ${filter === option.id
-                  ? 'bg-[#2874F0] text-white shadow-lg shadow-blue-200' 
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-blue-600 text-white shadow-2xs' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }
               `}
             >
@@ -250,133 +231,109 @@ const Notifications = () => {
         </div>
 
         {notifications.length > 0 && (
-          <div className="flex items-center gap-3.5">
-            {notifications.some(n => !n.read) && (
-              <button
-                onClick={handleMarkAllRead}
-                className="md:hidden px-3 py-1.5 text-[9px] font-normal text-gray-600 bg-gray-50 border border-gray-100 rounded-lg capitalize tracking-widest hover:bg-gray-100 transition-all flex items-center gap-1"
-              >
-                <FiCheck className="w-3 h-3 text-blue-600" />
-                Mark All Read
-              </button>
-            )}
+          <div className="flex items-center justify-end gap-2">
             <button
               onClick={handleClearAll}
-              className="px-3 py-1.5 text-[9px] font-normal text-rose-600 bg-rose-50 border border-rose-100 rounded-lg capitalize tracking-widest hover:bg-rose-100 transition-all flex items-center gap-1.5"
+              className="px-2.5 py-1 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
             >
-              <FiTrash2 className="w-3.5 h-3.5" />
-              Wipe Ledger
+              <FiTrash2 className="w-3 h-3" />
+              <span>Clear All</span>
             </button>
           </div>
         )}
       </div>
 
       {/* Notifications List */}
-      <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
-          <div className="bg-white rounded-[48px] p-24 text-center border border-gray-100 shadow-sm">
-            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-gray-100">
-              <FiBell className="w-10 h-10 text-gray-300" />
-            </div>
-            <h3 className="text-xl font-normal text-gray-800 mb-2 capitalize tracking-tight">Sync Complete</h3>
-            <p className="text-[10px] text-gray-400 font-normal capitalize tracking-widest">No pending alerts in the current matrix.</p>
+      <div className="space-y-3">
+        {loading ? (
+          <div className="bg-white rounded-xl p-10 text-center border border-gray-100 shadow-2xs">
+            <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              Loading alerts...
+            </span>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="bg-white rounded-xl p-10 text-center border border-dashed border-gray-200 shadow-2xs">
+            <FiBell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+            <h3 className="text-xs font-bold text-gray-900 uppercase">Inbox Up to Date</h3>
+            <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-widest">No pending notifications in current filter</p>
           </div>
         ) : (
-          <div className="space-y-3.5 pb-6">
+          <div className="space-y-2">
             {filteredNotifications
               .slice((currentPage - 1) * pageSize, currentPage * pageSize)
               .map((notif) => (
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif)}
-                className={`bg-white rounded-2xl p-4 border transition-all relative group hover:shadow-md cursor-pointer ${
-                  !notif.read ? 'border-blue-200 bg-blue-50/10 shadow-sm' : 'border-gray-100'
+                className={`bg-white rounded-xl p-3 sm:p-3.5 border transition-all relative group hover:border-gray-200 cursor-pointer shadow-2xs flex items-start gap-3 ${
+                  !notif.read ? 'border-blue-200 bg-blue-50/20' : 'border-gray-100'
                 }`}
               >
                 {!notif.read && (
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-600 rounded-l-2xl" />
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-600 rounded-l-xl" />
                 )}
                 
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm"
-                    style={{ backgroundColor: `${getNotificationColor(notif.type)}10` }}
-                  >
-                    {getNotificationIcon(notif.type)}
-                  </div>
-                  <div className="flex-1 pr-12 min-w-0">
-                    <div className="flex items-start justify-between mb-0.5">
-                      <h4 className={`font-normal text-gray-800 text-sm tracking-tight truncate ${!notif.read ? 'text-blue-700' : 'opacity-70'}`}>
-                        {notif.title}
-                      </h4>
-                    </div>
-                    <p className="text-xs text-gray-500 font-medium leading-relaxed">
-                      {notif.message}
-                    </p>
+                <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-base shrink-0">
+                  {getNotificationIcon(notif.type)}
+                </div>
 
-                    {notif.type === 'job_rejected' && notif.relatedId && (
-                      <div className="flex gap-2 mt-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/vendor/booking/${notif.relatedId}/assign-worker`);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider hover:bg-blue-500 transition-all"
-                        >
-                          Reassign Worker
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelfAssign(notif.relatedId);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-800 text-[9px] font-bold uppercase tracking-wider hover:bg-gray-200 transition-all border border-gray-200"
-                        >
-                          Do It Myself
-                        </button>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-3.5 mt-2.5">
-                       <p className="text-[8px] font-normal text-gray-400 capitalize tracking-widest">
-                        {notif.time || (notif.createdAt && new Date(notif.createdAt).toLocaleString())}
-                      </p>
-                      
-                      {(notif.action || notif.relatedType === 'booking' || notif.type === 'payout_requested') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleNotificationClick(notif);
-                          }}
-                          className="text-[8px] font-medium text-blue-600 flex items-center gap-1 capitalize tracking-widest hover:underline"
-                        >
-                          Execute Review
-                          <FiCheck className="w-2.5 h-2.5" />
-                        </button>
-                      )}
+                <div className="flex-1 min-w-0 pr-12">
+                  <h4 className={`font-bold text-xs tracking-tight truncate ${!notif.read ? 'text-gray-900' : 'text-gray-600'}`}>
+                    {notif.title}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 font-medium leading-normal mt-0.5">
+                    {notif.message}
+                  </p>
+
+                  {notif.type === 'job_rejected' && notif.relatedId && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/vendor/booking/${notif.relatedId}/assign-worker`);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+                      >
+                        Reassign Worker
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelfAssign(notif.relatedId);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 text-[9px] font-bold uppercase tracking-wider transition-all border border-gray-200 cursor-pointer"
+                      >
+                        Do It Myself
+                      </button>
                     </div>
+                  )}
+
+                  <div className="flex items-center gap-3 mt-2 text-[9px] font-medium text-gray-400">
+                    <span>{notif.time || (notif.createdAt && new Date(notif.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="absolute top-4 right-4 flex gap-1.5 transition-all">
+                <div className="absolute top-3 right-3 flex items-center gap-1">
                   {!notif.read && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleMarkAsRead(notif.id);
                       }}
-                      className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
                       title="Mark as read"
                     >
-                      <FiCheck className="w-4 h-4" />
+                      <FiCheck className="w-3.5 h-3.5" />
                     </button>
                   )}
                   <button
                     onClick={(e) => handleDelete(e, notif.id)}
-                    className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                    title="Delete"
+                    className="p-1 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Delete notification"
                   >
-                    <FiX className="w-4 h-4" />
+                    <FiX className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -396,39 +353,53 @@ const Notifications = () => {
               setPageSize(newSize);
               setCurrentPage(1);
             }}
-            className="mt-4"
+            className="mt-3"
           />
         )}
       </div>
 
       {/* Confirmation Modal */}
-      {showClearConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-[32px] p-10 shadow-2xl border border-gray-100 text-center">
-            <div className="w-20 h-20 bg-rose-50 rounded-3xl flex items-center justify-center mx-auto mb-8 border border-rose-100">
-              <FiTrash2 className="w-10 h-10 text-rose-500" />
-            </div>
-            <h3 className="text-2xl font-normal text-gray-900 mb-3 capitalize tracking-tight">Purge Records?</h3>
-            <p className="text-sm text-gray-500 font-medium mb-10 leading-relaxed px-4">
-              Permanent de-authorization of all operational alerts. This sequence cannot be aborted.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setShowClearConfirm(false)}
-                className="py-4 rounded-2xl bg-gray-50 text-[10px] font-normal capitalize tracking-widest text-gray-500 hover:bg-gray-100 transition-all"
-              >
-                Abort
-              </button>
-              <button
-                onClick={confirmClearAll}
-                className="py-4 rounded-2xl bg-rose-600 text-[10px] font-normal capitalize tracking-widest text-white shadow-xl shadow-rose-100 active:scale-95 transition-all"
-              >
-                Execute
-              </button>
-            </div>
+      <AnimatePresence>
+        {showClearConfirm && (
+          <div className="fixed inset-0 z-[170] flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowClearConfirm(false)}
+              className="absolute inset-0 bg-gray-900/40 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-xs bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 text-center z-10"
+            >
+              <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                <FiTrash2 className="w-6 h-6 text-rose-500" />
+              </div>
+              <h3 className="text-sm font-bold text-gray-900 mb-1">Clear All Notifications?</h3>
+              <p className="text-xs text-gray-500 mb-6">
+                Are you sure you want to delete all alert records from your inbox?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowClearConfirm(false)}
+                  className="flex-1 py-2 rounded-xl bg-gray-100 text-xs font-bold text-gray-600 hover:bg-gray-200 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmClearAll}
+                  className="flex-1 py-2 rounded-xl bg-rose-600 text-xs font-bold text-white shadow-2xs hover:bg-rose-700 transition-all cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };
