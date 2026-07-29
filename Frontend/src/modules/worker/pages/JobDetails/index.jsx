@@ -320,28 +320,28 @@ const JobDetails = () => {
 
       <main className="px-4 py-6">
         {/* View Timeline Button */}
-        <div className="mb-6">
+        <div className="mb-4">
           <button
             onClick={() => navigate(`/worker/job/${id}/timeline`)}
-            className="w-full bg-white border border-gray-200 py-4 rounded-2xl font-bold text-gray-700 flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all text-lg mb-4"
+            className="w-full bg-white border border-gray-200 py-2.5 rounded-xl font-semibold text-gray-700 flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all text-sm mb-3"
           >
-            <FiClock className="w-5 h-5 text-gray-500" />
+            <FiClock className="w-4 h-4 text-gray-500" />
             View Job Timeline
           </button>
 
           {(!job.workerResponse || job.workerResponse === 'PENDING') && (job.status === 'confirmed' || job.status === 'assigned' || job.status === 'pending') && (
-            <div className="flex gap-3 mb-4 animate-in slide-in-from-top-2">
+            <div className="flex gap-3 mb-3 animate-in slide-in-from-top-2">
               <button
                 onClick={() => handleJobResponse('REJECTED')}
                 disabled={actionLoading}
-                className="flex-1 py-4 rounded-2xl font-bold text-red-500 bg-red-50 border border-red-100 shadow-sm active:scale-95 transition-all"
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-red-500 bg-red-50 border border-red-100 shadow-sm active:scale-95 transition-all"
               >
                 DECLINE
               </button>
               <button
                 onClick={() => handleJobResponse('ACCEPTED')}
                 disabled={actionLoading}
-                className="flex-1 py-4 rounded-2xl font-bold text-white shadow-xl active:scale-95 transition-all"
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm text-white shadow-md active:scale-95 transition-all"
                 style={{ background: themeColors.button }}
               >
                 ACCEPT JOB
@@ -353,10 +353,10 @@ const JobDetails = () => {
             <button
               onClick={() => handleStatusUpdate('start')}
               disabled={actionLoading}
-              className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
+              className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all text-sm"
               style={{ background: themeColors.button }}
             >
-              {actionLoading ? 'Loading...' : <>START JOURNEY <FiNavigation className="w-5 h-5" /></>}
+              {actionLoading ? 'Loading...' : <>START JOURNEY <FiNavigation className="w-4 h-4" /></>}
             </button>
           )}
 
@@ -364,10 +364,10 @@ const JobDetails = () => {
             <button
               onClick={() => navigate(`/worker/job/${id}/map`)}
               disabled={actionLoading}
-              className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
+              className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all text-sm"
               style={{ background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' }}
             >
-              <FiNavigation className="w-5 h-5" /> TRACK JOURNEY / REACHED
+              <FiNavigation className="w-4 h-4" /> TRACK JOURNEY / REACHED
             </button>
           )}
 
@@ -375,32 +375,32 @@ const JobDetails = () => {
             <button
               onClick={() => handleStatusUpdate('complete')}
               disabled={actionLoading}
-              className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
+              className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all text-sm"
               style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
             >
-              {actionLoading ? 'Loading...' : <>COMPLETE WORK <FiCheckCircle className="w-5 h-5" /></>}
+              {actionLoading ? 'Loading...' : <>COMPLETE WORK <FiCheckCircle className="w-4 h-4" /></>}
             </button>
           )}
 
           {job.status === 'work_done' && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5">
               <button
                 onClick={() => navigate(`/worker/job/${id}/billing`)}
                 disabled={actionLoading}
-                className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
+                className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all text-sm"
                 style={{ background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' }}
               >
-                <FiFileText className="w-5 h-5" /> PREPARE BILL / EDIT
+                <FiFileText className="w-4 h-4" /> PREPARE BILL / EDIT
               </button>
 
               {(job?.customerConfirmationOTP || job?.paymentOtp) && (
                 <button
                   onClick={() => setIsPaymentModalOpen(true)}
                   disabled={actionLoading}
-                  className="w-full py-4 rounded-2xl font-bold text-white flex items-center justify-center gap-2 shadow-xl active:scale-95 transition-all text-lg"
+                  className="w-full py-2.5 rounded-xl font-semibold text-white flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all text-sm"
                   style={{ background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' }}
                 >
-                  <FiKey className="w-5 h-5" /> ENTER OTP
+                  <FiKey className="w-4 h-4" /> ENTER OTP
                 </button>
               )}
             </div>

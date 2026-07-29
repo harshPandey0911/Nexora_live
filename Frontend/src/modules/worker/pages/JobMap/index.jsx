@@ -723,34 +723,34 @@ const JobMap = () => {
       </div>
 
       {/* Modern Bottom Card */}
-      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-6 pb-28 md:pb-8 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
-        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
+      <div className={`absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-20 p-4 pb-20 md:pb-6 transition-transform duration-300 ${isFullScreen ? 'translate-y-full' : ''}`}>
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4"></div>
 
         {/* Time & Distance Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-sm font-medium text-teal-600 mb-1 flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-teal-600 mb-0.5 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
               {duration ? `Trip time: ${duration}` : 'Calculating path...'}
             </p>
-            <h2 className="text-2xl font-black text-gray-900 tracking-tight">Job Location</h2>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">Job Location</h2>
           </div>
           {distance && (
             <div className="text-right">
-              <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Distance</p>
-              <p className="text-xl font-bold text-gray-800">{distance}</p>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Distance</p>
+              <p className="text-lg font-bold text-gray-800">{distance}</p>
             </div>
           )}
         </div>
 
         {/* Address Section */}
-        <div className="bg-gray-50 rounded-2xl p-4 flex items-start gap-4 mb-4 border border-gray-100">
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm text-teal-600 border border-gray-100 shrink-0">
-            <FiMapPin className="w-5 h-5" />
+        <div className="bg-gray-50 rounded-xl p-3 flex items-start gap-3 mb-4 border border-gray-100">
+          <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center shadow-sm text-teal-600 border border-gray-100 shrink-0 mt-0.5">
+            <FiMapPin className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 mb-0.5 truncate">Address</h3>
-            <p className="text-sm text-gray-500 line-clamp-2 leading-relaxed">
+            <h3 className="text-xs font-bold text-gray-900 mb-0.5 truncate">Address</h3>
+            <p className="text-xs text-gray-500 line-clamp-2 leading-snug">
               {(() => {
                 const addr = job?.address;
                 if (!addr) return 'Address loading...';
@@ -762,7 +762,7 @@ const JobMap = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex gap-2.5">
           {job?.status === 'journey_started' && (
             <button
               onClick={async () => {
@@ -774,15 +774,15 @@ const JobMap = () => {
                 }
                 setIsVisitModalOpen(true);
               }}
-              className="px-6 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 transition-all active:scale-95"
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 transition-all active:scale-95 whitespace-nowrap"
             >
-              <FiCheckCircle className="w-5 h-5" /> Reached
+              <FiCheckCircle className="w-4 h-4 shrink-0" /> Reached
             </button>
           )}
 
           {(job?.userId?.phone || job?.customerPhone) && (
-            <a href={`tel:${job.userId?.phone || job.customerPhone}`} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-teal-600/30 transition-all active:scale-95">
-              <FiPhone className="w-5 h-5" /> Call
+            <a href={`tel:${job.userId?.phone || job.customerPhone}`} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-md shadow-teal-600/20 transition-all active:scale-95 whitespace-nowrap">
+              <FiPhone className="w-4 h-4 shrink-0" /> Call
             </a>
           )}
           <button
@@ -792,9 +792,9 @@ const JobMap = () => {
               const dest = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(addressStr);
               window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
             }}
-            className="w-14 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl flex items-center justify-center transition-all active:scale-95"
+            className="w-10 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl flex items-center justify-center transition-all active:scale-95 shrink-0 self-center"
           >
-            <FiNavigation className="w-6 h-6" />
+            <FiNavigation className="w-4 h-4" />
           </button>
         </div>
       </div>

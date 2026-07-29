@@ -104,18 +104,19 @@ const AddEditWorker = () => {
         const seenTitles = new Set();
 
         if (customRes?.success) {
-          const myServices = (customRes.data?.services || []).filter(s => !s.offeringType || s.offeringType === 'SERVICE');
-          myServices.forEach(s => {
-            // Add service title
+          const allItems = customRes.data?.services || [];
+          allItems.forEach(s => {
+            const type = s.offeringType === 'PRODUCT' ? 'PRODUCT' : 'SERVICE';
+            // Add item title
             if (s.title && !seenTitles.has(s.title.toLowerCase().trim())) {
               seenTitles.add(s.title.toLowerCase().trim());
-              optedList.push({ _id: s._id || s.id, title: s.title });
+              optedList.push({ _id: s._id || s.id, title: s.title, offeringType: type });
             }
             // Add parent category title for broader category matching
             const catTitle = s.category || s.categoryId?.title;
             if (catTitle && typeof catTitle === 'string' && !seenTitles.has(catTitle.toLowerCase().trim())) {
               seenTitles.add(catTitle.toLowerCase().trim());
-              optedList.push({ _id: catTitle, title: catTitle });
+              optedList.push({ _id: catTitle, title: catTitle, offeringType: type });
             }
           });
         }
@@ -596,25 +597,42 @@ const AddEditWorker = () => {
                           categories.map(cat => (
                             <button
                               key={cat._id || cat.title}
+                              type="button"
                               onClick={() => toggleCategory(cat.title)}
-                              className="w-full text-left px-4 py-2.5 hover:bg-blue-50/50 rounded-lg transition-all border-b border-gray-50 last:border-0 flex items-center justify-between group"
+                              className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50/50 rounded-lg transition-all border-b border-gray-50 last:border-0 flex items-center justify-between group"
                             >
-                              <span className="text-xs font-medium text-gray-700 group-hover:translate-x-0.5 transition-transform">{cat.title}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-700 group-hover:translate-x-0.5 transition-transform">{cat.title}</span>
+                                {cat.offeringType && (
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold tracking-wider ${cat.offeringType === 'PRODUCT' ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                    {cat.offeringType}
+                                  </span>
+                                )}
+                              </div>
                               {formData.serviceCategories.includes(cat.title) && (
                                 <div className="w-2 h-2 rounded-full bg-blue-900 shadow-sm" />
                               )}
                             </button>
                           ))
                         ) : (
-                          <div className="px-4 py-4 text-gray-400 text-xs text-center space-y-1.5">
-                            <p>No opted services found in portfolio.</p>
-                            <button
-                              type="button"
-                              onClick={(e) => { e.preventDefault(); navigate('/vendor/my-services'); }}
-                              className="text-blue-600 font-semibold underline text-[11px] hover:text-blue-800"
-                            >
-                              + Add services in Manage Services
-                            </button>
+                          <div className="px-4 py-4 text-gray-400 text-xs text-center space-y-2">
+                            <p>No products or services found in portfolio.</p>
+                            <div className="flex justify-center gap-3">
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); navigate('/vendor/my-services'); }}
+                                className="text-blue-600 font-semibold underline text-[11px] hover:text-blue-800"
+                              >
+                                + Add Services
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); navigate('/vendor/my-products'); }}
+                                className="text-purple-600 font-semibold underline text-[11px] hover:text-purple-800"
+                              >
+                                + Add Products
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
