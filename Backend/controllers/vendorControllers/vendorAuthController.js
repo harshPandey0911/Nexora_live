@@ -547,11 +547,20 @@ const logout = async (req, res) => {
     // Clear FCM tokens based on platform and reset Session ID
     if (req.user && req.user.id) {
       const updateQuery = platform === 'mobile'
-        ? { $set: { fcmTokenMobile: [], loginSessionId: null } }
-        : { $set: { fcmTokens: [], loginSessionId: null } };
+        ? { $set: { fcmTokenMobile: [], loginSessionId: null, isOnline: false, availability: 'OFFLINE' } }
+        : { $set: { fcmTokens: [], loginSessionId: null, isOnline: false, availability: 'OFFLINE' } };
 
       await Vendor.findByIdAndUpdate(req.user.id, updateQuery);
-      console.log(`[AUTH] ✅ ${platform} session & tokens cleared for vendor: ${req.user.id}`);
+      
+      try {
+        const { setVendorOnline, setVendorAvailability } = require('../../services/redisService');
+        await setVendorOnline(req.user.id, false);
+        await setVendorAvailability(req.user.id, 'OFFLINE');
+      } catch (e) {
+        // Ignore Redis error if any
+      }
+
+      console.log(`[AUTH] ✅ ${platform} session, tokens & online status cleared for vendor: ${req.user.id}`);
     }
 
     res.status(200).json({

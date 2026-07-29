@@ -680,42 +680,48 @@ const Dashboard = () => {
                         onClick={() => navigate(`/worker/job/${job.id}`)}
                         className="p-4 rounded-2xl border border-slate-200/70 bg-slate-50/50 hover:bg-white hover:border-teal-300 hover:shadow-lg transition-all duration-300 cursor-pointer group"
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <div className="w-11 h-11 rounded-2xl bg-teal-500/10 border border-teal-200 flex items-center justify-center shrink-0 text-teal-800 font-bold group-hover:scale-105 transition-transform">
-                              <FiBriefcase className="w-5 h-5" />
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-200 flex items-center justify-center shrink-0 text-teal-800 font-bold group-hover:scale-105 transition-transform">
+                              <FiBriefcase className="w-4 h-4" />
                             </div>
 
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-bold text-slate-900 truncate tracking-tight">{job.customerName}</h4>
-                              <p className="text-xs font-semibold text-teal-700 mt-0.5">{job.serviceType}</p>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-2 sm:hidden">
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate tracking-tight">{job.customerName}</h4>
+                                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md border shrink-0 ${badge.bg}`}>
+                                  {badge.label}
+                                </span>
+                              </div>
+                              <h4 className="hidden sm:block text-sm font-bold text-slate-900 truncate tracking-tight">{job.customerName}</h4>
+                              <p className="text-xs font-semibold text-teal-700 mt-0.5 leading-snug">{job.serviceType}</p>
                               
-                              <div className="flex items-center gap-2.5 mt-2 flex-wrap text-xs text-slate-500 font-medium">
-                                <span className="flex items-center gap-1">
-                                  <FiMapPin className="w-3.5 h-3.5 text-slate-400" />
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap text-xs text-slate-500 font-medium">
+                                <span className="flex items-center gap-1 text-[11px]">
+                                  <FiMapPin className="w-3 h-3 text-slate-400 shrink-0" />
                                   {job.location}
                                 </span>
-                                <span className="flex items-center gap-1 text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100/80">
-                                  <FiClock className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                                <span className="flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-100/80">
+                                  <FiClock className="w-3 h-3 text-teal-600 shrink-0" />
                                   Assigned: {job.assignedAt}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg border ${badge.bg}`}>
+                          <div className="flex items-center justify-between sm:flex-col sm:items-end gap-1.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                            <span className={`hidden sm:inline-flex text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-lg border ${badge.bg}`}>
                               {badge.label}
                             </span>
 
                             {job.price > 0 && (
-                              <span className="text-sm font-black text-slate-900">
+                              <span className="text-xs sm:text-sm font-black text-slate-900">
                                 ₹{Number(job.price).toLocaleString('en-IN')}
                               </span>
                             )}
 
-                            <div className="w-7 h-7 rounded-xl bg-slate-100 group-hover:bg-teal-600 group-hover:text-white flex items-center justify-center text-slate-500 transition-all mt-1">
-                              <FiArrowRight className="w-4 h-4" />
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-slate-100 group-hover:bg-teal-600 group-hover:text-white flex items-center justify-center text-slate-500 transition-all">
+                              <FiArrowRight className="w-3.5 h-3.5" />
                             </div>
                           </div>
                         </div>

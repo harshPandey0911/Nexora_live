@@ -361,59 +361,59 @@ const Wallet = () => {
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
-              className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl shadow-2xl max-w-sm sm:max-w-md w-full max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="sticky top-0 bg-gradient-to-br from-teal-600 to-teal-700 text-white px-6 py-5 rounded-t-3xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <FiDollarSign className="w-6 h-6" />
+              <div className="sticky top-0 bg-gradient-to-br from-teal-600 to-teal-700 text-white px-4 py-3.5 rounded-t-2xl flex items-center justify-between z-10 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0">
+                    <FiDollarSign className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg">Payment Details</h3>
-                    <p className="text-xs text-white/80">Transaction Information</p>
+                    <h3 className="font-bold text-sm sm:text-base leading-tight">Payment Details</h3>
+                    <p className="text-[10px] text-white/80">Transaction Information</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedTransaction(null)}
-                  className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                 >
-                  <FiX className="w-5 h-5" />
+                  <FiX className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
+              <div className="p-4 space-y-3.5">
                 {/* Amount Section */}
-                <div className="text-center pb-6 border-b border-gray-100">
-                  <p className="text-sm text-gray-500 mb-2">Amount Received</p>
-                  <p className="text-4xl font-black text-green-600">₹{selectedTransaction.amount?.toLocaleString()}</p>
-                  <p className="text-xs text-gray-400 mt-2">{formatDateTime(selectedTransaction.createdAt)}</p>
+                <div className="text-center pb-3.5 border-b border-gray-100">
+                  <p className="text-xs text-gray-500 font-medium mb-1">Amount Received</p>
+                  <p className="text-2xl sm:text-3xl font-black text-green-600">₹{selectedTransaction.amount?.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400 mt-1">{formatDateTime(selectedTransaction.createdAt)}</p>
                 </div>
 
                 {/* Screenshot */}
                 {selectedTransaction.metadata?.screenshot && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <FiImage className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Payment Proof</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <FiImage className="w-4 h-4 text-teal-600" />
+                      <h4 className="font-bold text-xs text-gray-900">Payment Proof</h4>
                     </div>
                     <div
-                      className="relative rounded-2xl overflow-hidden border-2 border-gray-100 cursor-pointer hover:border-teal-500 transition-colors group"
+                      className="relative rounded-xl overflow-hidden border border-gray-100 cursor-pointer hover:border-teal-500 transition-colors group"
                       onClick={() => viewScreenshot(selectedTransaction.metadata.screenshot)}
                     >
                       <img
                         src={selectedTransaction.metadata.screenshot}
                         alt="Payment Screenshot"
-                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="200"%3E%3Crect fill="%23f3f4f6" width="400" height="200"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="18" dy="100" dx="120"%3EImage not available%3C/text%3E%3C/svg%3E';
                         }}
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full">
-                          <p className="text-sm font-bold text-gray-900">Click to enlarge</p>
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                          <p className="text-xs font-bold text-gray-900">Click to enlarge</p>
                         </div>
                       </div>
                     </div>
@@ -422,12 +422,12 @@ const Wallet = () => {
 
                 {/* Payment Method */}
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <FiCreditCard className="w-5 h-5 text-teal-600" />
-                    <h4 className="font-bold text-gray-900">Payment Method</h4>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <FiCreditCard className="w-4 h-4 text-teal-600" />
+                    <h4 className="font-bold text-xs text-gray-900">Payment Method</h4>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <p className="text-gray-800 font-bold text-sm">
+                  <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100/80">
+                    <p className="text-gray-800 font-bold text-xs">
                       {(selectedTransaction.paymentMethod || selectedTransaction.metadata?.paymentMethod) === 'upi'
                         ? '📱 UPI (GPay / PhonePe / Paytm)'
                         : (selectedTransaction.paymentMethod || selectedTransaction.metadata?.paymentMethod) === 'bank_transfer'
@@ -440,12 +440,12 @@ const Wallet = () => {
                 {/* Transaction / Reference ID */}
                 {(selectedTransaction.referenceId || selectedTransaction.metadata?.transactionId) && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <FiFileText className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Reference / Txn ID</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <FiFileText className="w-4 h-4 text-teal-600" />
+                      <h4 className="font-bold text-xs text-gray-900">Reference / Txn ID</h4>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-gray-700 font-mono text-sm break-all">
+                    <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100/80">
+                      <p className="text-gray-700 font-mono text-xs break-all">
                         {selectedTransaction.referenceId || selectedTransaction.metadata?.transactionId}
                       </p>
                     </div>
@@ -455,40 +455,40 @@ const Wallet = () => {
                 {/* Notes */}
                 {selectedTransaction.metadata?.notes && (
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <FiInfo className="w-5 h-5 text-teal-600" />
-                      <h4 className="font-bold text-gray-900">Settlement Notes</h4>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <FiInfo className="w-4 h-4 text-teal-600" />
+                      <h4 className="font-bold text-xs text-gray-900">Settlement Notes</h4>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-gray-700 text-sm leading-relaxed">{selectedTransaction.metadata.notes}</p>
+                    <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100/80">
+                      <p className="text-gray-700 text-xs leading-snug">{selectedTransaction.metadata.notes}</p>
                     </div>
                   </div>
                 )}
 
                 {/* Additional Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-teal-50 rounded-xl p-4">
-                    <p className="text-xs text-teal-600 font-semibold mb-1">Status</p>
-                    <p className="text-sm font-bold text-teal-800 capitalize">{selectedTransaction.status || 'Completed'}</p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="bg-teal-50/80 rounded-xl p-2.5 border border-teal-100">
+                    <p className="text-[10px] text-teal-600 font-bold mb-0.5 uppercase tracking-wider">Status</p>
+                    <p className="text-xs font-bold text-teal-800 capitalize">{selectedTransaction.status || 'Completed'}</p>
                   </div>
-                  <div className="bg-blue-50 rounded-xl p-4">
-                    <p className="text-xs text-blue-600 font-semibold mb-1">Settlement Type</p>
-                    <p className="text-sm font-bold text-blue-800">Salary Reset & Payout</p>
+                  <div className="bg-blue-50/80 rounded-xl p-2.5 border border-blue-100">
+                    <p className="text-[10px] text-blue-600 font-bold mb-0.5 uppercase tracking-wider">Settlement Type</p>
+                    <p className="text-xs font-bold text-blue-800 leading-tight">Salary Reset & Payout</p>
                   </div>
                 </div>
 
                 {/* Description */}
                 {selectedTransaction.description && (
-                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
-                    <p className="text-xs text-emerald-700 font-bold mb-1 uppercase tracking-wider">Settlement Details</p>
-                    <p className="text-sm text-emerald-900 font-medium leading-relaxed">{selectedTransaction.description}</p>
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-2.5 border border-emerald-100">
+                    <p className="text-[10px] text-emerald-700 font-bold mb-0.5 uppercase tracking-wider">Settlement Details</p>
+                    <p className="text-xs text-emerald-900 font-medium leading-relaxed break-words">{selectedTransaction.description}</p>
                   </div>
                 )}
 
                 {/* Close Button */}
                 <button
                   onClick={() => setSelectedTransaction(null)}
-                  className="w-full py-4 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg"
+                  className="w-full py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-700 hover:to-teal-800 text-white text-xs font-bold rounded-xl transition-all active:scale-95 shadow-md cursor-pointer mt-1"
                 >
                   Close
                 </button>

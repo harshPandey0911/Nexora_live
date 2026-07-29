@@ -224,10 +224,14 @@ const ManualAssignment = () => {
       const res = await adminBookingService.getAllBookings(params);
       if (res.success) {
         // Sort: urgent (escalated) → waiting (requested) → active → done
+        // Within same priority group → oldest first (FIFO: first-in, first-served)
         const sorted = (res.data || []).sort((a, b) => {
           const ca = getStatusConfig(a);
           const cb = getStatusConfig(b);
-          return (PRIORITY_ORDER[ca.priority] ?? 5) - (PRIORITY_ORDER[cb.priority] ?? 5);
+          const priorityDiff = (PRIORITY_ORDER[ca.priority] ?? 5) - (PRIORITY_ORDER[cb.priority] ?? 5);
+          if (priorityDiff !== 0) return priorityDiff;
+          // Same priority → newest booking first (LIFO: last-in, first-served)
+          return new Date(b.createdAt) - new Date(a.createdAt);
         });
         setBookings(sorted);
         setLastRefreshed(new Date());

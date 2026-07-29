@@ -188,60 +188,7 @@ const Earnings = () => {
         </div>
       </div>
 
-      {/* Operational Breakdown Section */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-0.5">
-          <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Operational Breakdown</h3>
-          <select 
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="bg-white border border-gray-200 text-[10px] font-bold text-gray-700 px-3 py-1.5 rounded-lg outline-none cursor-pointer uppercase tracking-wider hover:border-gray-300 transition-all shadow-2xs"
-          >
-            <option value="all">Consolidated</option>
-            <option value="today">Today</option>
-            <option value="week">Weekly</option>
-            <option value="month">Monthly</option>
-          </select>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
-                <FiDollarSign className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Gross Earnings</p>
-                <p className="text-sm sm:text-base font-bold text-gray-900">+₹{(breakdown.totalEarnings || 0).toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0">
-                <FiGift className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Protocol Bonuses</p>
-                <p className="text-sm sm:text-base font-bold text-gray-900">+₹{(breakdown.totalBonuses || 0).toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-3.5 border border-gray-100 shadow-2xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center shrink-0">
-                <FiAlertCircle className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">System Deductions</p>
-                <p className="text-sm sm:text-base font-bold text-rose-600">-₹{(breakdown.totalDeductions || 0).toLocaleString('en-IN')}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Recent Activity List */}
       <div className="space-y-3 pt-2">

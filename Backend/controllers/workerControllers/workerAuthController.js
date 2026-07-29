@@ -247,11 +247,11 @@ const logout = async (req, res) => {
     // Clear FCM tokens based on platform and reset Session ID
     if (req.user && req.user.id) {
       const updateQuery = platform === 'mobile'
-        ? { $set: { fcmTokenMobile: [], loginSessionId: null } }
-        : { $set: { fcmTokens: [], loginSessionId: null } };
+        ? { $set: { fcmTokenMobile: [], loginSessionId: null, isOnline: false, availability: 'OFFLINE' } }
+        : { $set: { fcmTokens: [], loginSessionId: null, isOnline: false, availability: 'OFFLINE' } };
 
       await Worker.findByIdAndUpdate(req.user.id, updateQuery);
-      console.log(`[AUTH] ✅ ${platform} session & tokens cleared for worker: ${req.user.id}`);
+      console.log(`[AUTH] ✅ ${platform} session, tokens & online status cleared for worker: ${req.user.id}`);
     }
 
     res.status(200).json({

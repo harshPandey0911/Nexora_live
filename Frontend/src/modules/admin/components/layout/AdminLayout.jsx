@@ -99,6 +99,34 @@ const AdminLayout = () => {
       console.log('🚨 [AdminLayout] Received vendor cancellation/decline socket event:', data);
       const bId = data.bookingId || data.id;
 
+      let bookingDetails = {
+        _id: bId,
+        id: bId,
+        bookingNumber: data.bookingNumber || bId,
+        declinedVendorName: data.vendorName || data.declinedVendorName || 'Vendor',
+        declinedVendorId: data.vendorId || data.declinedVendorId,
+        declineReason: data.reason || data.declineReason || 'Vendor declined booking / Pool exhausted',
+        serviceName: data.serviceName || data.service || 'Service Booking'
+      };
+
+      try {
+        const res = await adminBookingService.getBookingById(bId);
+        if (res?.success && res.data) {
+          bookingDetails = {
+            ...bookingDetails,
+            ...res.data,
+            bookingNumber: res.data.bookingNumber || res.data._id,
+            declinedVendorName: data.vendorName || res.data.declinedVendorName || 'Vendor',
+            declineReason: data.reason || res.data.declineReason || 'Vendor declined booking / Pool exhausted'
+          };
+        }
+      } catch (e) {
+        console.error('Failed to fetch full booking details for escalation popup:', e);
+      }
+
+      setActiveAlert(bookingDetails);
+      startAlarm();
+
       // Dispatch event to reload active booking lists across admin UI
       window.dispatchEvent(new CustomEvent('adminBookingStatusChanged', { detail: { bookingId: bId, status: data.status || 'ESCALATED' } }));
       window.dispatchEvent(new Event('adminBookingAssigned'));

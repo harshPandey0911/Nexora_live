@@ -38,3 +38,7 @@ config/firebase-service-account.json
 config/*.json
 
 cloudinary-image-urls.json
+
+# Firebase Admin SDK Credentials
+*firebase-adminsdk*.json
+nexorago-2628b-firebase-adminsdk-fbsvc-097e8314b1.json

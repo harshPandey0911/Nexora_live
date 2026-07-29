@@ -162,13 +162,13 @@ messaging.onBackgroundMessage((payload) => {
       url: data.link || '/',
       timestamp: Date.now()
     },
-    // Vibration pattern for mobile devices
+    // Vibration pattern for mobile & supported desktop devices
     vibrate: vibrate,
-    // Keep notification until user interacts (for important ones)
+    // Keep notification until user interacts (for important ones like new_booking)
     requireInteraction: requireInteraction,
     // Action buttons
     actions: actions,
-    // Sound will be played by the system for high priority
+    // Sound will be played by OS/browser system for high priority notifications
     silent: false,
     // Renotify even if same tag exists
     renotify: true,
@@ -176,7 +176,7 @@ messaging.onBackgroundMessage((payload) => {
     timestamp: Date.now()
   };
 
-  // Show the notification
+  // Show the notification with system sound chime
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 

@@ -56,12 +56,12 @@ const initializeSocket = (server) => {
       socket.join(`user_${socket.userId.toString()}`);
     } else if (role === 'VENDOR') {
       socket.join(`vendor_${socket.userId.toString()}`);
-      // Update vendor online status
-      updateVendorOnlineStatus(socket.userId, true, socket.id);
+      // Register socketId without overriding manual isOnline toggle
+      updateVendorSocketInfo(socket.userId, socket.id);
     } else if (role === 'WORKER') {
       socket.join(`worker_${socket.userId.toString()}`);
-      // Update worker online status
-      updateWorkerOnlineStatus(socket.userId, true, socket.id);
+      // Register socketId without overriding manual isOnline toggle
+      updateWorkerSocketInfo(socket.userId, socket.id);
     } else if (role === 'ADMIN') {
       socket.join(`admin_${socket.userId.toString()}`);
       socket.join('admin_room');
@@ -220,69 +220,32 @@ const initializeSocket = (server) => {
 
     socket.on('disconnect', () => {
       console.log(`Socket disconnected: ${socket.id}`);
-      // Update online status
-      if (socket.userRole === 'VENDOR') {
-        updateVendorOnlineStatus(socket.userId, false, null);
-      } else if (socket.userRole === 'WORKER') {
-        updateWorkerOnlineStatus(socket.userId, false, null);
-      }
+      // Do not alter manual isOnline toggle status on disconnect
     });
   });
 
   console.log('Socket.io initialized successfully');
 };
 
-// Helper function to update vendor online status
-const updateVendorOnlineStatus = async (vendorId, isOnline, socketId) => {
+// Helper function to update vendor socket info without touching manual isOnline status
+const updateVendorSocketInfo = async (vendorId, socketId) => {
   try {
     const Vendor = require('../models/Vendor');
-    const { setVendorOnline, setVendorAvailability } = require('../services/redisService');
-
-    const updateData = {
-      currentSocketId: socketId
-    };
-
-    if (!isOnline) {
-      updateData.lastSeenAt = new Date();
-    }
-    // Note: We don't automatically set availability to 'AVAILABLE' on connect.
-    // This allows vendors to stay 'OFFLINE' even if their app is open (socket connected).
-
-    // Update MongoDB
-    const updatedVendor = await Vendor.findByIdAndUpdate(vendorId, updateData, { new: true });
-
-    // Update Redis cache (fast lookup)
-    await setVendorOnline(vendorId, isOnline);
-    if (updateData.availability) {
-      await setVendorAvailability(vendorId, updateData.availability);
-    }
-
-    console.log(`[Socket] Vendor ${vendorId} is now ${isOnline ? 'CONNECTED' : 'DISCONNECTED'} (Availability: ${updatedVendor?.availability})`);
+    await Vendor.findByIdAndUpdate(vendorId, { currentSocketId: socketId });
+    console.log(`[Socket] Vendor ${vendorId} socket updated: ${socketId}`);
   } catch (error) {
-    console.error('[Socket] Error updating vendor online status:', error);
+    console.error('[Socket] Error updating vendor socket info:', error);
   }
 };
 
-// Helper function to update worker online status
-const updateWorkerOnlineStatus = async (workerId, isOnline, socketId) => {
+// Helper function to update worker socket info without touching manual isOnline status
+const updateWorkerSocketInfo = async (workerId, socketId) => {
   try {
     const Worker = require('../models/Worker');
-
-    const updateData = {};
-
-    if (isOnline) {
-      // Just mark as technically connected/active if needed
-    } else {
-      updateData.lastSeenAt = new Date();
-    }
-
-    if (Object.keys(updateData).length > 0) {
-      await Worker.findByIdAndUpdate(workerId, updateData);
-    }
-
-    console.log(`[Socket] Worker ${workerId} is now ${isOnline ? 'CONNECTED' : 'DISCONNECTED'}`);
+    await Worker.findByIdAndUpdate(workerId, { currentSocketId: socketId });
+    console.log(`[Socket] Worker ${workerId} socket updated: ${socketId}`);
   } catch (error) {
-    console.error('[Socket] Error updating worker online status:', error);
+    console.error('[Socket] Error updating worker socket info:', error);
   }
 };
 

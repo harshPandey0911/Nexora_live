@@ -51,6 +51,7 @@ const getDashboardStats = async (req, res) => {
       pendingWithdrawals,
       pendingSettlementsCount,
       pendingScraps,
+      manualAssignmentBookings,
       recentActivityDocs
     ] = await Promise.all([
       User.countDocuments(dateFilter),
@@ -89,6 +90,10 @@ const getDashboardStats = async (req, res) => {
       Withdrawal.countDocuments({ status: 'pending' }),
       Settlement.countDocuments({ status: 'pending' }),
       Scrap.countDocuments({ status: 'pending' }),
+      // Count bookings that need manual vendor assignment (escalated)
+      Booking.countDocuments({
+        status: { $in: ['escalated', 'ESCALATED', 'vendor_declined', 'VENDOR_DECLINED'] }
+      }),
       Booking.find(dateFilter)
         .populate('userId', 'name phone')
         .populate('vendorId', 'name businessName')
@@ -135,7 +140,8 @@ const getDashboardStats = async (req, res) => {
           approvedVendors,
           pendingWithdrawals,
           pendingSettlements: pendingSettlementsCount,
-          pendingScraps
+          pendingScraps,
+          manualAssignmentBookings
         },
         recentBookings
       }

@@ -154,6 +154,9 @@ const ProductOrderConfirmation = () => {
           </div>
           <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Order Confirmed!</h1>
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-widest mt-1">Order ID: #{order.orderId}</p>
+          <div className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-700 px-3.5 py-1.5 rounded-full text-xs font-extrabold mt-3 shadow-xs">
+            <span className="text-sm">🚚</span> Estimated Delivery: <span className="text-emerald-900 font-black">6 - 7 Days</span>
+          </div>
 
           {/* Timeline Status — matches worker side stages */}
           <div className="mt-8 pt-8 border-t border-gray-100">

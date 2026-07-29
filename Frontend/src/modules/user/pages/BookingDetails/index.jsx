@@ -246,6 +246,8 @@ const BookingDetails = () => {
       case 'requested':
       case 'searching':
         return <FiSearch className="w-5 h-5 text-amber-500 animate-pulse" />;
+      case 'escalated':
+        return <FiAlertCircle className="w-5 h-5 text-orange-500 animate-pulse" />;
       default:
         return <FiClock className="w-5 h-5 text-gray-500" />;
     }
@@ -274,6 +276,8 @@ const BookingDetails = () => {
       case 'requested':
       case 'searching':
         return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'escalated':
+        return 'bg-orange-50 text-orange-700 border-orange-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }
@@ -294,6 +298,7 @@ const BookingDetails = () => {
       case 'cancelled': return 'Cancelled';
       case 'requested':
       case 'searching': return 'Finding Expert';
+      case 'escalated': return 'Waiting for Admin Assignment';
       default: return status?.replace('_', ' ') || 'Pending';
     }
   };
@@ -756,7 +761,39 @@ const BookingDetails = () => {
             </div>
           )}
 
+          {/* Escalated State Card — Admin Manual Assignment */}
+          {booking.status?.toLowerCase() === 'escalated' && (
+            <div className="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-orange-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-full -translate-y-16 translate-x-16 blur-3xl opacity-50 group-hover:opacity-80 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center border border-orange-100 shadow-sm">
+                    <FiAlertCircle className="w-6 h-6 text-orange-500 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-gray-900 leading-tight">Waiting for Admin Assignment</h3>
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Manual Assignment in Progress</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-4 leading-relaxed font-medium">
+                  Our team is personally reviewing your booking and assigning the best available expert for you. This usually takes a few minutes.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 bg-orange-50 rounded-xl p-3 border border-orange-100">
+                    <span className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-ping flex-shrink-0"></span>
+                    <span>Admin is manually selecting a verified expert for your request...</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <span className="w-1.5 h-1.5 bg-gray-300 rounded-full flex-shrink-0"></span>
+                    <span>You'll be notified as soon as an expert is assigned.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Service Partner Card - Only for Services */}
+
           {(booking.workerId || booking.assignedTo || booking.vendorId) && booking.offeringType !== 'PRODUCT' && ['confirmed', 'assigned', 'journey_started', 'visited', 'in_progress', 'work_done'].includes(booking.status?.toLowerCase()) && (
             <div className="bg-white rounded-3xl p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
               <div className="flex justify-between items-start mb-4">

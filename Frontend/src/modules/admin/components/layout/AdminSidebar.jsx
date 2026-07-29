@@ -126,7 +126,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     bookings: 0,
     vendors: 0,
     withdrawals: 0,
-    pendingSettlements: 0
+    pendingSettlements: 0,
+    manualAssignment: 0
   });
 
   // Load admin user from storage
@@ -163,7 +164,8 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             bookings: stats.pendingBookings || 0,
             vendors: stats.pendingVendors || 0,
             withdrawals: stats.pendingWithdrawals || 0,
-            pendingSettlements: stats.pendingSettlements || 0
+            pendingSettlements: stats.pendingSettlements || 0,
+            manualAssignment: stats.manualAssignmentBookings || 0
           });
         }
       } catch (error) {
@@ -175,6 +177,22 @@ const AdminSidebar = ({ isOpen, onClose }) => {
     // Refresh every 30 seconds
     const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Real-time badge update: listen to socket events relayed by AdminLayout
+  useEffect(() => {
+    const handleBookingStatusChanged = (e) => {
+      const { status } = e.detail || {};
+      if (status === 'ESCALATED') {
+        // A booking was escalated to manual assignment — increment badge
+        setCounts(prev => ({ ...prev, manualAssignment: prev.manualAssignment + 1 }));
+      } else if (status === 'ACCEPTED' || status === 'ASSIGNED') {
+        // A booking was resolved — decrement badge
+        setCounts(prev => ({ ...prev, manualAssignment: Math.max(0, prev.manualAssignment - 1) }));
+      }
+    };
+    window.addEventListener('adminBookingStatusChanged', handleBookingStatusChanged);
+    return () => window.removeEventListener('adminBookingStatusChanged', handleBookingStatusChanged);
   }, []);
 
   // Check if mobile on mount and resize
@@ -367,6 +385,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                       {item.title === "Settlements" && child === "Withdrawals" && counts.withdrawals > 0 && (
                         <span className="bg-orange-500 text-white text-[10px] h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full">
                           {counts.withdrawals}
+                        </span>
+                      )}
+                      {item.title === "Bookings" && child === "Manual Assignment" && counts.manualAssignment > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full animate-pulse">
+                          {counts.manualAssignment > 99 ? '99+' : counts.manualAssignment}
                         </span>
                       )}
                     </div>
