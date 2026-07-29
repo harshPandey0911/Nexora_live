@@ -68,59 +68,41 @@ const getAllTransactions = async (req, res) => {
       bookings.forEach(booking => {
         const bill = billMap[booking._id.toString()];
 
-        // 1. Company Revenue (from VendorBill)
-        if (shouldInclude('commission') && bill && bill.companyRevenue > 0) {
-          virtualTransactions.push({
-            _id: `${booking._id}_comm`,
-            referenceId: `REV-${booking.bookingNumber}`,
-            bookingId: booking,
-            userId: booking.userId,
-            vendorId: booking.vendorId,
-            type: 'commission',
-            amount: bill.companyRevenue,
-            status: 'completed',
-            paymentMethod: 'system',
-            createdAt: bill.paidAt || booking.completedAt || booking.updatedAt || booking.createdAt,
-            description: `Company revenue for booking ${booking.bookingNumber}`
-          });
-        }
+        const baseCommission = bill ? Math.max(0, bill.companyRevenue - (booking.visitingCharges || 0)) : 0;
+        const convenienceFee = Number(booking.visitingCharges) || 0;
+        const totalCompanyIncome = bill ? bill.companyRevenue : convenienceFee;
+        const gstAmount = bill ? bill.totalGST : 0;
+        const vendorEarning = bill ? bill.vendorTotalEarning : 0;
+        const grandTotal = bill ? bill.grandTotal : (booking.finalAmount || 0);
 
-        // 2. GST (from VendorBill)
-        if (shouldInclude('gst') && bill && bill.totalGST > 0) {
-          virtualTransactions.push({
-            _id: `${booking._id}_gst`,
-            referenceId: `GST-${booking.bookingNumber}`,
-            bookingId: booking,
-            type: 'gst',
-            amount: bill.totalGST,
-            status: 'completed',
-            paymentMethod: 'system',
-            createdAt: bill.paidAt || booking.completedAt || booking.updatedAt || booking.createdAt,
-            description: `GST for booking ${booking.bookingNumber}`
-          });
-        }
-
-        // 3. Convenience Fee (Visiting Charges)
-        if (shouldInclude('convenience_fee') && booking.visitingCharges > 0) {
-          virtualTransactions.push({
-            _id: `${booking._id}_conv`,
-            referenceId: `FEE-${booking.bookingNumber}`,
-            bookingId: booking,
-            type: 'convenience_fee',
-            amount: booking.visitingCharges,
-            status: 'completed',
-            paymentMethod: 'system',
-            createdAt: booking.completedAt || booking.updatedAt || booking.createdAt,
-            description: `Convenience Fee for booking ${booking.bookingNumber}`
-          });
-        }
+        virtualTransactions.push({
+          _id: booking._id.toString(),
+          referenceId: `REV-${booking.bookingNumber}`,
+          bookingId: booking,
+          bookingNumber: booking.bookingNumber,
+          userId: booking.userId,
+          vendorId: booking.vendorId,
+          type: 'booking_revenue',
+          grandTotal,
+          commission: baseCommission,
+          convenienceFee,
+          companyIncome: totalCompanyIncome,
+          gstAmount,
+          vendorEarning,
+          vendorBill: bill || null,
+          amount: totalCompanyIncome,
+          status: 'completed',
+          paymentMethod: booking.paymentMethod || 'cash',
+          createdAt: bill?.paidAt || booking.completedAt || booking.updatedAt || booking.createdAt,
+          description: `Platform revenue breakdown for booking ${booking.bookingNumber}`
+        });
       });
 
       return res.status(200).json({
         success: true,
         data: virtualTransactions,
         pagination: {
-          total: totalBookings, // Note: This is total bookings, not total rows
+          total: totalBookings,
           page: parseInt(page),
           limit: parseInt(limit),
           pages: Math.ceil(totalBookings / parseInt(limit))
