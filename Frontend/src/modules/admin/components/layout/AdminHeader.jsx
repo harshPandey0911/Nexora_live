@@ -107,9 +107,21 @@ const AdminHeader = ({ onMenuClick }) => {
 
   useEffect(() => {
     fetchNotifications();
+    
+    const handleRealtimeNotification = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('adminNotificationReceived', handleRealtimeNotification);
+    window.addEventListener('adminWorkerCreated', handleRealtimeNotification);
+
     // Optional: Poll every 60 seconds
     const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('adminNotificationReceived', handleRealtimeNotification);
+      window.removeEventListener('adminWorkerCreated', handleRealtimeNotification);
+    };
   }, []);
 
   const handleMarkAsRead = async (id) => {

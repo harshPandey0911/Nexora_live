@@ -1,5 +1,6 @@
 const Worker = require('../../models/Worker');
 const Booking = require('../../models/Booking');
+const ProductOrder = require('../../models/ProductOrder');
 const { validationResult } = require('express-validator');
 const cloudinaryService = require('../../services/cloudinaryService');
 const { WORKER_STATUS, BOOKING_STATUS } = require('../../utils/constants');
@@ -37,14 +38,26 @@ const getVendorWorkers = async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
-    // Dynamically compute completedJobs count & salary owed for each worker from Booking collection
+    // Dynamically compute completedJobs count & salary owed for each worker from Booking & ProductOrder collections
     const workerIds = workers.map(w => w._id);
-    const [completedStats, salaryOwedStats] = await Promise.all([
+    const completedStatuses = [
+      'completed', 'COMPLETED',
+      'work_done', 'WORK_DONE',
+      'delivered', 'DELIVERED',
+      'delivered_by_worker', 'DELIVERED_BY_WORKER',
+      'paid', 'PAID',
+      'worker_paid', 'WORKER_PAID'
+    ];
+
+    const [
+      bookingCompletedStats, productCompletedStats,
+      bookingSalaryOwedStats, productSalaryOwedStats
+    ] = await Promise.all([
       Booking.aggregate([
         {
           $match: {
             workerId: { $in: workerIds },
-            status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE', 'paid', 'closed', 'settlement_pending', 'worker_paid'] }
+            status: { $in: completedStatuses }
           }
         },
         {
@@ -54,11 +67,25 @@ const getVendorWorkers = async (req, res) => {
           }
         }
       ]),
+      ProductOrder.aggregate([
+        {
+          $match: {
+            $or: [{ workerId: { $in: workerIds } }, { assignedWorkerId: { $in: workerIds } }],
+            status: { $in: completedStatuses }
+          }
+        },
+        {
+          $group: {
+            _id: { $ifNull: ['$workerId', '$assignedWorkerId'] },
+            count: { $sum: 1 }
+          }
+        }
+      ]),
       Booking.aggregate([
         {
           $match: {
             workerId: { $in: workerIds },
-            status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
+            status: { $in: completedStatuses },
             isWorkerPaid: { $ne: true },
             workerPaymentStatus: { $ne: 'PAID' }
           }
@@ -66,20 +93,42 @@ const getVendorWorkers = async (req, res) => {
         {
           $group: {
             _id: '$workerId',
-            totalOwed: { $sum: { $ifNull: ['$finalAmount', '$basePrice'] } }
+            totalOwed: { $sum: { $ifNull: ['$vendorEarnings', '$finalAmount'] } }
+          }
+        }
+      ]),
+      ProductOrder.aggregate([
+        {
+          $match: {
+            $or: [{ workerId: { $in: workerIds } }, { assignedWorkerId: { $in: workerIds } }],
+            status: { $in: completedStatuses },
+            isWorkerPaid: { $ne: true },
+            workerPaymentStatus: { $ne: 'PAID' }
+          }
+        },
+        {
+          $group: {
+            _id: { $ifNull: ['$workerId', '$assignedWorkerId'] },
+            totalOwed: { $sum: { $ifNull: ['$financialBreakdown.totalAmount', '$totalAmount'] } }
           }
         }
       ])
     ]);
 
     const completedMap = {};
-    completedStats.forEach(stat => {
-      completedMap[stat._id.toString()] = stat.count;
+    bookingCompletedStats.forEach(stat => {
+      if (stat._id) completedMap[stat._id.toString()] = (completedMap[stat._id.toString()] || 0) + stat.count;
+    });
+    productCompletedStats.forEach(stat => {
+      if (stat._id) completedMap[stat._id.toString()] = (completedMap[stat._id.toString()] || 0) + stat.count;
     });
 
     const salaryOwedMap = {};
-    salaryOwedStats.forEach(stat => {
-      salaryOwedMap[stat._id.toString()] = stat.totalOwed;
+    bookingSalaryOwedStats.forEach(stat => {
+      if (stat._id) salaryOwedMap[stat._id.toString()] = (salaryOwedMap[stat._id.toString()] || 0) + stat.totalOwed;
+    });
+    productSalaryOwedStats.forEach(stat => {
+      if (stat._id) salaryOwedMap[stat._id.toString()] = (salaryOwedMap[stat._id.toString()] || 0) + stat.totalOwed;
     });
 
     const mappedWorkers = workers.map(w => ({
@@ -207,6 +256,42 @@ const addWorker = async (req, res) => {
       approvalStatus: 'pending',
       status: WORKER_STATUS.OFFLINE
     });
+
+    // Notify Admins (Non-blocking)
+    (async () => {
+      try {
+        const { createNotification } = require('../notificationControllers/notificationController');
+        const Admin = require('../../models/Admin');
+        const admins = await Admin.find({});
+
+        const notificationData = {
+          type: 'new_worker_registration',
+          title: 'New Worker Added',
+          message: `A new worker ${name} has been added by a vendor and is awaiting approval.`,
+          relatedId: worker._id,
+          relatedType: 'worker'
+        };
+
+        if (admins && admins.length > 0) {
+          await Promise.all(admins.map(admin =>
+            createNotification({ ...notificationData, adminId: admin._id })
+          ));
+        }
+
+        // Emit socket event to admin_room for real-time sidebar & notification update
+        const { getIO } = require('../../sockets');
+        const io = getIO();
+        if (io) {
+          io.to('admin_room').emit('adminWorkerCreated', {
+            workerId: worker._id,
+            name: worker.name,
+            approvalStatus: worker.approvalStatus
+          });
+        }
+      } catch (e) {
+        console.error('Non-blocking admin worker notification error:', e);
+      }
+    })();
 
     res.status(201).json({
       success: true,
@@ -548,16 +633,38 @@ const payAndResetWorkerSalary = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Worker not found or does not belong to vendor' });
     }
 
-    // Find all completed unpaid bookings for this worker under this vendor
-    const unpaidBookings = await Booking.find({
-      workerId: worker._id,
-      vendorId: vendorId,
-      status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
-      isWorkerPaid: { $ne: true },
-      workerPaymentStatus: { $ne: 'PAID' }
-    });
+    const completedStatuses = [
+      'completed', 'COMPLETED',
+      'work_done', 'WORK_DONE',
+      'delivered', 'DELIVERED',
+      'delivered_by_worker', 'DELIVERED_BY_WORKER',
+      'paid', 'PAID',
+      'worker_paid', 'WORKER_PAID'
+    ];
 
-    const totalUnpaidOwed = unpaidBookings.reduce((sum, b) => sum + (b.finalAmount || b.basePrice || 0), 0);
+    const ProductOrder = require('../../models/ProductOrder');
+
+    // Find all completed unpaid bookings & product orders for this worker under this vendor
+    const [unpaidBookings, unpaidProductOrders] = await Promise.all([
+      Booking.find({
+        workerId: worker._id,
+        vendorId: vendorId,
+        status: { $in: completedStatuses },
+        isWorkerPaid: { $ne: true },
+        workerPaymentStatus: { $ne: 'PAID' }
+      }),
+      ProductOrder.find({
+        $or: [{ workerId: worker._id }, { assignedWorkerId: worker._id }],
+        vendorId: vendorId,
+        status: { $in: completedStatuses },
+        isWorkerPaid: { $ne: true },
+        workerPaymentStatus: { $ne: 'PAID' }
+      })
+    ]);
+
+    const totalUnpaidOwedBookings = unpaidBookings.reduce((sum, b) => sum + (b.vendorEarnings || b.finalAmount || b.basePrice || 0), 0);
+    const totalUnpaidOwedProducts = unpaidProductOrders.reduce((sum, p) => sum + (p.financialBreakdown?.totalAmount || p.totalAmount || 0), 0);
+    const totalUnpaidOwed = totalUnpaidOwedBookings + totalUnpaidOwedProducts;
     const effectiveWorkerBalance = worker.wallet?.balance || 0;
 
     if (totalUnpaidOwed <= 0 && effectiveWorkerBalance <= 0 && (!amount || Number(amount) <= 0)) {
@@ -571,11 +678,25 @@ const payAndResetWorkerSalary = async (req, res) => {
       ? Number(amount) 
       : (totalUnpaidOwed || effectiveWorkerBalance);
 
-    // Mark unpaid bookings as paid
+    // Mark unpaid bookings & product orders as paid
     const bookingIdsToUpdate = unpaidBookings.map(b => b._id);
     if (bookingIdsToUpdate.length > 0) {
       await Booking.updateMany(
         { _id: { $in: bookingIdsToUpdate } },
+        {
+          $set: {
+            isWorkerPaid: true,
+            workerPaymentStatus: 'PAID',
+            workerPaidAt: new Date()
+          }
+        }
+      );
+    }
+
+    const productOrderIdsToUpdate = unpaidProductOrders.map(p => p._id);
+    if (productOrderIdsToUpdate.length > 0) {
+      await ProductOrder.updateMany(
+        { _id: { $in: productOrderIdsToUpdate } },
         {
           $set: {
             isWorkerPaid: true,

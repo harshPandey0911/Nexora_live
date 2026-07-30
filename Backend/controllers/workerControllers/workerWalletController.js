@@ -1,6 +1,16 @@
 const Worker = require('../../models/Worker');
 const Transaction = require('../../models/Transaction');
 const Booking = require('../../models/Booking');
+const ProductOrder = require('../../models/ProductOrder');
+
+const completedStatuses = [
+  'completed', 'COMPLETED',
+  'work_done', 'WORK_DONE',
+  'delivered', 'DELIVERED',
+  'delivered_by_worker', 'DELIVERED_BY_WORKER',
+  'paid', 'PAID',
+  'worker_paid', 'WORKER_PAID'
+];
 
 /**
  * Get worker wallet with ledger balance
@@ -15,44 +25,83 @@ const getWallet = async (req, res) => {
     }
 
     // Calculate total active physical cash collected on field pending handover to vendor
-    const cashBookingsResult = await Booking.aggregate([
-      {
-        $match: {
-          workerId: worker._id,
-          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
-          isWorkerPaid: { $ne: true },
-          workerPaymentStatus: { $ne: 'PAID' }
+    const [cashBookingsResult, cashProductOrdersResult] = await Promise.all([
+      Booking.aggregate([
+        {
+          $match: {
+            workerId: worker._id,
+            status: { $in: completedStatuses },
+            cashHandedOverAt: null,
+            isWorkerPaid: { $ne: true },
+            workerPaymentStatus: { $ne: 'PAID' }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ["$finalAmount", "$userPayableAmount", "$basePrice"] } }
+          }
         }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: { $ifNull: ["$finalAmount", "$basePrice"] } }
+      ]),
+      ProductOrder.aggregate([
+        {
+          $match: {
+            $or: [{ workerId: worker._id }, { assignedWorkerId: worker._id }],
+            status: { $in: completedStatuses },
+            cashHandedOverAt: null,
+            isWorkerPaid: { $ne: true },
+            workerPaymentStatus: { $ne: 'PAID' }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ["$financialBreakdown.totalAmount", "$totalAmount"] } }
+          }
         }
-      }
+      ])
     ]);
 
-    const cashCollectedOnField = cashBookingsResult[0]?.total || 0;
+    const cashCollectedOnField = (cashBookingsResult[0]?.total || 0) + (cashProductOrdersResult[0]?.total || 0);
 
     // Calculate pending unpaid salary owed to worker by vendor
-    const unpaidSalaryResult = await Booking.aggregate([
-      {
-        $match: {
-          workerId: worker._id,
-          status: { $in: ['completed', 'COMPLETED', 'work_done', 'WORK_DONE'] },
-          isWorkerPaid: { $ne: true },
-          workerPaymentStatus: { $ne: 'PAID' }
+    const [unpaidSalaryResult, unpaidProductSalaryResult] = await Promise.all([
+      Booking.aggregate([
+        {
+          $match: {
+            workerId: worker._id,
+            status: { $in: completedStatuses },
+            isWorkerPaid: { $ne: true },
+            workerPaymentStatus: { $ne: 'PAID' }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ["$vendorEarnings", "$finalAmount"] } }
+          }
         }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: { $ifNull: ["$finalAmount", "$basePrice"] } }
+      ]),
+      ProductOrder.aggregate([
+        {
+          $match: {
+            $or: [{ workerId: worker._id }, { assignedWorkerId: worker._id }],
+            status: { $in: completedStatuses },
+            isWorkerPaid: { $ne: true },
+            workerPaymentStatus: { $ne: 'PAID' }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ["$financialBreakdown.deliveryCharge", "$deliveryCharge", "$financialBreakdown.totalAmount", "$totalAmount"] } }
+          }
         }
-      }
+      ])
     ]);
 
-    const salaryOwed = unpaidSalaryResult[0]?.total || worker.wallet?.balance || 0;
+    // Salary Owed reflects accumulated vendor payouts added when vendor pays worker (resets on Pay & Reset)
+    const salaryOwed = worker.wallet?.balance || 0;
 
     res.status(200).json({
       success: true,
@@ -87,16 +136,55 @@ const getTransactions = async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const transactions = await Transaction.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
+    const [dbTransactions, completedBookings, completedProductOrders] = await Promise.all([
+      Transaction.find(query).sort({ createdAt: -1 }),
+      Booking.find({ workerId, status: { $in: completedStatuses } }).populate('userId', 'name'),
+      ProductOrder.find({
+        $or: [{ workerId }, { assignedWorkerId: workerId }],
+        status: { $in: completedStatuses }
+      }).populate('userId', 'name')
+    ]);
 
-    const total = await Transaction.countDocuments(query);
+    // Map completed bookings & product orders into transaction objects
+    const jobTxns = [
+      ...completedBookings.map(b => ({
+        _id: b._id,
+        type: 'worker_payment',
+        amount: b.vendorEarnings || b.finalAmount || 0,
+        status: b.isWorkerPaid ? 'SUCCESS' : 'PENDING',
+        description: `Service Payment: ${b.serviceName || 'Booking'}`,
+        createdAt: b.updatedAt || b.createdAt,
+        metadata: { bookingId: b._id, customerName: b.userId?.name || 'Customer' }
+      })),
+      ...completedProductOrders.map(p => ({
+        _id: p._id,
+        type: 'worker_payment',
+        amount: p.financialBreakdown?.totalAmount || p.totalAmount || 0,
+        status: p.isWorkerPaid ? 'SUCCESS' : 'PENDING',
+        description: `Delivery Order: ${p.items?.[0]?.title || 'Parts Delivery'}`,
+        createdAt: p.updatedAt || p.createdAt,
+        metadata: { orderId: p._id, customerName: p.userId?.name || 'Customer' }
+      }))
+    ];
+
+    // Avoid duplicate entries if a Transaction model entry already exists for a booking/order
+    const existingRelatedIds = new Set(dbTransactions.map(t => String(t.bookingId || t.relatedId || t._id)));
+    const uniqueJobTxns = jobTxns.filter(j => !existingRelatedIds.has(String(j._id)));
+
+    let allTransactions = [...dbTransactions, ...uniqueJobTxns];
+
+    if (type && type !== 'all') {
+      allTransactions = allTransactions.filter(t => t.type === type);
+    }
+
+    allTransactions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const total = allTransactions.length;
+    const paginated = allTransactions.slice(skip, skip + parseInt(limit));
 
     res.status(200).json({
       success: true,
-      data: transactions,
+      data: paginated,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),

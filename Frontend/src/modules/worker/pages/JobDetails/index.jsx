@@ -316,7 +316,7 @@ const JobDetails = () => {
 
   return (
     <div className="min-h-screen pb-20" style={{ background: themeColors.backgroundGradient }}>
-      <Header title="Job Details" onBack={() => navigate('/worker/dashboard', { replace: true })} />
+      <Header title="Job Details" onBack={() => navigate('/worker/jobs', { replace: true })} />
 
       <main className="px-4 py-6">
         {/* View Timeline Button */}

@@ -146,11 +146,30 @@ const AdminLayout = () => {
       window.dispatchEvent(new Event('adminBookingAssigned'));
     };
 
+    const handleNotification = (data) => {
+      console.log('🔔 [AdminLayout] Received notification socket event:', data);
+      window.dispatchEvent(new CustomEvent('adminNotificationReceived', { detail: data }));
+    };
+
+    const handleWorkerCreated = (data) => {
+      console.log('👷 [AdminLayout] Received adminWorkerCreated socket event:', data);
+      window.dispatchEvent(new CustomEvent('adminWorkerCreated', { detail: data }));
+      toast.success(`New Worker Registered: ${data.name || 'Worker'}`);
+    };
+
+    const handleWorkerStatusChanged = (data) => {
+      console.log('👷 [AdminLayout] Received adminWorkerStatusChanged socket event:', data);
+      window.dispatchEvent(new CustomEvent('adminWorkerStatusChanged', { detail: data }));
+    };
+
     socket.on('adminBookingDecline', handleEscalation);
     socket.on('vendor_cancelled_booking', handleEscalation);
     socket.on('vendor_rejected_booking', handleEscalation);
     socket.on('booking_cancelled_by_vendor', handleEscalation);
     socket.on('adminBookingAccept', handleAcceptance);
+    socket.on('notification', handleNotification);
+    socket.on('adminWorkerCreated', handleWorkerCreated);
+    socket.on('adminWorkerStatusChanged', handleWorkerStatusChanged);
 
     return () => {
       socket.disconnect();

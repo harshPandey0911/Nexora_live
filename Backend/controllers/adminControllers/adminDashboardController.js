@@ -48,6 +48,7 @@ const getDashboardStats = async (req, res) => {
       revenueResult,
       pendingVendors,
       approvedVendors,
+      pendingWorkers,
       pendingWithdrawals,
       pendingSettlementsCount,
       pendingScraps,
@@ -85,8 +86,9 @@ const getDashboardStats = async (req, res) => {
           }
         }
       ]),
+      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.PENDING }),
       Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED }),
-      Vendor.countDocuments({ approvalStatus: VENDOR_STATUS.APPROVED }),
+      Worker.countDocuments({ approvalStatus: 'pending' }),
       Withdrawal.countDocuments({ status: 'pending' }),
       Settlement.countDocuments({ status: 'pending' }),
       Scrap.countDocuments({ status: 'pending' }),
@@ -138,6 +140,7 @@ const getDashboardStats = async (req, res) => {
           platformCommission,
           pendingVendors,
           approvedVendors,
+          pendingWorkers,
           pendingWithdrawals,
           pendingSettlements: pendingSettlementsCount,
           pendingScraps,

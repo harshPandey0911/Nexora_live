@@ -164,6 +164,20 @@ const approveWorker = async (req, res) => {
       console.warn('Worker approval notification warning:', nErr.message);
     }
 
+    // Emit socket event to admin_room to update pending counts in real-time
+    try {
+      const { getIO } = require('../../sockets');
+      const io = getIO();
+      if (io) {
+        io.to('admin_room').emit('adminWorkerStatusChanged', {
+          workerId: worker._id,
+          approvalStatus: 'approved'
+        });
+      }
+    } catch (sErr) {
+      console.warn('Worker socket notification warning:', sErr.message);
+    }
+
     res.status(200).json({
       success: true,
       message: 'Worker approved successfully',
@@ -210,6 +224,20 @@ const rejectWorker = async (req, res) => {
       });
     } catch (nErr) {
       console.warn('Worker rejection notification warning:', nErr.message);
+    }
+
+    // Emit socket event to admin_room to update pending counts in real-time
+    try {
+      const { getIO } = require('../../sockets');
+      const io = getIO();
+      if (io) {
+        io.to('admin_room').emit('adminWorkerStatusChanged', {
+          workerId: worker._id,
+          approvalStatus: 'rejected'
+        });
+      }
+    } catch (sErr) {
+      console.warn('Worker socket notification warning:', sErr.message);
     }
 
     res.status(200).json({

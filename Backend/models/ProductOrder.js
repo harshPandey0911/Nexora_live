@@ -125,7 +125,14 @@ const productOrderSchema = new mongoose.Schema({
   workerResponse: { type: String, enum: ['PENDING', 'ACCEPTED', 'REJECTED'], default: 'PENDING' },
   workerAcceptedAt: { type: Date, default: null },
   deliveryOtp: { type: String, default: null },
-  deliveryOtpExpiry: { type: Date, default: null }
+  deliveryOtpExpiry: { type: Date, default: null },
+  // Worker Settlement & Cash Handover Fields
+  isWorkerPaid: { type: Boolean, default: false },
+  workerPaymentStatus: { type: String, enum: ['PENDING', 'PAID', 'PROCESSING', 'FAILED'], default: 'PENDING' },
+  workerPaidAt: { type: Date, default: null },
+  workerPayoutAmount: { type: Number, default: 0 },
+  cashCollected: { type: Boolean, default: false },
+  cashHandedOverAt: { type: Date, default: null }
 }, {
   timestamps: true
 });
