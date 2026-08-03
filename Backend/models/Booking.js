@@ -410,9 +410,8 @@ const bookingSchema = new mongoose.Schema({
 // Generate unique booking number
 bookingSchema.pre('save', async function (next) {
   if (this.isNew && !this.bookingNumber) {
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    this.bookingNumber = `BK${timestamp}${random}`;
+    const random = Math.floor(100000 + Math.random() * 900000);
+    this.bookingNumber = `BK-${random}`;
   }
   next();
 });

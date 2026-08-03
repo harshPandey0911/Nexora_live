@@ -289,75 +289,88 @@ const UserPayments = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaction ID</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Booking ID</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User / Entity</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Method</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Transaction ID</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Booking ID</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">User / Entity</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Amount</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Type</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Payment Method</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status</th>
+                  <th className="px-3.5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {transactions.map((tx) => (
-                  <motion.tr
-                    key={tx._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hover:bg-gray-50/50 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">{tx.referenceId || tx._id.substring(0, 10).toUpperCase()}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">{tx.bookingId?.bookingNumber || 'N/A'}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            {tx.userId?.name || tx.bookingId?.userId?.name || tx.vendorId?.businessName || tx.vendorId?.name || tx.workerId?.name || 'Guest'}
+                {transactions.map((tx) => {
+                  const txDisplayId = tx.referenceId && tx.referenceId.startsWith('pay_')
+                    ? tx.referenceId
+                    : (tx.referenceId || `#${tx._id?.slice(-8).toUpperCase()}`);
+                  const fullTxId = tx.referenceId || tx._id;
+
+                  return (
+                    <motion.tr
+                      key={tx._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="hover:bg-gray-50/50 transition-colors"
+                    >
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <span className="font-mono font-bold text-gray-900 text-xs truncate max-w-[150px]" title={fullTxId}>
+                            {txDisplayId}
                           </span>
-                          {(tx.userId || tx.bookingId?.userId) && <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">User</span>}
-                          {tx.vendorId && <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded font-medium">Vendor</span>}
-                          {tx.workerId && <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-medium">Worker</span>}
+                          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 w-max mt-0.5">
+                            User Payment
+                          </span>
                         </div>
-                        <span className="text-xs text-gray-500">
-                          {tx.userId?.email || tx.vendorId?.email || tx.workerId?.email || ''}
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className="font-mono font-bold text-xs text-gray-800 bg-gray-100 px-2 py-1 rounded">
+                          {tx.bookingId?.bookingNumber || 'N/A'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm font-bold ${getTypeColor(tx.type)}`}>
-                        {tx.type === 'credit' ? '+ ' : tx.type === 'debit' ? '- ' : ''}
-                        {formatCurrency(tx.amount)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100">
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600 capitalize">{tx.paymentMethod?.replace('_', ' ')}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(tx.status)}`}>
-                        {tx.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(tx.createdAt).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </td>
-                  </motion.tr>
-                ))}
+                      </td>
+                      <td className="px-3.5 py-3">
+                        <div className="flex flex-col max-w-[160px]">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-xs font-bold text-gray-900 truncate">
+                              {tx.userId?.name || tx.bookingId?.userId?.name || tx.vendorId?.businessName || tx.vendorId?.name || tx.workerId?.name || 'Guest'}
+                            </span>
+                            {(tx.userId || tx.bookingId?.userId) && <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded font-semibold shrink-0">User</span>}
+                            {tx.vendorId && <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded font-semibold shrink-0">Vendor</span>}
+                            {tx.workerId && <span className="text-[10px] bg-orange-100 text-orange-800 px-1.5 py-0.2 rounded font-semibold shrink-0">Worker</span>}
+                          </div>
+                          <span className="text-[11px] text-gray-500 truncate">
+                            {tx.userId?.email || tx.vendorId?.email || tx.workerId?.email || ''}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className={`text-xs font-extrabold ${getTypeColor(tx.type)}`}>
+                          {tx.type === 'credit' ? '+ ' : tx.type === 'debit' ? '- ' : ''}
+                          {formatCurrency(tx.amount)}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100">
+                          {tx.type}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className="text-xs font-medium text-gray-700 capitalize">{tx.paymentMethod?.replace('_', ' ')}</span>
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(tx.status)}`}>
+                          {tx.status}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-3 whitespace-nowrap text-xs text-gray-500 font-medium">
+                        {new Date(tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <span className="text-gray-400 ml-1 text-[11px]">
+                          {new Date(tx.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

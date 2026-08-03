@@ -336,32 +336,39 @@ const VendorPayments = () => {
               ) : (
                 transactions.map((tx) => (
                   <tr key={tx._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <span className="text-xs font-mono text-gray-500">#{tx._id.slice(-6).toUpperCase()}</span>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-mono font-bold text-gray-900 truncate max-w-[150px]" title={tx.referenceId || tx._id}>
+                          {tx.referenceId && tx.referenceId.startsWith('pay_') ? tx.referenceId : (tx.referenceId || `#${tx._id?.slice(-8).toUpperCase()}`)}
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 w-max mt-0.5">
+                          Vendor Ledger
+                        </span>
+                      </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-3.5 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-3">
-                          <FiBriefcase className="w-4 h-4" />
+                        <div className="h-7 w-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mr-2.5 shrink-0">
+                          <FiBriefcase className="w-3.5 h-3.5" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-800">{tx.vendorId?.businessName || tx.vendorId?.name || 'Unknown'}</div>
-                          <div className="text-xs text-gray-500">{tx.vendorId?.phone}</div>
+                          <div className="text-xs font-bold text-gray-900">{tx.vendorId?.businessName || tx.vendorId?.name || 'Unknown'}</div>
+                          <div className="text-[11px] text-gray-500">{tx.vendorId?.phone}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getTypeColor(tx.type)}`}>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold border ${getTypeColor(tx.type)}`}>
                         {tx.type === 'tds_deduction' ? 'TDS Deduction' : tx.type.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`text-sm font-semibold ${['earnings_credit', 'settlement'].includes(tx.type) ? 'text-green-600' : 'text-gray-800'}`}>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className={`text-xs font-extrabold ${['earnings_credit', 'settlement'].includes(tx.type) ? 'text-green-600' : 'text-gray-800'}`}>
                         {['earnings_credit', 'settlement'].includes(tx.type) ? '+' : '-'}{formatCurrency(tx.amount)}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(tx.status)}`}>
+                    <td className="py-3 px-3.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${getStatusColor(tx.status)}`}>
                         {getStatusIcon(tx.status)}
                         <span className="capitalize">{tx.status}</span>
                       </span>

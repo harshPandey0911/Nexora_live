@@ -300,11 +300,11 @@ const AdminRevenue = () => {
                   >
                     <td className="px-3 py-3.5 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {tx.bookingNumber || tx.referenceId}
+                        <span className="font-mono text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                          {tx.referenceId || tx._id}
                         </span>
-                        <span className="text-[10px] text-gray-400 font-medium truncate max-w-[140px]">
-                          Ref: {tx.referenceId}
+                        <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100 w-max mt-0.5">
+                          Platform Revenue
                         </span>
                       </div>
                     </td>
@@ -398,6 +398,18 @@ const AdminRevenue = () => {
               <div>
                 <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">Financial Audit Ledger</p>
                 <h3 className="text-lg font-bold">Booking #{selectedRevenue.bookingNumber}</h3>
+                <p className="text-xs text-gray-300 font-mono mt-0.5 flex items-center gap-2">
+                  <span>Txn ID: <strong className="text-white font-mono">{selectedRevenue.referenceId || selectedRevenue._id}</strong></span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedRevenue.referenceId || selectedRevenue._id);
+                      toast.success('Transaction ID copied!');
+                    }}
+                    className="text-[10px] px-1.5 py-0.5 bg-white/20 hover:bg-white/30 text-white rounded transition-colors"
+                  >
+                    Copy
+                  </button>
+                </p>
               </div>
               <button
                 onClick={() => setSelectedRevenue(null)}
