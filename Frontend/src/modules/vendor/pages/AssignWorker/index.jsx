@@ -84,7 +84,9 @@ const AssignWorker = () => {
 
   const handleAssign = async () => {
     if (!assignToSelf && !selectedWorker) {
-      toast.error('Please select a worker or assign to yourself');
+      toast.error('Please select an operative or choose "Do It Myself" to confirm assignment.', {
+        id: 'select-operative-toast'
+      });
       return;
     }
 
@@ -282,8 +284,12 @@ const AssignWorker = () => {
         <div className="pt-2">
           <button
             onClick={handleAssign}
-            disabled={(!assignToSelf && !selectedWorker) || assigning}
-            className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white bg-[#00246b] hover:bg-[#001c54] flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-2xs cursor-pointer"
+            disabled={assigning}
+            className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-2xs cursor-pointer ${
+              !assignToSelf && !selectedWorker
+                ? 'bg-slate-500 hover:bg-slate-600'
+                : 'bg-[#00246b] hover:bg-[#001c54]'
+            }`}
           >
             {assigning ? (
               <>
