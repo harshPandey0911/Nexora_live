@@ -250,6 +250,7 @@ const BookingTimeline = () => {
     } finally {
       setActionLoading(false);
     }
+  };
   const getJourneyUnlockInfo = (scheduledDate, scheduledTime) => {
     if (!scheduledDate) return { allowed: true };
 

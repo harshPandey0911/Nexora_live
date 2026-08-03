@@ -1,15 +1,37 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
+const fs = require('fs');
 
 const COLORS = {
-  primary: '#00a6a6',
-  secondary: '#115e59',
-  accent: '#f59e0b',
+  primary: '#00246b',       // Deep Nexora Royal Blue
+  secondary: '#0055ff',     // Vivid Accent Blue
+  yellow: '#D68F35',        // Golden Accent
+  orange: '#BB5F36',        // Warm Orange Accent
+  accent: '#D68F35',
   success: '#10b981',
-  bg: '#f1f5f9',
+  bg: '#f8fafc',
   white: '#ffffff',
   text: '#0f172a',
   lightText: '#64748b',
   border: '#e2e8f0'
+};
+
+const LOGO_PATH = path.resolve(__dirname, '../../Frontend/public/nexora-go-logo.png');
+
+const getLogoAttachment = (existingAttachments = []) => {
+  const logoAtt = fs.existsSync(LOGO_PATH) ? [
+    {
+      filename: 'nexora-go-logo.png',
+      path: LOGO_PATH,
+      cid: 'nexoragologo',
+      contentType: 'image/png',
+      contentDisposition: 'inline',
+      headers: {
+        'X-Attachment-Id': 'nexoragologo'
+      }
+    }
+  ] : [];
+  return [...logoAtt, ...existingAttachments];
 };
 
 const getPrimaryFrontendUrl = () => {
@@ -18,8 +40,6 @@ const getPrimaryFrontendUrl = () => {
 };
 
 const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
-  const origin = customOrigin || getPrimaryFrontendUrl();
-  const logoUrl = `${origin}/nexora-go-logo.png`;
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -33,20 +53,19 @@ const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
   </style>
   <![endif]-->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
     
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: ${COLORS.bg}; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: ${COLORS.bg}; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
     .preheader { display: none; max-width: 0; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #fff; opacity: 0; }
     .wrapper { width: 100%; table-layout: fixed; background-color: ${COLORS.bg}; padding-bottom: 60px; }
-    .main { max-width: 600px; margin: 0 auto; background-color: ${COLORS.white}; border-radius: 24px; overflow: hidden; margin-top: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .main { max-width: 600px; margin: 0 auto; background-color: ${COLORS.white}; border-radius: 24px; overflow: hidden; margin-top: 40px; box-shadow: 0 20px 30px -5px rgba(0, 36, 107, 0.12), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
     
-    .header { background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%); padding: 48px 40px; text-align: center; position: relative; }
-    .logo-img { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; background-color: #ffffff; padding: 4px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); margin-bottom: 12px; }
+    .header { background: linear-gradient(135deg, #00246b 0%, #004499 50%, #0066cc 100%); padding: 44px 30px; text-align: center; position: relative; border-bottom: 4px solid #D68F35; }
     .header h1 { margin: 0; font-size: 24px; color: ${COLORS.white}; font-weight: 800; letter-spacing: -0.5px; }
     
     .content { padding: 48px 40px; color: ${COLORS.text}; }
     .badge { display: inline-block; padding: 8px 16px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px; }
-    .badge-primary { background-color: ${COLORS.primary}15; color: ${COLORS.primary}; }
+    .badge-primary { background-color: rgba(0, 36, 107, 0.1); color: ${COLORS.primary}; }
     .badge-success { background-color: ${COLORS.success}15; color: ${COLORS.success}; }
     
     h2 { font-size: 28px; font-weight: 800; line-height: 1.2; margin: 0 0 16px 0; color: ${COLORS.text}; letter-spacing: -0.5px; }
@@ -64,7 +83,7 @@ const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
     .total-value { font-size: 22px; font-weight: 900; color: ${COLORS.primary}; }
     
     .btn-container { text-align: center; margin-top: 40px; }
-    .btn { display: inline-block; background-color: ${COLORS.primary}; color: ${COLORS.white} !important; padding: 18px 36px; border-radius: 16px; font-weight: 700; font-size: 16px; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(0, 166, 166, 0.3); transition: all 0.2s; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #00246b 0%, #0055ff 100%); color: ${COLORS.white} !important; padding: 16px 36px; border-radius: 14px; font-weight: 700; font-size: 16px; text-decoration: none; box-shadow: 0 10px 20px -3px rgba(0, 36, 107, 0.35); transition: all 0.2s; }
     
     .footer { text-align: center; padding: 40px; }
     .footer p { font-size: 13px; color: ${COLORS.lightText}; margin-bottom: 8px; }
@@ -80,10 +99,17 @@ const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
 </head>
 <body>
   <div class="preheader">${preheader}</div>
+  <!-- Nexora-Unique-Ref: ${Date.now()} -->
   <div class="wrapper">
     <div class="main">
       <div class="header">
-        <img src="${logoUrl}" alt="Nexora Go" class="logo-img" />
+        <table align="center" border="0" cellpadding="0" cellspacing="0" style="margin: 0 auto 14px auto;">
+          <tr>
+            <td align="center" valign="middle" style="width: 58px; height: 58px; background-color: #ffffff; border-radius: 18px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); padding: 5px;">
+              <img src="cid:nexoragologo" alt="Nexora Go Logo" style="width: 48px; height: 48px; object-fit: contain; display: block; border: 0;" />
+            </td>
+          </tr>
+        </table>
         <h1>Nexora Go</h1>
       </div>
       <div class="content">
@@ -93,9 +119,9 @@ const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
         <p>On-Demand Services • Delivered with Care</p>
         <p>&copy; ${new Date().getFullYear()} Nexora Go. All rights reserved.</p>
         <div class="social-links">
-          <a href="#">Help Center</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
+          <a href="${customOrigin || getPrimaryFrontendUrl()}/user" target="_blank" style="color: #00246b; font-weight: 600; text-decoration: underline;">Help Center</a>
+          <a href="${customOrigin || getPrimaryFrontendUrl()}/user/privacy" target="_blank" style="color: #00246b; font-weight: 600; text-decoration: underline;">Privacy Policy</a>
+          <a href="${customOrigin || getPrimaryFrontendUrl()}/user/terms" target="_blank" style="color: #00246b; font-weight: 600; text-decoration: underline;">Terms of Service</a>
         </div>
       </div>
     </div>
@@ -150,7 +176,8 @@ const sendOTPEmail = async (email, otp, purpose = 'verification') => {
       from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: email,
       subject: `${subjectPrefix} - Nexora Go`,
-      html: emailWrapper(content, subjectPrefix, `Your verification code is ${otp}`)
+      html: emailWrapper(content, subjectPrefix, `Your verification code is ${otp}`),
+      attachments: getLogoAttachment()
     });
     return { success: true };
   } catch (error) {
@@ -556,18 +583,25 @@ const sendPasswordResetEmail = async (email, name, resetUrl, frontendUrl = '') =
 
     const transporter = createTransporter();
     const content = `
-      <div style="text-align: left; padding: 20px 0;">
-        <h2>Reset Your Password</h2>
-        <p>Hi ${name || 'User'},</p>
-        <p>We received a request to reset your password.</p>
-        <p>Click the button below to set a new password:</p>
+      <div style="text-align: left; padding: 10px 0;">
+        <div class="badge badge-primary" style="background-color: rgba(0, 36, 107, 0.08); color: #00246b; font-weight: 700; padding: 6px 14px; border-radius: 20px; display: inline-block; margin-bottom: 20px; font-size: 13px;">🔒 Security Verification</div>
+        <h2 style="font-size: 26px; font-weight: 800; color: #0f172a; margin-bottom: 12px; letter-spacing: -0.5px;">Reset Your Password</h2>
+        <p style="font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 12px;">Hi <strong>${name || 'Valued User'}</strong>,</p>
+        <p style="font-size: 15px; color: #475569; line-height: 1.6; margin-bottom: 24px;">We received a request to reset the password for your <strong>Nexora Go</strong> account. Click the button below to choose a new password:</p>
         
-        <div class="btn-container" style="text-align: left; margin: 30px 0;">
-          <a href="${resetUrl}" class="btn" style="background-color: ${COLORS.primary}; color: #ffffff !important; padding: 15px 30px; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-block;">Reset Password</a>
+        <div class="btn-container" style="text-align: left; margin: 28px 0 32px 0;">
+          <a href="${resetUrl}" class="btn" style="background: linear-gradient(135deg, #00246b 0%, #0055ff 100%); color: #ffffff !important; padding: 16px 36px; border-radius: 14px; font-weight: 700; font-size: 16px; text-decoration: none; display: inline-block; box-shadow: 0 10px 20px -3px rgba(0, 36, 107, 0.35);">Reset Password</a>
         </div>
         
-        <p style="font-size: 14px; color: ${COLORS.lightText};">This link expires in 15 minutes.</p>
-        <p style="font-size: 14px; color: ${COLORS.lightText};">If you didn't request this, simply ignore this email.</p>
+        <div style="background-color: #f8fafc; border-left: 4px solid #D68F35; padding: 16px 20px; border-radius: 0 14px 14px 0; margin-bottom: 28px;">
+          <p style="font-size: 14px; color: #475569; margin: 0; font-weight: 600;">⏱️ This link is valid for 15 minutes only.</p>
+          <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">If you didn't request a password reset, your account is completely safe and you can safely ignore this email.</p>
+        </div>
+
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 20px;">
+          <p style="font-size: 12px; color: #94a3b8; margin: 0 0 6px 0;">Button not working? Copy and paste this URL into your browser:</p>
+          <p style="font-size: 12px; color: #0055ff; word-break: break-all; margin: 0; font-family: monospace;">${resetUrl}</p>
+        </div>
       </div>
     `;
 
@@ -575,7 +609,8 @@ const sendPasswordResetEmail = async (email, name, resetUrl, frontendUrl = '') =
       from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: email,
       subject: 'Reset Your Password - Nexora Go',
-      html: emailWrapper(content, 'Reset Your Password', 'Reset Link', frontendUrl)
+      html: emailWrapper(content, 'Reset Your Password', 'Reset Link', frontendUrl),
+      attachments: getLogoAttachment()
     });
     return { success: true };
   } catch (error) {

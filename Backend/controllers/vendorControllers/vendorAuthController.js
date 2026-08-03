@@ -699,7 +699,7 @@ const forgotPassword = async (req, res) => {
 
     // Create reset URL - Extract primary domain if FRONTEND_URL contains comma-separated origins
     const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const frontendUrl = rawFrontendUrl.split(',')[0].trim();
+    const frontendUrl = rawFrontendUrl.split(',')[0].trim().replace(/\/+$/, '');
     const resetUrl = `${frontendUrl}/vendor/reset-password/${rawToken}`;
 
     // Log reset link in terminal for easier local testing
