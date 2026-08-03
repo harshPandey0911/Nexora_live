@@ -247,6 +247,18 @@ const approveSettlement = async (req, res) => {
 
     await settlement.save();
 
+    // Create corresponding Transaction ledger entry for vendor wallet history
+    await Transaction.create({
+      vendorId: vendor._id,
+      type: 'settlement',
+      amount: settlement.amount,
+      balanceAfter: vendor.wallet.dues,
+      status: 'completed',
+      description: `Cash Dues Settlement of ₹${settlement.amount} Approved & Cleared`,
+      paymentMethod: settlement.paymentMethod || 'upi',
+      referenceId: settlement.paymentReference || settlement._id.toString()
+    }).catch(e => console.error('[Settlement] Failed to create ledger transaction:', e));
+
     // Record this settlement in the earning tracker
     recordSettlement(new Date(), settlement.amount);
 

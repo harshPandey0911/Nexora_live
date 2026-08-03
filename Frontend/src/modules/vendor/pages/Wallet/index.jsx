@@ -46,34 +46,39 @@ const Wallet = () => {
   const loadWalletData = async () => {
     try {
       if (transactions.length === 0) setLoading(true);
-      const [walletRes, txnRes, withRes, setRes] = await Promise.all([
+      const [walletRes, txnRes, withRes, setRes] = await Promise.allSettled([
         vendorWalletService.getWallet(),
         vendorWalletService.getTransactions({ limit: 50 }),
         vendorWalletService.getWithdrawals({ limit: 50 }),
         vendorWalletService.getSettlements({ limit: 50 })
       ]);
 
-      if (walletRes.success) {
-        setWallet(walletRes.data);
-        localStorage.setItem('vendorWalletData', JSON.stringify(walletRes.data));
+      if (walletRes.status === 'fulfilled' && walletRes.value?.success) {
+        setWallet(walletRes.value.data);
+        localStorage.setItem('vendorWalletData', JSON.stringify(walletRes.value.data));
       }
 
-      if (txnRes.success) {
-        const txns = txnRes.data || [];
+      if (txnRes.status === 'fulfilled' && txnRes.value?.success) {
+        const txns = txnRes.value.data || [];
         setTransactions(txns);
         localStorage.setItem('vendorTransactions', JSON.stringify(txns));
       }
 
-      if (withRes?.success) {
-        setWithdrawals(withRes.data || []);
+      if (withRes.status === 'fulfilled' && withRes.value?.success) {
+        setWithdrawals(withRes.value.data || []);
       }
 
-      if (setRes?.success) {
-        setSettlements(setRes.data || []);
+      if (setRes.status === 'fulfilled' && setRes.value?.success) {
+        setSettlements(setRes.value.data || []);
+      }
+
+      // If main wallet request failed, show single toast
+      if (walletRes.status === 'rejected' || (walletRes.value && !walletRes.value.success)) {
+        toast.error('Failed to load wallet balance', { id: 'vendor-wallet-load-error' });
       }
     } catch (error) {
       console.error('Error loading wallet:', error);
-      toast.error('Failed to load wallet data');
+      toast.error('Failed to load wallet data', { id: 'vendor-wallet-load-error' });
     } finally {
       setLoading(false);
     }
