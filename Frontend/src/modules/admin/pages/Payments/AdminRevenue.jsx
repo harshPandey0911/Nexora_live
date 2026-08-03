@@ -30,7 +30,8 @@ const AdminRevenue = () => {
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
-    type: 'all'
+    type: 'all',
+    period: 'all'
   });
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -46,7 +47,7 @@ const AdminRevenue = () => {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.page, debouncedSearch, filters.status, filters.type]);
+  }, [pagination.page, debouncedSearch, filters.status, filters.type, filters.period]);
 
   const fetchData = async () => {
     try {
@@ -58,9 +59,10 @@ const AdminRevenue = () => {
           search: debouncedSearch,
           status: filters.status,
           type: filters.type,
+          period: filters.period,
           entity: 'admin'
         }),
-        adminTransactionService.getTransactionStats({ entity: 'admin' })
+        adminTransactionService.getTransactionStats({ entity: 'admin', period: filters.period })
       ]);
 
       if (response && response.success) {
@@ -123,18 +125,20 @@ const AdminRevenue = () => {
       className="space-y-6"
     >
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* 1. Total Customer Bill (GMV) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+          className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-50 rounded-xl">
-              <FiDollarSign className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-gray-50 rounded-xl">
+              <FiDollarSign className="w-5 h-5 text-gray-700" />
             </div>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">Gross GMV</span>
           </div>
-          <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">Total Customer Billing</p>
           <h3 className="text-2xl font-bold text-gray-900 mt-1">
             {loading ? (
               <div className="h-8 w-24 bg-gray-100 animate-pulse rounded"></div>
@@ -144,45 +148,71 @@ const AdminRevenue = () => {
           </h3>
         </motion.div>
 
+        {/* 2. Total GST Tax Collected */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+          transition={{ delay: 0.05 }}
+          className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <FiPieChart className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-purple-50 rounded-xl">
+              <FiPieChart className="w-5 h-5 text-purple-600" />
             </div>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full border border-purple-100">Tax</span>
           </div>
-          <p className="text-gray-500 text-sm font-medium">Total Commissions</p>
-          <h3 className="text-2xl font-bold text-blue-600 mt-1">
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">GST Tax Collected</p>
+          <h3 className="text-2xl font-bold text-purple-600 mt-1">
             {loading ? (
-              <div className="h-8 w-24 bg-gray-100 animate-pulse rounded"></div>
+              <div className="h-8 w-24 bg-purple-50 animate-pulse rounded"></div>
             ) : (
-              formatCurrency(stats.totalCommission || stats.totalRevenue || 0)
+              formatCurrency(stats.totalGST || 0)
             )}
           </h3>
         </motion.div>
 
+        {/* 3. Net Platform Income */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100"
+          transition={{ delay: 0.1 }}
+          className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-green-50 rounded-xl">
-              <FiActivity className="w-6 h-6 text-green-600" />
+            <div className="p-3 bg-emerald-50 rounded-xl">
+              <FiActivity className="w-5 h-5 text-emerald-600" />
             </div>
-            <span className="text-xs font-semibold px-2.5 py-1 bg-green-50 text-green-700 rounded-full">Net Income</span>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">Net Profit</span>
           </div>
-          <p className="text-gray-500 text-sm font-medium">Total Platform Income</p>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">Net Platform Revenue</p>
+          <h3 className="text-2xl font-bold text-emerald-600 mt-1">
+            {loading ? (
+              <div className="h-8 w-24 bg-emerald-50 animate-pulse rounded"></div>
+            ) : (
+              formatCurrency(stats.netRevenue || stats.totalCommission || 0)
+            )}
+          </h3>
+        </motion.div>
+
+        {/* 4. Total Vendor Payouts */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-gray-100"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-amber-50 rounded-xl">
+              <FiDollarSign className="w-5 h-5 text-amber-600" />
+            </div>
+            <span className="text-xs font-semibold px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full border border-amber-100">Vendor Share</span>
+          </div>
+          <p className="text-gray-500 text-xs font-medium uppercase tracking-wider">Total Vendor Payouts</p>
           <h3 className="text-2xl font-bold text-gray-900 mt-1">
             {loading ? (
-              <div className="h-8 w-24 bg-gray-200 animate-pulse rounded"></div>
+              <div className="h-8 w-24 bg-amber-50 animate-pulse rounded"></div>
             ) : (
-              formatCurrency(stats.netRevenue || stats.totalRevenue || 0)
+              formatCurrency(stats.totalVendorEarnings || 0)
             )}
           </h3>
         </motion.div>
@@ -201,11 +231,23 @@ const AdminRevenue = () => {
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select
+            value={filters.period || 'all'}
+            onChange={(e) => setFilters(prev => ({ ...prev, period: e.target.value }))}
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium text-gray-700 cursor-pointer min-w-[140px]"
+          >
+            <option value="all">📅 All Time</option>
+            <option value="today">☀️ Today</option>
+            <option value="this_week">📆 This Week</option>
+            <option value="this_month">🗓️ This Month</option>
+            <option value="this_year">📊 This Year</option>
+          </select>
+
           <select
             value={filters.status}
             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium text-gray-600 min-w-[150px]"
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm font-medium text-gray-600 min-w-[130px]"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
@@ -235,18 +277,18 @@ const AdminRevenue = () => {
             <p className="text-gray-500 mt-1">Transactions will appear here once bookings are completed.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="w-full">
+            <table className="w-full text-left border-collapse table-auto">
               <thead>
                 <tr className="bg-gray-50/70 border-b border-gray-100">
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Booking Reference</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer / Vendor</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total Customer Bill</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">GST Collected</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Net Platform Revenue</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Action</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Booking Ref</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Customer / Vendor</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Customer Bill</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">GST Tax</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Net Revenue</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-3 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -256,63 +298,60 @@ const AdminRevenue = () => {
                     onClick={() => setSelectedRevenue(tx)}
                     className="hover:bg-blue-50/40 transition-colors cursor-pointer group"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3.5 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        <span className="text-xs sm:text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                           {tx.bookingNumber || tx.referenceId}
                         </span>
-                        <span className="text-[11px] text-gray-400 font-medium">Ref: {tx.referenceId}</span>
+                        <span className="text-[10px] text-gray-400 font-medium truncate max-w-[140px]">
+                          Ref: {tx.referenceId}
+                        </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3.5">
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-gray-800">{tx.userId?.name || 'Customer'}</span>
-                        <span className="text-[11px] text-gray-500 font-medium">Vendor: {tx.vendorId?.name || 'Assigned Vendor'}</span>
+                        <span className="text-xs font-bold text-gray-800 truncate max-w-[120px]">{tx.userId?.name || 'Customer'}</span>
+                        <span className="text-[10px] text-gray-500 font-medium truncate max-w-[120px]">Vendor: {tx.vendorId?.name || 'Assigned Vendor'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-black text-gray-900">
+                    <td className="px-3 py-3.5 whitespace-nowrap">
+                      <span className="text-xs sm:text-sm font-black text-gray-900">
                         {formatCurrency(tx.grandTotal || 0)}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-black text-purple-600">
+                        <span className="text-xs sm:text-sm font-black text-purple-600">
                           {formatCurrency(tx.gstAmount || 0)}
                         </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-100">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-100 shrink-0">
                           GST Tax
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-black text-emerald-600">
+                        <span className="text-xs sm:text-sm font-black text-emerald-600">
                           +{formatCurrency(tx.companyIncome || 0)}
                         </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-100 shrink-0">
                           Net Income
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(tx.status)}`}>
+                    <td className="px-3 py-3.5 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${getStatusColor(tx.status)}`}>
                         {tx.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs text-gray-500 font-medium">
-                      {new Date(tx.createdAt).toLocaleString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <td className="px-3 py-3.5 text-xs text-gray-500 font-medium whitespace-nowrap">
+                      <div>{new Date(tx.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                      <div className="text-[10px] text-gray-400">{new Date(tx.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-3 py-3.5 text-right whitespace-nowrap">
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedRevenue(tx); }}
-                        className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-100 cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-100 cursor-pointer"
                       >
                         View Table
                       </button>

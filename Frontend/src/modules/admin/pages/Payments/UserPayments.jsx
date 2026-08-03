@@ -37,7 +37,8 @@ const UserPayments = () => {
   const [filters, setFilters] = useState({
     search: '',
     status: 'all',
-    type: 'all'
+    type: 'all',
+    period: 'all'
   });
 
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -52,7 +53,7 @@ const UserPayments = () => {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.page, debouncedSearch, filters.status, filters.type]);
+  }, [pagination.page, debouncedSearch, filters.status, filters.type, filters.period]);
 
   const fetchData = async () => {
     try {
@@ -64,9 +65,10 @@ const UserPayments = () => {
           search: debouncedSearch,
           status: filters.status,
           type: filters.type,
+          period: filters.period,
           entity: 'user'
         }),
-        adminTransactionService.getTransactionStats({ entity: 'user' })
+        adminTransactionService.getTransactionStats({ entity: 'user', period: filters.period })
       ]);
 
       if (response.success) {
@@ -223,11 +225,23 @@ const UserPayments = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <select
+            value={filters.period || 'all'}
+            onChange={(e) => setFilters(prev => ({ ...prev, period: e.target.value }))}
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium text-gray-700 cursor-pointer min-w-[130px]"
+          >
+            <option value="all">📅 All Time</option>
+            <option value="today">☀️ Today</option>
+            <option value="this_week">📆 This Week</option>
+            <option value="this_month">🗓️ This Month</option>
+            <option value="this_year">📊 This Year</option>
+          </select>
+
           <select
             value={filters.status}
             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium text-gray-600 min-w-[150px]"
+            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-sm font-medium text-gray-600 min-w-[130px]"
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>

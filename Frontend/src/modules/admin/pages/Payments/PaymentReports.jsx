@@ -514,7 +514,44 @@ const PaymentReports = () => {
           <h2 className="text-lg font-semibold text-gray-800">Quick Export Reports</h2>
 
           {/* Date Range Filter */}
-          <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-2">
+          <div className="flex flex-wrap items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl p-2">
+            <select
+              onChange={(e) => {
+                const now = new Date();
+                const todayStr = now.toISOString().split('T')[0];
+                const period = e.target.value;
+                if (period === 'all') {
+                  setStartDate('2020-01-01');
+                  setEndDate(todayStr);
+                } else if (period === 'today') {
+                  setStartDate(todayStr);
+                  setEndDate(todayStr);
+                } else if (period === 'this_week') {
+                  const day = now.getDay();
+                  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                  const weekStart = new Date(now.setDate(diff));
+                  setStartDate(weekStart.toISOString().split('T')[0]);
+                  setEndDate(todayStr);
+                } else if (period === 'this_month') {
+                  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+                  setStartDate(monthStart.toISOString().split('T')[0]);
+                  setEndDate(todayStr);
+                } else if (period === 'this_year') {
+                  const yearStart = new Date(now.getFullYear(), 0, 1);
+                  setStartDate(yearStart.toISOString().split('T')[0]);
+                  setEndDate(todayStr);
+                }
+              }}
+              defaultValue="this_month"
+              className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-pointer focus:outline-none"
+            >
+              <option value="today">☀️ Today</option>
+              <option value="this_week">📆 This Week</option>
+              <option value="this_month">🗓️ This Month</option>
+              <option value="this_year">📊 This Year</option>
+              <option value="all">📅 All Time</option>
+            </select>
+
             <div className="flex items-center gap-2">
               <CustomDateInput
                 value={startDate}
