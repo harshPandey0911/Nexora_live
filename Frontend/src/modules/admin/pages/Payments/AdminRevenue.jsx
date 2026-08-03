@@ -109,6 +109,7 @@ const AdminRevenue = () => {
       { key: '_id', label: 'Transaction ID' },
       { key: 'bookingNumber', label: 'Booking Number' },
       { key: 'grandTotal', label: 'Grand Total', type: 'currency' },
+      { key: 'gstAmount', label: 'GST Collected', type: 'currency' },
       { key: 'companyIncome', label: 'Net Revenue', type: 'currency' },
       { key: 'status', label: 'Status' },
       { key: 'createdAt', label: 'Date', type: 'datetime' }
@@ -241,6 +242,7 @@ const AdminRevenue = () => {
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Booking Reference</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Customer / Vendor</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Total Customer Bill</th>
+                  <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">GST Collected</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Net Platform Revenue</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
@@ -272,6 +274,16 @@ const AdminRevenue = () => {
                       <span className="text-sm font-black text-gray-900">
                         {formatCurrency(tx.grandTotal || 0)}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-black text-purple-600">
+                          {formatCurrency(tx.gstAmount || 0)}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-bold border border-purple-100">
+                          GST Tax
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">
@@ -391,37 +403,65 @@ const AdminRevenue = () => {
                         <th className="p-3 text-right">Destination</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      <tr>
-                        <td className="p-3 font-semibold text-gray-800">Platform Commission (10%)</td>
-                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-green-50 text-green-700 font-bold text-[10px]">Commission</span></td>
-                        <td className="p-3 text-right font-bold text-emerald-600">+{formatCurrency(selectedRevenue.commission || 0)}</td>
-                        <td className="p-3 text-right font-medium text-gray-500">Admin Account</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-semibold text-gray-800">Convenience / Visiting Fee</td>
-                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px]">Platform Fee</span></td>
-                        <td className="p-3 text-right font-bold text-blue-600">+{formatCurrency(selectedRevenue.convenienceFee || 0)}</td>
-                        <td className="p-3 text-right font-medium text-gray-500">Admin Account</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-semibold text-gray-800">Government GST (18%)</td>
-                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold text-[10px]">Tax</span></td>
-                        <td className="p-3 text-right font-bold text-purple-600">+{formatCurrency(selectedRevenue.gstAmount || 0)}</td>
-                        <td className="p-3 text-right font-medium text-gray-500">Govt Treasury</td>
-                      </tr>
-                      <tr>
-                        <td className="p-3 font-semibold text-gray-800">Vendor Net Payout (90% Base)</td>
-                        <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-bold text-[10px]">Payout</span></td>
-                        <td className="p-3 text-right font-bold text-gray-900">{formatCurrency(selectedRevenue.vendorEarning || 0)}</td>
-                        <td className="p-3 text-right font-medium text-gray-500">Vendor Wallet</td>
-                      </tr>
-                      <tr className="bg-gray-50 font-bold border-t border-gray-200">
-                        <td className="p-3 text-gray-900" colSpan={2}>Grand Total Customer Paid</td>
-                        <td className="p-3 text-right text-gray-900 text-sm">{formatCurrency(selectedRevenue.grandTotal || 0)}</td>
-                        <td className="p-3 text-right text-gray-500">Invoice Total</td>
-                      </tr>
-                    </tbody>
+                    {(() => {
+                      const vEarning = selectedRevenue.vendorEarning || 0;
+                      const comm = selectedRevenue.commission || 0;
+                      const totalBase = vEarning + comm;
+
+                      let commPctStr = '';
+                      let vendorPctStr = '';
+
+                      if (totalBase > 0) {
+                        const rawCommPct = ((comm / totalBase) * 100).toFixed(1);
+                        const rawVendorPct = ((vEarning / totalBase) * 100).toFixed(1);
+                        const commPct = rawCommPct.endsWith('.0') ? rawCommPct.slice(0, -2) : rawCommPct;
+                        const vendorPct = rawVendorPct.endsWith('.0') ? rawVendorPct.slice(0, -2) : rawVendorPct;
+                        commPctStr = ` (${commPct}%)`;
+                        vendorPctStr = ` (${vendorPct}% Base)`;
+                      }
+
+                      const gstAmt = selectedRevenue.gstAmount || 0;
+                      let gstPctStr = ' (18%)';
+                      if (totalBase > 0 && gstAmt > 0) {
+                        const rawGstPct = ((gstAmt / totalBase) * 100).toFixed(1);
+                        const gstPct = rawGstPct.endsWith('.0') ? rawGstPct.slice(0, -2) : rawGstPct;
+                        gstPctStr = ` (${gstPct}%)`;
+                      }
+
+                      return (
+                        <tbody className="divide-y divide-gray-100">
+                          <tr>
+                            <td className="p-3 font-semibold text-gray-800">Platform Commission{commPctStr}</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-green-50 text-green-700 font-bold text-[10px]">Commission</span></td>
+                            <td className="p-3 text-right font-bold text-emerald-600">+{formatCurrency(comm)}</td>
+                            <td className="p-3 text-right font-medium text-gray-500">Admin Account</td>
+                          </tr>
+                          <tr>
+                            <td className="p-3 font-semibold text-gray-800">Convenience / Visiting Fee</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px]">Platform Fee</span></td>
+                            <td className="p-3 text-right font-bold text-blue-600">+{formatCurrency(selectedRevenue.convenienceFee || 0)}</td>
+                            <td className="p-3 text-right font-medium text-gray-500">Admin Account</td>
+                          </tr>
+                          <tr>
+                            <td className="p-3 font-semibold text-gray-800">Government GST{gstPctStr}</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 font-bold text-[10px]">Tax</span></td>
+                            <td className="p-3 text-right font-bold text-purple-600">+{formatCurrency(gstAmt)}</td>
+                            <td className="p-3 text-right font-medium text-gray-500">Govt Treasury</td>
+                          </tr>
+                          <tr>
+                            <td className="p-3 font-semibold text-gray-800">Vendor Net Payout{vendorPctStr}</td>
+                            <td className="p-3"><span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-bold text-[10px]">Payout</span></td>
+                            <td className="p-3 text-right font-bold text-gray-900">{formatCurrency(vEarning)}</td>
+                            <td className="p-3 text-right font-medium text-gray-500">Vendor Wallet</td>
+                          </tr>
+                          <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                            <td className="p-3 text-gray-900" colSpan={2}>Grand Total Customer Paid</td>
+                            <td className="p-3 text-right text-gray-900 text-sm">{formatCurrency(selectedRevenue.grandTotal || 0)}</td>
+                            <td className="p-3 text-right text-gray-500">Invoice Total</td>
+                          </tr>
+                        </tbody>
+                      );
+                    })()}
                   </table>
                 </div>
               </div>
