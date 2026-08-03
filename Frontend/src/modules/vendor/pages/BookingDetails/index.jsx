@@ -871,6 +871,15 @@ export default function BookingDetails() {
                   </div>
                 ))}
 
+                {(booking.visitingCharges > 0 || booking.platformFee > 0 || bill?.visitingCharges > 0 || bill?.platformFee > 0 || bill?.visitationFee > 0) && (
+                  <div className="flex justify-between items-center">
+                    <span className="font-normal text-gray-500 capitalize tracking-tight text-[11px] md:text-xs">Platform Fee</span>
+                    <span className="font-normal text-gray-900 text-xs md:text-sm">
+                      ₹{(bill?.platformFee || bill?.visitingCharges || bill?.visitationFee || booking.visitingCharges || booking.platformFee || 0).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-[10px] text-gray-400 font-medium capitalize tracking-widest pt-2.5 md:pt-3.5 border-t border-dashed border-gray-100">
                   <span>Operational Tax (18%)</span>
                   <span className="text-gray-900">₹{(originalGST + extraServiceGST).toFixed(2)}</span>

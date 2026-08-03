@@ -222,17 +222,37 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
         <h2>Booking Scheduled</h2>
         <p>Great news! Your booking for <strong>${service.title || service.name}</strong> has been confirmed. A professional will be at your door as per the schedule below.</p>
         
-        <div class="card">
-          <div class="card-title">Order Summary</div>
-          <div class="data-row"><span class="data-label">Booking ID</span><span class="data-value">#${bookingId}</span></div>
-          <div class="data-row"><span class="data-label">Date</span><span class="data-value">${new Date(booking.scheduledDate).toLocaleDateString('en-IN', { dateStyle: 'full' })}</span></div>
-          <div class="data-row"><span class="data-label">Time Slot</span><span class="data-value">${booking.scheduledTime}</span></div>
-          <div class="data-row"><span class="data-label">Address</span><span class="data-value">${booking.address.city}, ${booking.address.pincode}</span></div>
+        <div class="card" style="background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 20px; padding: 24px; margin: 24px 0;">
+          <div class="card-title" style="margin-bottom: 16px; border-bottom: 1px solid ${COLORS.border}; padding-bottom: 8px;">Order Summary</div>
           
-          <div class="total-row">
-            <span class="total-label">Total Amount</span>
-            <span class="total-value">₹${booking.finalAmount}</span>
-          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Booking ID</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">#${bookingId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Date</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${new Date(booking.scheduledDate).toLocaleDateString('en-IN', { dateStyle: 'full' })}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Time Slot</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${booking.scheduledTime}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Address</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${booking.address?.city || ''}, ${booking.address?.pincode || ''}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top: 16px; border-top: 2px dashed ${COLORS.border};">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                  <tr>
+                    <td style="font-size: 16px; font-weight: 800; color: ${COLORS.text}; text-align: left;">Total Amount</td>
+                    <td style="font-size: 20px; font-weight: 900; color: ${COLORS.primary}; text-align: right;">₹${booking.finalAmount}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
 
         <div class="btn-container">
@@ -241,9 +261,9 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
       `;
 
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+        from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
         to: user.email,
-        subject: `Booking Confirmed #${bookingId} - Homster`,
+        subject: `Booking Confirmed #${bookingId} - Nexora Go`,
         html: emailWrapper(content, 'Confirmed', 'Your booking is scheduled successfully')
       });
     }
@@ -254,13 +274,31 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
         <h2>Incoming Order</h2>
         <p>Hello ${vendor.name}, a new booking has been assigned to you. Plan your resources accordingly.</p>
         
-        <div class="card">
-          <div class="card-title">Job Details</div>
-          <div class="data-row"><span class="data-label">Order</span><span class="data-value">#${bookingId}</span></div>
-          <div class="data-row"><span class="data-label">Service</span><span class="data-value">${service.title}</span></div>
-          <div class="data-row"><span class="data-label">Customer</span><span class="data-value">${user.name}</span></div>
-          <div class="data-row"><span class="data-label">Schedule</span><span class="data-value">${new Date(booking.scheduledDate).toLocaleDateString()} at ${booking.scheduledTime}</span></div>
-          <div class="data-row"><span class="data-label">Amount</span><span class="data-value">₹${booking.finalAmount}</span></div>
+        <div class="card" style="background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 20px; padding: 24px; margin: 24px 0;">
+          <div class="card-title" style="margin-bottom: 16px; border-bottom: 1px solid ${COLORS.border}; padding-bottom: 8px;">Job Details</div>
+          
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Order ID</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">#${bookingId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Service</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${service.title || service.name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Customer</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${user.name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Schedule</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${new Date(booking.scheduledDate).toLocaleDateString()} at ${booking.scheduledTime}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Amount</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">₹${booking.finalAmount}</td>
+            </tr>
+          </table>
         </div>
 
         <div class="btn-container">
@@ -269,9 +307,9 @@ const sendBookingEmails = async (booking, user, vendor, service) => {
       `;
 
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+        from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
         to: vendor.email,
-        subject: `New Job Assigned #${bookingId} - Homster`,
+        subject: `New Job Assigned #${bookingId} - Nexora Go`,
         html: emailWrapper(vContent, 'New Job', 'Action Required: New job assigned')
       });
     }
@@ -289,40 +327,125 @@ const sendBookingCompletionEmails = async (booking) => {
     const bookingId = booking.bookingNumber || booking._id;
 
     if (user && user.email) {
+      const basePrice = Number(booking.basePrice || 0);
+      const visitingCharges = Number(booking.visitingCharges || 0);
+      const tax = Number(booking.tax || 0);
+      const discount = Number(booking.discount || 0);
+      const penalty = Number(booking.penalty || 0);
+      const extraChargesTotal = Number(booking.extraChargesTotal || 
+        (Array.isArray(booking.extraCharges) ? booking.extraCharges.reduce((sum, c) => sum + (c.total || (c.price * (c.quantity || 1)) || 0), 0) : 0));
+      
+      const finalAmount = Number(booking.finalAmount || booking.userPayableAmount || (basePrice + visitingCharges + tax + extraChargesTotal + penalty - discount));
+      const completedDate = booking.completedAt ? new Date(booking.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-IN');
+      const paymentMethodStr = booking.paymentMethod ? booking.paymentMethod.toUpperCase() : 'ONLINE / CASH';
+      const paymentStatusStr = booking.paymentStatus ? booking.paymentStatus.toUpperCase() : 'PAID';
+      const serviceName = booking.serviceName || booking.serviceId?.title || 'Home Service';
+
+      // Build extra charges HTML rows if any
+      let extraChargesHtml = '';
+      if (Array.isArray(booking.extraCharges) && booking.extraCharges.length > 0) {
+        extraChargesHtml = booking.extraCharges.map(item => `
+          <tr>
+            <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">
+              + ${item.name || 'Extra Charge'} ${item.quantity > 1 ? `(x${item.quantity})` : ''}
+            </td>
+            <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">
+              +₹${item.total || (item.price * (item.quantity || 1))}
+            </td>
+          </tr>
+        `).join('');
+      } else if (extraChargesTotal > 0) {
+        extraChargesHtml = `
+          <tr>
+            <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Extra Charges / Parts</td>
+            <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">+₹${extraChargesTotal}</td>
+          </tr>
+        `;
+      }
+
+      // Build discount HTML row if any
+      const discountHtml = discount > 0 ? `
+        <tr>
+          <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.success}; text-align: left;">Coupon / Discount</td>
+          <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.success}; text-align: right;">-₹${discount}</td>
+        </tr>
+      ` : '';
+
       const content = `
-        <div style="text-align: center; margin-bottom: 32px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
-          <h2>Service Completed</h2>
-          <p>Thank you for choosing Homster. We hope the service for <strong>${booking.serviceId?.title || 'Home Service'}</strong> was to your satisfaction.</p>
+        <div style="text-align: center; margin-bottom: 24px;">
+          <div style="font-size: 40px; margin-bottom: 12px;">⭐</div>
+          <h2 style="margin-bottom: 8px;">Service Completed</h2>
+          <p style="margin: 0; font-size: 15px;">Thank you for choosing <strong>Nexora Go</strong>. We hope the service for <strong>${serviceName}</strong> was to your satisfaction.</p>
         </div>
 
-        <div class="card" style="background-color: white;">
-          <div class="card-title">Official Receipt</div>
-          <div class="data-row"><span class="data-label">Invoice No.</span><span class="data-value">INV-${bookingId}</span></div>
-          <div class="data-row"><span class="data-label">Completed On</span><span class="data-value">${new Date().toLocaleDateString('en-IN')}</span></div>
-          <div class="data-row"><span class="data-label">Service Charge</span><span class="data-value">₹${booking.basePrice - booking.discount}</span></div>
-          <div class="data-row"><span class="data-label">Visiting Fee</span><span class="data-value">₹${booking.visitingCharges}</span></div>
-          <div class="data-row"><span class="data-label">HST (Tax)</span><span class="data-value">₹${booking.tax}</span></div>
+        <div class="card" style="background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 20px; padding: 24px; margin: 24px 0;">
+          <div class="card-title" style="margin-bottom: 16px; border-bottom: 1px solid ${COLORS.border}; padding-bottom: 8px;">Official Receipt</div>
           
-          <div class="total-row">
-            <span class="total-label">Amount Paid</span>
-            <span class="total-value">₹${booking.finalAmount}</span>
-          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Invoice No.</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">INV-${bookingId}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Completed On</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${completedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Payment Method</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${paymentMethodStr} (${paymentStatusStr})</td>
+            </tr>
+
+            <tr>
+              <td colspan="2" style="padding: 12px 0 6px 0; border-top: 1px solid ${COLORS.border}; font-size: 11px; font-weight: 700; color: ${COLORS.lightText}; text-transform: uppercase; letter-spacing: 0.5px;">
+                Billing Breakdown
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Service Base Charge</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">₹${basePrice}</td>
+            </tr>
+
+            ${extraChargesHtml}
+
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Visiting Fee</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">₹${visitingCharges}</td>
+            </tr>
+
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">HST / Taxes</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">₹${tax}</td>
+            </tr>
+
+            ${discountHtml}
+
+            <tr>
+              <td colspan="2" style="padding-top: 16px; border-top: 2px dashed ${COLORS.border};">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                  <tr>
+                    <td style="font-size: 16px; font-weight: 800; color: ${COLORS.text}; text-align: left;">Amount Paid</td>
+                    <td style="font-size: 20px; font-weight: 900; color: ${COLORS.primary}; text-align: right;">₹${finalAmount}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <div style="text-align: center; margin-top: 32px; border: 1px solid ${COLORS.border}; border-radius: 16px; padding: 24px;">
-           <div style="font-weight: 700; font-size: 14px; color: ${COLORS.text}; margin-bottom: 8px;">RATE THE PROFESSIONAL</div>
-           <p style="font-size: 13px; margin: 0;">How was your experience with us? Help others by rating the service.</p>
-           <div class="btn-container" style="margin-top: 16px;">
-             <a href="#" class="btn" style="background-color: #f59e0b;">Submit Rating</a>
+        <div style="text-align: center; margin-top: 24px; border: 1px solid ${COLORS.border}; border-radius: 16px; padding: 20px;">
+           <div style="font-weight: 700; font-size: 13px; color: ${COLORS.text}; margin-bottom: 6px; text-transform: uppercase;">Rate the Professional</div>
+           <p style="font-size: 13px; margin: 0 0 12px 0;">How was your experience with us? Help others by rating the service.</p>
+           <div class="btn-container" style="margin-top: 12px;">
+             <a href="#" class="btn" style="background-color: #f59e0b; padding: 12px 24px; font-size: 14px;">Submit Rating</a>
            </div>
         </div>
       `;
 
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+        from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
         to: user.email,
-        subject: `Service Invoice #${bookingId} - Homster`,
+        subject: `Service Invoice #${bookingId} - Nexora Go`,
         html: emailWrapper(content, 'Invoice', 'Your service is complete. Here is the receipt.')
       });
     }
@@ -339,25 +462,39 @@ const sendWithdrawalApprovedEmail = async (vendor, amount, transactionId) => {
 
     const content = `
       <div style="text-align: center;">
-        <div class="badge badge-success">Settlemet Done</div>
+        <div class="badge badge-success">Settlement Done</div>
         <h2>Funds Withdrawn Successfully</h2>
         <p>Hi ${vendor.name}, your withdrawal request has been approved and successfully processed to your account.</p>
         
-        <div class="card">
-          <div class="data-row"><span class="data-label">Transaction Ref</span><span class="data-value">${transactionId || 'N/A'}</span></div>
-          <div class="data-row"><span class="data-label">Settlemet Date</span><span class="data-value">${new Date().toLocaleDateString()}</span></div>
-          <div class="total-row">
-            <span class="total-label">Amount Sent</span>
-            <span class="total-value" style="color: ${COLORS.success}">₹${amount}</span>
-          </div>
+        <div class="card" style="background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 20px; padding: 24px; margin: 24px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Transaction Ref</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${transactionId || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Settlement Date</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">${new Date().toLocaleDateString()}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top: 16px; border-top: 2px dashed ${COLORS.border};">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                  <tr>
+                    <td style="font-size: 16px; font-weight: 800; color: ${COLORS.text}; text-align: left;">Amount Sent</td>
+                    <td style="font-size: 20px; font-weight: 900; color: ${COLORS.success}; text-align: right;">₹${amount}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+      from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: vendor.email,
-      subject: 'Withdrawal Success - Homster',
+      subject: 'Withdrawal Success - Nexora Go',
       html: emailWrapper(content, 'Withdrawal', 'Your funds are on the way')
     });
   } catch (error) { console.error(error); }
@@ -377,12 +514,23 @@ const sendDuesPaymentApprovedEmail = async (vendor, amount, balanceAfter) => {
         <h2>Payment Acknowledged</h2>
         <p>Hi ${vendor.name}, we've successfully verified your dues payment. Your wallet has been updated.</p>
         
-        <div class="card">
-          <div class="data-row"><span class="data-label">Payment Amount</span><span class="data-value">₹${amount}</span></div>
-          <div class="total-row">
-            <span class="total-label">Remaining Balance</span>
-            <span class="total-value">₹${balanceAfter}</span>
-          </div>
+        <div class="card" style="background-color: #ffffff; border: 1px solid ${COLORS.border}; border-radius: 20px; padding: 24px; margin: 24px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 600; color: ${COLORS.lightText}; text-align: left;">Payment Amount</td>
+              <td style="padding: 6px 0; font-size: 13px; font-weight: 700; color: ${COLORS.text}; text-align: right;">₹${amount}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top: 16px; border-top: 2px dashed ${COLORS.border};">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+                  <tr>
+                    <td style="font-size: 16px; font-weight: 800; color: ${COLORS.text}; text-align: left;">Remaining Balance</td>
+                    <td style="font-size: 20px; font-weight: 900; color: ${COLORS.text}; text-align: right;">₹${balanceAfter}</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
         </div>
       </div>
     `;

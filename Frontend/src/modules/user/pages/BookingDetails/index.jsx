@@ -1325,14 +1325,14 @@ const BookingDetails = () => {
                         </div>
                       )}
 
-                      {/* Visiting Charges */}
-                      {(booking.visitingCharges > 0 || bill?.visitingCharges > 0) && (
+                      {/* Platform Fee / Visiting Charges */}
+                      {(booking.visitingCharges > 0 || bill?.visitingCharges > 0 || booking.platformFee > 0 || bill?.platformFee > 0 || bill?.visitationFee > 0) && (
                         <div className="mt-4 pt-2 border-t border-gray-100">
                           <div className="flex justify-between text-xs font-bold text-gray-600">
                             <span className="flex items-center gap-2 uppercase tracking-wide">
-                              <FiClock className="w-3.5 h-3.5 text-blue-400" /> Visiting Charges
+                              <FiClock className="w-3.5 h-3.5 text-blue-400" /> Platform Fee
                             </span>
-                            <span className="font-mono">₹{(bill?.visitingCharges || booking.visitingCharges || 0).toFixed(2)}</span>
+                            <span className="font-mono">₹{(bill?.platformFee || bill?.visitingCharges || bill?.visitationFee || booking.visitingCharges || booking.platformFee || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       )}
@@ -1409,7 +1409,15 @@ const BookingDetails = () => {
                         </div>
                       )}
 
-                      {/* Convenience Fee removed */}
+                      {/* Platform Fee */}
+                      {(booking.visitingCharges > 0 || booking.platformFee > 0 || booking.visitationFee > 0) && (
+                        <div className="flex justify-between items-center text-gray-600">
+                          <span>Platform Fee</span>
+                          <span className="font-medium text-gray-900">
+                            ₹{(booking.visitingCharges || booking.platformFee || booking.visitationFee || 0).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
 
 
                       {booking.paymentMethod !== 'plan_benefit' && booking.discount > 0 && (
