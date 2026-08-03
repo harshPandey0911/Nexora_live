@@ -406,8 +406,9 @@ const forgotPassword = async (req, res) => {
     }
 
     const { mobile } = req.body;
-    // Map mobile (from request) to phone (in db schema)
-    const user = await User.findOne({ phone: mobile });
+    // Clean mobile number (strip non-digits, take last 10 digits)
+    const cleanPhone = mobile ? String(mobile).replace(/\D/g, '').slice(-10) : '';
+    const user = await User.findOne({ phone: cleanPhone });
 
     if (!user) {
       // Generic success to prevent user enumeration
@@ -442,8 +443,9 @@ const forgotPassword = async (req, res) => {
       isUsed: false
     });
 
-    // Create reset URL
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Create reset URL - Extract primary domain if FRONTEND_URL contains comma-separated origins
+    const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = rawFrontendUrl.split(',')[0].trim();
     const resetUrl = `${frontendUrl}/user/reset-password/${rawToken}`;
 
     // Log reset link in terminal for easier local testing
@@ -454,7 +456,7 @@ const forgotPassword = async (req, res) => {
     // Send reset email if user has email
     if (user.email) {
       const { sendPasswordResetEmail } = require('../../services/emailService');
-      await sendPasswordResetEmail(user.email, user.name, resetUrl);
+      await sendPasswordResetEmail(user.email, user.name, resetUrl, frontendUrl);
     }
 
     return res.status(200).json({

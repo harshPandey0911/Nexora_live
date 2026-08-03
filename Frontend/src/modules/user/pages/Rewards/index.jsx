@@ -8,22 +8,24 @@ import { themeColors } from '../../../../theme';
 
 const Rewards = () => {
   const navigate = useNavigate();
+  const getReferralUrl = () => `${window.location.origin}/refer/your-link`;
+
   const handleCopyLink = () => {
     // Copy referral link to clipboard
-    const referralLink = 'https://appzeto.com/refer/your-link';
+    const referralLink = getReferralUrl();
     navigator.clipboard.writeText(referralLink).then(() => {
       toast.success('Link copied to clipboard!');
     });
   };
 
   const handleShareWhatsApp = () => {
-    const text = 'Check out this amazing electrical services app!';
-    const url = 'https://appzeto.com/refer/your-link';
+    const text = 'Check out this amazing electrical services app on Nexora!';
+    const url = getReferralUrl();
     window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`, '_blank');
   };
 
   const handleShareMessenger = () => {
-    const url = 'https://appzeto.com/refer/your-link';
+    const url = getReferralUrl();
     window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(url)}&app_id=your-app-id`, '_blank');
   };
   return (

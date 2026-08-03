@@ -697,8 +697,9 @@ const forgotPassword = async (req, res) => {
       isUsed: false
     });
 
-    // Create reset URL
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    // Create reset URL - Extract primary domain if FRONTEND_URL contains comma-separated origins
+    const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = rawFrontendUrl.split(',')[0].trim();
     const resetUrl = `${frontendUrl}/vendor/reset-password/${rawToken}`;
 
     // Log reset link in terminal for easier local testing
@@ -709,7 +710,7 @@ const forgotPassword = async (req, res) => {
     // Send reset email if vendor has email
     if (vendor.email) {
       const { sendPasswordResetEmail } = require('../../services/emailService');
-      await sendPasswordResetEmail(vendor.email, vendor.name, resetUrl);
+      await sendPasswordResetEmail(vendor.email, vendor.name, resetUrl, frontendUrl);
     }
 
     return res.status(200).json({

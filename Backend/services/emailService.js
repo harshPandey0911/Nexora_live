@@ -12,7 +12,15 @@ const COLORS = {
   border: '#e2e8f0'
 };
 
-const emailWrapper = (content, title, preheader = '') => `
+const getPrimaryFrontendUrl = () => {
+  const rawUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  return rawUrl.split(',')[0].trim();
+};
+
+const emailWrapper = (content, title, preheader = '', customOrigin = '') => {
+  const origin = customOrigin || getPrimaryFrontendUrl();
+  const logoUrl = `${origin}/nexora-go-logo.png`;
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,7 +41,7 @@ const emailWrapper = (content, title, preheader = '') => `
     .main { max-width: 600px; margin: 0 auto; background-color: ${COLORS.white}; border-radius: 24px; overflow: hidden; margin-top: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
     
     .header { background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.secondary} 100%); padding: 48px 40px; text-align: center; position: relative; }
-    .logo-circle { width: 64px; height: 64px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; border: 1px solid rgba(255,255,255,0.3); margin-bottom: 16px; }
+    .logo-img { width: 64px; height: 64px; border-radius: 18px; object-fit: cover; background-color: #ffffff; padding: 4px; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2); margin-bottom: 12px; }
     .header h1 { margin: 0; font-size: 24px; color: ${COLORS.white}; font-weight: 800; letter-spacing: -0.5px; }
     
     .content { padding: 48px 40px; color: ${COLORS.text}; }
@@ -75,7 +83,7 @@ const emailWrapper = (content, title, preheader = '') => `
   <div class="wrapper">
     <div class="main">
       <div class="header">
-        <div class="logo-circle">N</div>
+        <img src="${logoUrl}" alt="Nexora Go" class="logo-img" />
         <h1>Nexora Go</h1>
       </div>
       <div class="content">
@@ -95,6 +103,7 @@ const emailWrapper = (content, title, preheader = '') => `
 </body>
 </html>
 `;
+};
 
 const createTransporter = () => {
   const isSecure = parseInt(process.env.EMAIL_PORT) === 465;
@@ -126,7 +135,7 @@ const sendOTPEmail = async (email, otp, purpose = 'verification') => {
       <div style="text-align: center;">
         <div class="badge badge-primary">Security</div>
         <h2>Verify your identity</h2>
-        <p>Your one-time password (OTP) for Homster is ready. Use this code to complete your ${purpose.replace('_', ' ')}.</p>
+        <p>Your one-time password (OTP) for Nexora Go is ready. Use this code to complete your ${purpose.replace('_', ' ')}.</p>
         
         <div style="background: ${COLORS.bg}; border-radius: 20px; padding: 40px; margin: 40px 0; border: 2px dashed ${COLORS.primary};">
           <div style="font-size: 48px; font-weight: 900; letter-spacing: 12px; color: ${COLORS.primary}; margin-bottom: 8px;">${otp}</div>
@@ -138,9 +147,9 @@ const sendOTPEmail = async (email, otp, purpose = 'verification') => {
     `;
 
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || 'Homster <noreply@homster.com>',
+      from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: email,
-      subject: `${subjectPrefix} - Homster`,
+      subject: `${subjectPrefix} - Nexora Go`,
       html: emailWrapper(content, subjectPrefix, `Your verification code is ${otp}`)
     });
     return { success: true };
@@ -390,7 +399,7 @@ const sendDuesPaymentApprovedEmail = async (vendor, amount, balanceAfter) => {
 /**
  * Send Password Reset Link Email
  */
-const sendPasswordResetEmail = async (email, name, resetUrl) => {
+const sendPasswordResetEmail = async (email, name, resetUrl, frontendUrl = '') => {
   try {
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
       console.log(`[EMAIL SERVICE] Password Reset Link for ${email}: ${resetUrl}`);
@@ -417,11 +426,13 @@ const sendPasswordResetEmail = async (email, name, resetUrl) => {
     await transporter.sendMail({
       from: process.env.EMAIL_FROM || 'Nexora Go <noreply@nexorago.com>',
       to: email,
-      subject: 'Reset Your Password',
-      html: emailWrapper(content, 'Reset Your Password', 'Reset Link')
+      subject: 'Reset Your Password - Nexora Go',
+      html: emailWrapper(content, 'Reset Your Password', 'Reset Link', frontendUrl)
     });
+    return { success: true };
   } catch (error) {
     console.error('sendPasswordResetEmail Error:', error);
+    return { success: false, error: error.message };
   }
 };
 

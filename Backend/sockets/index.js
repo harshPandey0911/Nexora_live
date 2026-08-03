@@ -5,18 +5,20 @@ const { authenticateSocket } = require('../middleware/authMiddleware');
 let io = null;
 
 const initializeSocket = (server) => {
+  const envOrigins = process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL.split(',').map(url => url.trim()) 
+    : [];
+
   io = new Server(server, {
     pingTimeout: 60000,
     pingInterval: 25000,
     cors: {
       origin: [
-        process.env.FRONTEND_URL, 
+        ...envOrigins, 
         'http://localhost:5173', 
         'http://localhost:5174', 
         'http://127.0.0.1:5173', 
-        'http://127.0.0.1:5174',
-        'https://www.homster.in',
-        'https://homster.in'
+        'http://127.0.0.1:5174'
       ].filter(Boolean),
       credentials: true,
       methods: ["GET", "POST"]
