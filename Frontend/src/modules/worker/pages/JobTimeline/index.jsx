@@ -473,7 +473,7 @@ const JobTimeline = () => {
             <p className="text-sm text-gray-500 mb-4">Enter customer OTP</p>
             <div className="flex gap-2 justify-center mb-6">
               {[0, 1, 2, 3].map(i => (
-                <input key={i} id={`otp-${i}`} type="number" className="w-12 h-12 border rounded text-center text-xl"
+                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*" className="w-12 h-12 border rounded text-center text-xl"
                   value={otpInput[i]} onChange={e => handleOtpChange(i, e.target.value)} maxLength={1} />
               ))}
             </div>

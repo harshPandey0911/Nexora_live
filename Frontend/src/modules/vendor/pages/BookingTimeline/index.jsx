@@ -608,7 +608,7 @@ const BookingTimeline = () => {
             <p className="text-sm text-gray-500 mb-4">Enter user OTP to verify arrival.</p>
             <div className="flex gap-2 justify-center mb-4">
               {[0, 1, 2, 3].map((i) => (
-                <input key={i} id={`otp-${i}`} type="number" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
+                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
               ))}
             </div>
             <button onClick={handleVerifyVisit} disabled={actionLoading} className="w-full bg-blue-600 text-white py-2 rounded-lg">{actionLoading ? 'Verifying...' : 'Verify'}</button>
