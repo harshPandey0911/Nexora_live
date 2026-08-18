@@ -272,6 +272,7 @@ const JobTimeline = () => {
   };
 
   const unlockStatus = getJourneyUnlockInfo(job?.scheduledDate, job?.scheduledTime);
+  const customerPaid = job?.cashCollected || job?.paymentStatus === 'SUCCESS' || job?.paymentStatus === 'success';
 
   const timelineStages = [
     {

@@ -262,8 +262,7 @@ const ServicesPage = () => {
 
       {/* Main Content */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 mt-4 sm:-mt-12 relative z-20 pb-16">
-        <div className="bg-white rounded-[32px] p-4 lg:p-8 shadow-2xl shadow-blue-900/5 border border-white">
-          
+        
           {/* Tabs */}
           <div className="bg-slate-50/80 rounded-[20px] p-2 mb-8 flex overflow-x-auto no-scrollbar gap-2">
             {tabs.map((tab) => (
@@ -414,14 +413,22 @@ const ServicesPage = () => {
                     onClick={() => navigate(`/user/service/${svc.id || svc._id}`)}
                     className="group bg-white rounded-[24px] border border-gray-100 hover:border-blue-100 cursor-pointer transition-all duration-500 flex flex-col overflow-hidden shadow-sm hover:shadow-xl"
                   >
-                    {/* Left/Top: Image */}
-                    <div className="relative w-full aspect-[16/11] sm:aspect-[4/3] self-stretch overflow-hidden bg-slate-50 flex-shrink-0">
+                    {/* Left/Top: Image with Lazy Loading & Skeleton Fade-In */}
+                    <div className="relative w-full aspect-[16/11] sm:aspect-[4/3] self-stretch overflow-hidden bg-slate-100 flex-shrink-0 animate-pulse">
                       <img 
                         src={toAssetUrl(svc.iconUrl || svc.icon || svc.vendorPhoto || '')} 
-                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-full object-cover transform group-hover:scale-110 transition-all duration-700 opacity-0 transition-opacity"
                         alt={svc.title}
+                        loading="lazy"
+                        onLoad={(e) => {
+                          e.target.classList.remove('opacity-0');
+                          e.target.parentElement.classList.remove('animate-pulse');
+                          e.target.parentElement.classList.add('bg-transparent');
+                        }}
                         onError={(e) => {
                           e.target.src = 'https://ui-avatars.com/api/?name=' + svc.title + '&background=f0f9ff&color=2563eb&bold=true';
+                          e.target.classList.remove('opacity-0');
+                          e.target.parentElement.classList.remove('animate-pulse');
                         }}
                       />
                       {svc.rating && (
@@ -448,7 +455,7 @@ const ServicesPage = () => {
                       </p>
 
                       <div className="flex items-center justify-between gap-2 mt-auto">
-                        <span className="text-sm sm:text-lg font-bold text-blue-600">₹{svc.basePrice}</span>
+                        <span className="text-xs sm:text-lg font-bold text-blue-600 shrink-0">₹{svc.basePrice}</span>
                         
                         {(() => {
                           const isInCart = Boolean(
@@ -461,20 +468,29 @@ const ServicesPage = () => {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (isInCart) {
-                                  navigate('/user/cart');
+                                    navigate('/user/cart');
                                 } else {
-                                  handleAddToCart(svc);
+                                    handleAddToCart(svc);
                                 }
                               }}
                               disabled={addingToCart === (svc.id || svc._id)}
-                              className={`h-7 sm:h-9 px-2 sm:px-3 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-widest transition-all flex items-center gap-1 ${
+                              className={`h-7 sm:h-9 px-2 sm:px-3 text-white rounded-lg sm:rounded-xl font-bold text-[8px] sm:text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1 shrink-0 ${
                                 isInCart ? 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200'
                               }`}
+                              style={{ minWidth: '60px' }}
                             >
                               {addingToCart === (svc.id || svc._id) ? '...' : isInCart ? (
-                                <><FiCheckCircle className="w-3 h-3" /> Added to Cart</>
+                                <>
+                                  <FiCheckCircle className="w-3 h-3 shrink-0" />
+                                  <span className="hidden sm:inline">Added to Cart</span>
+                                  <span className="sm:hidden">Added</span>
+                                </>
                               ) : (
-                                <><FiPlusSquare className="w-3 h-3" /> Add to Cart</>
+                                <>
+                                  <FiPlusSquare className="w-3 h-3 shrink-0" />
+                                  <span className="hidden sm:inline">Add to Cart</span>
+                                  <span className="sm:hidden">Add</span>
+                                </>
                               )}
                             </button>
                           );
@@ -492,7 +508,6 @@ const ServicesPage = () => {
               </div>
             )}
           </AnimatePresence>
-        </div>
       </div>
 
       {/* Trust Badges */}

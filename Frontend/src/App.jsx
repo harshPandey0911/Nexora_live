@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'; // Updated index to .jsx
 import { BrowserRouter, useLocation } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, ToastBar } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import AppRoutes from './routes';
 import { SocketProvider } from './context/SocketContext';
@@ -89,7 +89,7 @@ function App() {
                   position="top-center"
                   reverseOrder={false}
                   toastOptions={{
-                    duration: 2000, // Global default (reduced from 3000)
+                    duration: 3000,
                     style: {
                       background: '#333',
                       color: '#fff',
@@ -97,19 +97,29 @@ function App() {
                       padding: '12px 20px',
                     },
                     success: {
-                      duration: 1000, // 1 second as requested
+                      duration: 3000,
                       style: {
                         background: '#10B981',
                       },
                     },
                     error: {
-                      duration: 2000, // Reduced from 4000
+                      duration: 4000,
                       style: {
                         background: '#EF4444',
                       },
                     },
                   }}
-                />
+                >
+                  {(t) => (
+                    <div 
+                      onClick={() => toast.dismiss(t.id)}
+                      className="cursor-pointer transition-transform active:scale-95"
+                      title="Click to dismiss"
+                    >
+                      <ToastBar toast={t} />
+                    </div>
+                  )}
+                </Toaster>
               </div>
             </CartProvider>
           </CityProvider>

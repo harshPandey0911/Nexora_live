@@ -108,38 +108,38 @@ const Login = () => {
   const brandColor = themeColors.brand?.teal || '#347989';
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 flex flex-col justify-start sm:justify-center py-12 sm:px-6 lg:px-8 relative overflow-x-hidden">
+    <div className="h-[100dvh] sm:h-auto sm:min-h-screen overflow-hidden sm:overflow-auto bg-gray-50 flex flex-col justify-start sm:justify-center py-6 sm:py-12 sm:px-6 lg:px-8 relative">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--brand-teal)] opacity-[0.03] rounded-full blur-3xl animate-floating" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[var(--brand-yellow)] opacity-[0.03] rounded-full blur-3xl animate-floating" style={{ animationDelay: '2s' }} />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8 relative z-10">
-        <div className="flex justify-center mb-6">
-          <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-4 sm:mb-8 relative z-10">
+        <div className="flex justify-center mb-3 sm:mb-6">
+          <Logo className="h-16 w-16 sm:h-24 sm:w-24 transform hover:scale-110 transition-transform duration-500" />
         </div>
-        <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
           Sign in to account
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-gray-600">
           Enter your mobile number and password to get started
         </p>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0 relative z-10">
-        <div className="bg-white py-8 px-4 shadow-2xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden animate-slide-in-bottom">
+        <div className="bg-white py-5 px-4 shadow-2xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden animate-slide-in-bottom">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[var(--brand-teal)] via-[var(--brand-yellow)] to-[var(--brand-orange)]" />
 
-          <form className="space-y-6" onSubmit={handleLoginSubmit} autoComplete="off">
+          <form className="space-y-4 sm:space-y-6" onSubmit={handleLoginSubmit} autoComplete="off">
             <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="phone" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Mobile Number
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiPhone className="h-5 w-5 text-gray-400" />
+                  <FiPhone className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
-                  <span className="text-gray-500 font-medium border-r pr-2 border-gray-300 sm:text-sm">+91</span>
+                  <span className="text-gray-500 font-medium border-r pr-2 border-gray-300 text-xs sm:text-sm">+91</span>
                 </div>
                 <input
                   ref={phoneInputRef}
@@ -148,7 +148,7 @@ const Login = () => {
                   autoComplete="off"
                   id="phone"
                   name="phone"
-                  className="block w-full pl-24 pr-4 py-3.5 border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
+                  className="block w-full pl-20 sm:pl-24 pr-4 py-2.5 sm:py-3.5 border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] text-xs sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
                   placeholder="9876543210"
                   value={formData.phone}
                   onChange={(e) => {
@@ -164,26 +164,26 @@ const Login = () => {
                 />
               </div>
               {errors.phone && (
-                <p className="text-red-500 text-xs mt-1 ml-1">{errors.phone}</p>
+                <p className="text-red-500 text-[10px] sm:text-xs mt-1 ml-1">{errors.phone}</p>
               )}
             </div>
 
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700">
                   Password
                 </label>
                 <Link
                   to="/user/forgot-password"
                   state={{ phone: formData.phone }}
-                  className="text-xs font-semibold text-gray-500 hover:text-[var(--brand-teal)] transition-colors"
+                  className="text-[10px] sm:text-xs font-semibold text-gray-500 hover:text-[var(--brand-teal)] transition-colors"
                 >
                   Forgot Password?
                 </Link>
               </div>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiLock className="h-5 w-5 text-gray-400" />
+                  <FiLock className="h-4.5 w-4.5 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   id="password"
@@ -193,7 +193,7 @@ const Login = () => {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-10 py-3.5 border border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
+                  className="block w-full pl-10 pr-10 py-2.5 sm:py-3.5 border border-gray-300 rounded-xl focus:ring-[var(--brand-teal)] focus:border-[var(--brand-teal)] text-xs sm:text-sm transition-all duration-300 ease-in-out hover:border-gray-400"
                   placeholder="••••••••"
                   style={{ '--tw-ring-color': brandColor }}
                 />
@@ -203,9 +203,9 @@ const Login = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
                 >
                   {showPassword ? (
-                    <FiEyeOff className="h-5 w-5" />
+                    <FiEyeOff className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                   ) : (
-                    <FiEye className="h-5 w-5" />
+                    <FiEye className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
                   )}
                 </button>
               </div>
@@ -215,12 +215,12 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl text-sm font-bold text-white transition-all duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-teal)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 transform shadow-lg shadow-[var(--brand-teal)]/30 hover:shadow-[var(--brand-teal)]/40 overflow-hidden"
+                className="group relative w-full flex justify-center py-2.5 sm:py-3.5 px-4 border border-transparent rounded-xl text-sm font-bold text-white transition-all duration-500 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--brand-teal)] disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 transform shadow-lg shadow-[var(--brand-teal)]/30 hover:shadow-[var(--brand-teal)]/40 overflow-hidden"
                 style={{ backgroundColor: brandColor }}
               >
                 <span className="absolute inset-0 w-full h-full bg-white/10 group-hover:translate-x-full transition-transform duration-700 -translate-x-full" />
                 {isLoading ? (
-                  <LogoLoader fullScreen={false} inline={true} size="w-6 h-6" />
+                  <LogoLoader fullScreen={false} inline={true} size="w-5 h-5 sm:w-6 sm:h-6" />
                 ) : (
                   <span className="flex items-center gap-2 relative z-10">
                     Sign In <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
@@ -229,10 +229,10 @@ const Login = () => {
               </button>
             </div>
 
-            <div className="text-center text-xs text-gray-500 mt-4 select-none">
+            <div className="text-center text-[10px] sm:text-xs text-gray-500 mt-3 select-none">
               By signing in, you agree to our{' '}
               <Link to="/user/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
-                Terms & Conditions
+                Terms &amp; Conditions
               </Link>{' '}
               and{' '}
               <Link to="/user/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
@@ -240,20 +240,20 @@ const Login = () => {
               </Link>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200" />
                 </div>
-                <div className="relative flex justify-center text-sm">
+                <div className="relative flex justify-center text-xs">
                   <span className="px-2 bg-white text-gray-500">New to Nexora Go?</span>
                 </div>
               </div>
 
-              <div className="mt-6">
+              <div className="mt-4 sm:mt-6">
                 <Link
                   to="/user/signup"
-                  className="w-full inline-flex justify-center py-3 px-4 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:text-[var(--brand-teal)] hover:bg-gray-50 border border-gray-200 transition-all duration-300 hover:border-[var(--brand-teal)]/30"
+                  className="w-full inline-flex justify-center py-2.5 px-4 rounded-xl shadow-sm bg-white text-xs sm:text-sm font-medium text-gray-500 hover:text-[var(--brand-teal)] hover:bg-gray-50 border border-gray-200 transition-all duration-300 hover:border-[var(--brand-teal)]/30"
                 >
                   Create an account
                 </Link>
@@ -263,7 +263,7 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="mt-8 text-center text-xs text-gray-400">
+      <div className="mt-4 sm:mt-8 text-center text-[10px] sm:text-xs text-gray-400">
         &copy; {new Date().getFullYear()} Nexora Go. All rights reserved.
       </div>
     </div>

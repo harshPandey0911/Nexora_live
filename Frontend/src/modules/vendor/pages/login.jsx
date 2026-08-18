@@ -126,35 +126,35 @@ const VendorLogin = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4 bg-gray-50"
+      className="min-h-screen flex items-center justify-center px-4 bg-gray-50 py-4 sm:py-0"
     >
       <div className="w-full max-w-md">
         {/* White Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <Logo className="h-24 w-24 transform hover:scale-110 transition-transform duration-500" />
+          <div className="flex justify-center mb-4 sm:mb-6">
+            <Logo className="h-16 w-16 sm:h-24 sm:w-24 transform hover:scale-110 transition-transform duration-500" />
           </div>
 
           {/* Title */}
-          <h1 className="text-3xl font-normal text-gray-900 text-center mb-2">
+          <h1 className="text-2xl sm:text-3xl font-normal text-gray-900 text-center mb-1.5 sm:mb-2">
             Vendor Login
           </h1>
-          <p className="text-gray-600 text-center mb-8">
+          <p className="text-xs sm:text-sm text-gray-600 text-center mb-4 sm:mb-8 leading-relaxed">
             Enter your mobile number and password to access your portal
           </p>
 
           {/* Form Content */}
-          <form onSubmit={handleLoginSubmit} className="space-y-6">
+          <form onSubmit={handleLoginSubmit} className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                 Mobile Number
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <FiPhone className="w-5 h-5 text-gray-400" />
+                  <FiPhone className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 </div>
-                <div className="absolute left-12 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium border-r pr-3 mr-2">
+                <div className="absolute left-11 top-1/2 transform -translate-y-1/2 text-gray-400 font-medium border-r pr-2.5 sm:pr-3 mr-2 text-sm sm:text-base">
                   +91
                 </div>
                 <input
@@ -163,7 +163,7 @@ const VendorLogin = () => {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="0000000000"
-                  className="w-full pl-24 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
+                  className="w-full pl-20 sm:pl-24 pr-4 py-2 sm:py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider text-sm sm:text-base"
                   onFocus={(e) => {
                     e.target.style.borderColor = themeColors.button;
                     e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
@@ -178,19 +178,19 @@ const VendorLogin = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                 Password
               </label>
               <div className="relative">
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <FiLock className="w-5 h-5 text-gray-400" />
+                  <FiLock className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider"
+                  className="w-full pl-11 sm:pl-12 pr-11 sm:pr-12 py-2 sm:py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent text-gray-900 font-medium tracking-wider text-sm sm:text-base"
                   onFocus={(e) => {
                     e.target.style.borderColor = themeColors.button;
                     e.target.style.boxShadow = `0 0 0 3px rgba(30, 58, 138, 0.1)`;
@@ -206,7 +206,7 @@ const VendorLogin = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none z-10"
                 >
-                  {showPassword ? <FiEyeOff className="w-5 h-5" /> : <FiEye className="w-5 h-5" />}
+                  {showPassword ? <FiEyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <FiEye className="w-4 h-4 sm:w-5 sm:h-5" />}
                 </button>
               </div>
             </div>
@@ -214,7 +214,7 @@ const VendorLogin = () => {
             <div className="flex justify-end">
               <Link 
                 to="/vendor/forgot-password" 
-                className="text-sm font-semibold transition-all hover:opacity-80"
+                className="text-xs sm:text-sm font-semibold transition-all hover:opacity-80"
                 style={{ color: themeColors.button }}
               >
                 Forgot Password?
@@ -224,7 +224,7 @@ const VendorLogin = () => {
             <button
               type="submit"
               disabled={isLoading || !phoneNumber || phoneNumber.length < 10 || !password || password.length < 6}
-              className="w-full py-3 rounded-xl text-white font-medium text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 sm:py-3 rounded-xl text-white font-medium text-base sm:text-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
                 background: `linear-gradient(135deg, ${themeColors.button} 0%, #1e40af 100%)`,
                 boxShadow: '0 4px 12px rgba(30, 58, 138, 0.3)'
@@ -247,18 +247,18 @@ const VendorLogin = () => {
         </div>
 
         {/* Bottom Link */}
-        <p className="mt-8 text-center text-gray-500">
-          <span className="text-sm">New to the network?</span>{' '}
+        <p className="mt-4 sm:mt-8 text-center text-gray-500 text-sm">
+          <span>New to the network?</span>{' '}
           <Link 
             to="/vendor/signup" 
-            className="text-sm font-semibold border-b-2 ml-1 transition-all pb-0.5"
+            className="font-semibold border-b-2 ml-1 transition-all pb-0.5"
             style={{ color: '#00a6a6', borderColor: '#00a6a6' }}
           >
             Apply Now
           </Link>
         </p>
 
-        <div className="mt-4 text-center text-xs text-gray-500">
+        <div className="mt-2 sm:mt-4 text-center text-[10px] sm:text-xs text-gray-500 leading-normal">
           By signing in, you agree to our{' '}
           <Link to="/vendor/terms" className="font-semibold hover:underline" style={{ color: themeColors.button }}>
             Terms &amp; Conditions
