@@ -125,6 +125,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const [counts, setCounts] = useState({
     bookings: 0,
     vendors: 0,
+    workers: 0,
     withdrawals: 0,
     pendingSettlements: 0,
     manualAssignment: 0
@@ -163,6 +164,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
           setCounts({
             bookings: stats.pendingBookings || 0,
             vendors: stats.pendingVendors || 0,
+            workers: stats.pendingWorkers || 0,
             withdrawals: stats.pendingWithdrawals || 0,
             pendingSettlements: stats.pendingSettlements || 0,
             manualAssignment: stats.manualAssignmentBookings || 0
@@ -191,8 +193,24 @@ const AdminSidebar = ({ isOpen, onClose }) => {
         setCounts(prev => ({ ...prev, manualAssignment: Math.max(0, prev.manualAssignment - 1) }));
       }
     };
+
+    const handleWorkerCreated = () => {
+      setCounts(prev => ({ ...prev, workers: prev.workers + 1 }));
+    };
+
+    const handleWorkerStatusChanged = () => {
+      setCounts(prev => ({ ...prev, workers: Math.max(0, prev.workers - 1) }));
+    };
+
     window.addEventListener('adminBookingStatusChanged', handleBookingStatusChanged);
-    return () => window.removeEventListener('adminBookingStatusChanged', handleBookingStatusChanged);
+    window.addEventListener('adminWorkerCreated', handleWorkerCreated);
+    window.addEventListener('adminWorkerStatusChanged', handleWorkerStatusChanged);
+
+    return () => {
+      window.removeEventListener('adminBookingStatusChanged', handleBookingStatusChanged);
+      window.removeEventListener('adminWorkerCreated', handleWorkerCreated);
+      window.removeEventListener('adminWorkerStatusChanged', handleWorkerStatusChanged);
+    };
   }, []);
 
   // Check if mobile on mount and resize
@@ -331,6 +349,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
               {counts.vendors > 99 ? '99+' : counts.vendors}
             </span>
           )}
+          {item.title === "Workers" && counts.workers > 0 && (
+            <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse mr-2">
+              {counts.workers > 99 ? '99+' : counts.workers}
+            </span>
+          )}
           {item.title === "Settlements" && (counts.withdrawals + counts.pendingSettlements) > 0 && (
             <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse mr-2">
               {(counts.withdrawals + counts.pendingSettlements) > 99 ? '99+' : (counts.withdrawals + counts.pendingSettlements)}
@@ -377,6 +400,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
                         }
                       `}>
                       <span>{child}</span>
+                      {item.title === "Workers" && child === "All Workers" && counts.workers > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full animate-pulse">
+                          {counts.workers > 99 ? '99+' : counts.workers}
+                        </span>
+                      )}
                       {item.title === "Settlements" && child === "Pending" && counts.pendingSettlements > 0 && (
                         <span className="bg-red-500 text-white text-[10px] h-5 min-w-[20px] px-1.5 flex items-center justify-center rounded-full">
                           {counts.pendingSettlements}

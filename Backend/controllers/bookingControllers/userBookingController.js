@@ -381,7 +381,7 @@ const createBooking = async (req, res) => {
     }
 
     // Create booking
-    const bookingNumber = `BK${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const bookingNumber = `BK-${Math.floor(100000 + Math.random() * 900000)}`;
 
     // Improve Category Fetching if ID is missing (Fallback to title match)
     let finalCategory = category;

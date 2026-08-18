@@ -52,65 +52,65 @@ const BookingTimeline = () => {
   const loadBooking = useCallback(async () => {
     try {
       const response = await getBookingById(id);
-        const apiData = response.data || response;
+      const apiData = response.data || response;
 
-        const isSelfJob = apiData.assignedAt && !apiData.workerId;
-        const mappedBooking = {
-          ...apiData,
-          id: apiData._id || apiData.id,
-          isSelfJob,
-          assignedTo: apiData.workerId ? { name: apiData.workerId.name } : (apiData.assignedAt ? { name: 'You (Self)' } : null),
-          location: {
-            address: apiData.address?.addressLine1 || apiData.location?.address || 'Address not available',
-            lat: apiData.address?.lat || apiData.location?.lat,
-            lng: apiData.address?.lng || apiData.location?.lng
-          },
-          status: apiData.status,
-          finalAmount: apiData.finalAmount || apiData.price || 0,
-          vendorEarnings: apiData.vendorBillId?.vendorTotalEarning || apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0),
-          // Timeline mapping if backend supports it, otherwise derived from status/timestamps
-          timeline: [
-            { stage: 1, timestamp: apiData.createdAt },
-            { stage: 2, timestamp: apiData.acceptedAt },
-            { stage: 3, timestamp: apiData.assignedAt },
-            { stage: 4, timestamp: apiData.startedAt }, // Assuming started means visited for now? Or keep null
-            { stage: 5, timestamp: apiData.completedAt }, // Simplified mapping
-          ]
-        };
-        setBooking(mappedBooking);
+      const isSelfJob = apiData.assignedAt && !apiData.workerId;
+      const mappedBooking = {
+        ...apiData,
+        id: apiData._id || apiData.id,
+        isSelfJob,
+        assignedTo: apiData.workerId ? { name: apiData.workerId.name } : (apiData.assignedAt ? { name: 'You (Self)' } : null),
+        location: {
+          address: apiData.address?.addressLine1 || apiData.location?.address || 'Address not available',
+          lat: apiData.address?.lat || apiData.location?.lat,
+          lng: apiData.address?.lng || apiData.location?.lng
+        },
+        status: apiData.status,
+        finalAmount: apiData.finalAmount || apiData.price || 0,
+        vendorEarnings: apiData.vendorBillId?.vendorTotalEarning || apiData.vendorEarnings || (apiData.finalAmount ? apiData.finalAmount - (apiData.commission || 0) : 0),
+        // Timeline mapping if backend supports it, otherwise derived from status/timestamps
+        timeline: [
+          { stage: 1, timestamp: apiData.createdAt },
+          { stage: 2, timestamp: apiData.acceptedAt },
+          { stage: 3, timestamp: apiData.assignedAt },
+          { stage: 4, timestamp: apiData.startedAt }, // Assuming started means visited for now? Or keep null
+          { stage: 5, timestamp: apiData.completedAt }, // Simplified mapping
+        ]
+      };
+      setBooking(mappedBooking);
 
-        // Determine current stage based on status
-        // Determine current stage based on status
-        const statusMap = {
-          'requested': 1,
-          'searching': 1,
-          'confirmed': 2,
-          'Vendor Accepted': 2,
-          'vendor accepted': 2,
-          'accepted': 2,
-          'assigned': 3,
-          'journey_started': 4,
-          'visited': 5,
-          'in_progress': 5,
-          'work_done': 7,
-          'completed': 8,
-        };
+      // Determine current stage based on status
+      // Determine current stage based on status
+      const statusMap = {
+        'requested': 1,
+        'searching': 1,
+        'confirmed': 2,
+        'Vendor Accepted': 2,
+        'vendor accepted': 2,
+        'accepted': 2,
+        'assigned': 3,
+        'journey_started': 4,
+        'visited': 5,
+        'in_progress': 5,
+        'work_done': 7,
+        'completed': 8,
+      };
 
-        const isActuallyPaid = apiData.isWorkerPaid || apiData.workerPaymentStatus === 'PAID' || apiData.workerPaymentStatus === 'SUCCESS';
-        const isSettled = apiData.finalSettlementStatus === 'DONE';
+      const isActuallyPaid = apiData.isWorkerPaid || apiData.workerPaymentStatus === 'PAID' || apiData.workerPaymentStatus === 'SUCCESS';
+      const isSettled = apiData.finalSettlementStatus === 'DONE';
 
-        // Custom logic for later stages
-        let stage = statusMap[apiData.status] || 2;
-        if (apiData.status === 'completed') {
-          if (isSettled) stage = 10; // Booking Complete
-          else if (isActuallyPaid || isSelfJob) stage = 9; // Final Settlement (Skip Pay Worker for self)
-          else stage = 8; // Pay Worker
-        }
-
-        setCurrentStage(stage);
-      } catch (error) {
-        console.error('Error loading booking:', error);
+      // Custom logic for later stages
+      let stage = statusMap[apiData.status] || 2;
+      if (apiData.status === 'completed') {
+        if (isSettled) stage = 10; // Booking Complete
+        else if (isActuallyPaid || isSelfJob) stage = 9; // Final Settlement (Skip Pay Worker for self)
+        else stage = 8; // Pay Worker
       }
+
+      setCurrentStage(stage);
+    } catch (error) {
+      console.error('Error loading booking:', error);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -264,6 +264,51 @@ const BookingTimeline = () => {
       setActionLoading(false);
     }
   };
+  const getJourneyUnlockInfo = (scheduledDate, scheduledTime) => {
+    if (!scheduledDate) return { allowed: true };
+
+    const now = new Date();
+    const apptDay = new Date(scheduledDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    apptDay.setHours(0, 0, 0, 0);
+
+    if (apptDay > today) {
+      const dateFormatted = new Date(scheduledDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      return {
+        allowed: false,
+        message: `Scheduled for ${dateFormatted} (${scheduledTime || 'Slot Time'})`
+      };
+    }
+
+    const appointment = new Date(scheduledDate);
+    if (scheduledTime) {
+      const timeMatch = scheduledTime.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        if (scheduledTime.toLowerCase().includes('pm') && hours < 12) hours += 12;
+        if (scheduledTime.toLowerCase().includes('am') && hours === 12) hours = 0;
+        appointment.setHours(hours, minutes, 0, 0);
+      }
+    }
+
+    // 60 minutes buffer before appointment slot
+    const unlockTime = new Date(appointment.getTime() - 60 * 60 * 1000);
+
+    if (now < unlockTime) {
+      const unlockTimeString = unlockTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return {
+        allowed: false,
+        unlockTime: unlockTimeString,
+        message: `Journey unlocks 60 mins prior (${unlockTimeString})`
+      };
+    }
+
+    return { allowed: true };
+  };
+
+  const unlockStatus = getJourneyUnlockInfo(booking?.scheduledDate, booking?.scheduledTime);
 
   const timelineStages = [
     {
@@ -285,14 +330,18 @@ const BookingTimeline = () => {
       title: 'Assigned',
       icon: FiUser,
       action: currentStage === 2 ? () => navigate(`/vendor/booking/${id}/assign-worker`) : null,
-      description: booking?.assignedTo ? `Assigned to ${booking.assignedTo.name}` : 'Assign worker or start yourself',
+      description: booking?.assignedTo ? `Assigned to ${booking.assignedTo.name}` : (booking?.isSelfJob ? 'Assigned to You (Self)' : 'Assign worker or start yourself'),
+      timestamp: booking?.assignedAt || (booking?.isSelfJob ? booking?.acceptedAt : null)
     },
     {
       id: 4,
       title: 'Journey Started',
       icon: FiMapPin,
       action: (currentStage === 3 && booking?.isSelfJob) ? handleStartSelfJob : null,
-      description: booking?.isSelfJob ? 'You started journey' : (booking?.assignedTo ? 'Worker started journey' : 'Waiting for journey start'),
+      description: (currentStage >= 4 || booking?.journeyStartedAt)
+        ? (booking?.isSelfJob ? 'You started journey' : (booking?.assignedTo ? `Worker ${booking.assignedTo.name} started journey` : 'Journey in progress'))
+        : (booking?.isSelfJob ? 'Pending: Travel to location & start journey' : (booking?.assignedTo ? `Waiting for ${booking.assignedTo.name} to start journey` : 'Waiting for journey start')),
+      timestamp: booking?.journeyStartedAt
     },
     {
       id: 5,
@@ -327,8 +376,8 @@ const BookingTimeline = () => {
       actionLabel: booking?.isSelfJob ? 'Make / Prepare Bill' : 'Approve Work',
       description: booking?.isSelfJob
         ? (['completed', 'paid', 'success'].includes(booking?.status?.toLowerCase()) || booking?.cashCollected
-            ? 'Customer payment received & verified.'
-            : 'Validation: Please go to Make / Prepare Bill page to calculate final bill & collect payment.')
+          ? 'Customer payment received & verified.'
+          : 'Validation: Please go to Make / Prepare Bill page to calculate final bill & collect payment.')
         : 'Review and approve worker work',
     },
     {
@@ -422,6 +471,27 @@ const BookingTimeline = () => {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
           }}
         >
+          {/* Scheduled Appointment Banner */}
+          {(booking?.scheduledDate || booking?.scheduledTime) && (
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6 flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-xs">
+                  <FiClock className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Scheduled Service Appointment</p>
+                  <p className="text-sm font-bold text-gray-900 mt-0.5">
+                    {booking?.scheduledDate ? new Date(booking.scheduledDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Today'}
+                    {booking?.scheduledTime ? ` • ${booking.scheduledTime}` : ''}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-extrabold px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full border border-blue-200">
+                Scheduled Slot
+              </span>
+            </div>
+          )}
+
           {/* Timeline */}
           <div className="relative">
             {timelineStages.map((stage, index) => {
@@ -483,28 +553,35 @@ const BookingTimeline = () => {
 
                       {/* Action Button */}
                       {stage.action && !isSkipped && (
-                        <button
-                          onClick={stage.action}
-                          className="px-4 py-2 rounded-lg font-medium text-white text-sm transition-all active:scale-95 flex items-center gap-2"
-                          style={{
-                            background: themeColors.button,
-                            boxShadow: `0 2px 8px ${themeColors.button}40`,
-                          }}
-                        >
-                          {stage.actionLabel || (
-                            stage.id === 3 ? 'Assign Worker' :
-                              stage.id === 4 ? 'Start Journey' :
-                                stage.id === 5 ? 'Mark Arrived' :
-                                  stage.id === 6 ? 'Mark workdone' :
-                                    stage.id === 7 ? (
-                                      (booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected)
-                                        ? 'Payment Completed ✓'
-                                        : (booking?.isSelfJob ? 'Make / Prepare Bill' : 'Approve Work')
-                                    ) :
-                                      stage.id === 8 ? 'Pay Worker' :
-                                        stage.id === 9 ? 'Final Settlement' : 'Continue'
-                          )}
-                        </button>
+                        stage.id === 4 && !unlockStatus.allowed ? (
+                          <div className="inline-flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold shadow-2xs">
+                            <FiClock className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>{unlockStatus.message}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={stage.action}
+                            className="px-4 py-2 rounded-lg font-medium text-white text-sm transition-all active:scale-95 flex items-center gap-2"
+                            style={{
+                              background: themeColors.button,
+                              boxShadow: `0 2px 8px ${themeColors.button}40`,
+                            }}
+                          >
+                            {stage.actionLabel || (
+                              stage.id === 3 ? 'Assign Worker' :
+                                stage.id === 4 ? 'Start Journey' :
+                                  stage.id === 5 ? 'Mark Arrived' :
+                                    stage.id === 6 ? 'Mark workdone' :
+                                      stage.id === 7 ? (
+                                        (booking?.paymentStatus === 'SUCCESS' || booking?.paymentStatus === 'paid' || booking?.cashCollected)
+                                          ? 'Payment Completed ✓'
+                                          : (booking?.isSelfJob ? 'Make / Prepare Bill' : 'Approve Work')
+                                      ) :
+                                        stage.id === 8 ? 'Pay Worker' :
+                                          stage.id === 9 ? 'Final Settlement' : 'Continue'
+                            )}
+                          </button>
+                        )
                       )}
 
                       {/* Online Payment Status Badge for Stage 7 */}
@@ -543,7 +620,7 @@ const BookingTimeline = () => {
             <p className="text-sm text-gray-500 mb-4">Enter user OTP to verify arrival.</p>
             <div className="flex gap-2 justify-center mb-4">
               {[0, 1, 2, 3].map((i) => (
-                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
+                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
               ))}
             </div>
             <button onClick={handleVerifyVisit} disabled={actionLoading} className="w-full bg-blue-600 text-white py-2 rounded-lg">{actionLoading ? 'Verifying...' : 'Verify'}</button>
@@ -575,7 +652,7 @@ const BookingTimeline = () => {
           <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-gray-100">
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-xl font-bold text-gray-800">Pay Worker</h3>
-              <button 
+              <button
                 onClick={() => setIsPayWorkerModalOpen(false)}
                 className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors"
               >

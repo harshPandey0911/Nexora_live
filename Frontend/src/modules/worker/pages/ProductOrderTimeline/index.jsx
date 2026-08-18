@@ -9,11 +9,29 @@ import { toast } from 'react-hot-toast';
 const DeliveryOtpModal = ({ isOpen, onClose, onVerify, loading }) => {
   const [otp, setOtp] = useState(['', '', '', '']);
   const handleChange = (index, value) => {
-    if (!/^\d?$/.test(value)) return;
+    const cleanValue = value.replace(/\D/g, '');
+    if (!cleanValue) {
+      const newOtp = [...otp];
+      newOtp[index] = '';
+      setOtp(newOtp);
+      return;
+    }
+    if (cleanValue.length > 1) {
+      const digits = cleanValue.slice(0, 4).split('');
+      const newOtp = [...otp];
+      digits.forEach((d, i) => {
+        if (i < 4) newOtp[i] = d;
+      });
+      setOtp(newOtp);
+      const nextIndex = Math.min(digits.length, 3);
+      document.getElementById(`totp-${nextIndex}`)?.focus();
+      return;
+    }
+    const digit = cleanValue.slice(-1);
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = digit;
     setOtp(newOtp);
-    if (value && index < 3) document.getElementById(`totp-${index + 1}`)?.focus();
+    if (digit && index < 3) document.getElementById(`totp-${index + 1}`)?.focus();
   };
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) document.getElementById(`totp-${index - 1}`)?.focus();
@@ -36,8 +54,8 @@ const DeliveryOtpModal = ({ isOpen, onClose, onVerify, loading }) => {
         </div>
         <div className="flex gap-2 sm:gap-3 justify-center mb-4 sm:mb-6">
           {[0, 1, 2, 3].map((i) => (
-            <input key={i} id={`totp-${i}`} type="number" inputMode="numeric"
-              className="w-11 h-11 sm:w-14 sm:h-14 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-center text-lg sm:text-xl font-black focus:border-emerald-500 focus:outline-none text-slate-900"
+            <input key={i} id={`totp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*" autoComplete="one-time-code"
+              className="w-11 h-11 sm:w-14 sm:h-14 border-2 border-slate-200 rounded-xl sm:rounded-2xl text-center text-lg sm:text-xl font-black focus:border-emerald-500 focus:outline-none text-slate-900 shadow-xs transition-colors"
               value={otp[i]} onChange={(e) => handleChange(i, e.target.value)} onKeyDown={(e) => handleKeyDown(i, e)} maxLength={1} />
           ))}
         </div>

@@ -6,12 +6,31 @@ const Vendor = require('../../models/Vendor');
 const Worker = require('../../models/Worker');
 const PlatformEarning = require('../../models/PlatformEarning');
 
+const getDateFilter = (period) => {
+  if (!period || period === 'all') return null;
+  const now = new Date();
+  let startDate;
+  if (period === 'today') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  } else if (period === 'this_week') {
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    startDate = new Date(now.setDate(diff));
+    startDate.setHours(0, 0, 0, 0);
+  } else if (period === 'this_month') {
+    startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  } else if (period === 'this_year') {
+    startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0);
+  }
+  return startDate ? { $gte: startDate } : null;
+};
+
 /**
  * Get all transactions with pagination and filtering
  */
 const getAllTransactions = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, status, type, entity } = req.query;
+    const { page = 1, limit = 10, search, status, type, entity, period } = req.query;
 
     // --- SPECIAL HANDLING FOR ADMIN REVENUE (Extract from Bookings) ---
     if (entity === 'admin') {
@@ -21,6 +40,11 @@ const getAllTransactions = async (req, res) => {
       let bookingQuery = {
         status: { $in: ['COMPLETED', 'completed', 'paid', 'PAID'] } // Assuming revenue realized on completion
       };
+
+      const dateGte = getDateFilter(period);
+      if (dateGte) {
+        bookingQuery.createdAt = dateGte;
+      }
 
       // Search filter
       if (search) {
@@ -223,32 +247,59 @@ const getAllTransactions = async (req, res) => {
  */
 const getTransactionStats = async (req, res) => {
   try {
-    const { entity } = req.query;
+    const { entity, period } = req.query;
 
     // --- SPECIAL HANDLING FOR ADMIN REVENUE (Extract from Bookings) ---
     if (entity === 'admin') {
-      const stats = await PlatformEarning.aggregate([
+      const dateGte = getDateFilter(period);
+
+      let data = { totalRevenue: 0, totalCommission: 0, totalGST: 0, totalVendorEarnings: 0 };
+
+      // Aggregate from VendorBill for exact time period
+      const billMatch = { status: 'paid' };
+      if (dateGte) billMatch.paidAt = dateGte;
+
+      const billStats = await VendorBill.aggregate([
+        { $match: billMatch },
         {
           $group: {
             _id: null,
-            totalRevenue: { $sum: '$totalRevenue' },
-            totalCommission: { $sum: '$platformCommission' },
+            totalRevenue: { $sum: '$grandTotal' },
+            totalCommission: { $sum: '$companyRevenue' },
             totalGST: { $sum: '$totalGST' },
-            totalVendorEarnings: { $sum: '$vendorEarnings' }
+            totalVendorEarnings: { $sum: '$vendorTotalEarning' }
           }
         }
       ]);
 
-      const data = stats[0] || { totalRevenue: 0, totalCommission: 0, totalGST: 0, totalVendorEarnings: 0 };
+      if (billStats && billStats.length > 0) {
+        data = billStats[0];
+      } else {
+        // Fallback to PlatformEarning model
+        const platformMatch = dateGte ? { createdAt: dateGte } : {};
+        const stats = await PlatformEarning.aggregate([
+          { $match: platformMatch },
+          {
+            $group: {
+              _id: null,
+              totalRevenue: { $sum: '$totalRevenue' },
+              totalCommission: { $sum: '$platformCommission' },
+              totalGST: { $sum: '$totalGST' },
+              totalVendorEarnings: { $sum: '$vendorEarnings' }
+            }
+          }
+        ]);
+        if (stats && stats.length > 0) data = stats[0];
+      }
 
       return res.status(200).json({
         success: true,
         data: {
-          totalRevenue: data.totalRevenue,
-          totalCommission: data.totalCommission,
-          totalGST: data.totalGST,
-          totalVendorEarnings: data.totalVendorEarnings,
-          netRevenue: data.totalCommission
+          totalRevenue: data.totalRevenue || 0,
+          totalCommission: data.totalCommission || 0,
+          totalGST: data.totalGST || 0,
+          totalVendorEarnings: data.totalVendorEarnings || 0,
+          netRevenue: data.totalCommission || 0
         }
       });
     }

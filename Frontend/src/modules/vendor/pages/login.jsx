@@ -100,8 +100,25 @@ const VendorLogin = () => {
       }
     } catch (error) {
       setIsLoading(false);
-      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
-      toast.error(errorMessage);
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || '';
+
+      if (status === 403 && msg.toLowerCase().includes('pending')) {
+        toast('Your profile is under verification. Please wait for admin approval.', {
+          duration: 6000,
+          icon: '⏳'
+        });
+      } else if (status === 403 && msg.toLowerCase().includes('rejected')) {
+        toast.error('Your account has been rejected. Please contact support.', {
+          duration: 6000
+        });
+      } else if (status === 403 && msg.toLowerCase().includes('suspended')) {
+        toast.error('Your account has been suspended. Please contact support.', {
+          duration: 6000
+        });
+      } else {
+        toast.error(msg || 'Login failed. Please try again.');
+      }
     }
   };
 

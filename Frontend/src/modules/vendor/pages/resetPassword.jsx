@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { FiLock, FiArrowRight, FiCheckCircle, FiAlertTriangle, FiCheck, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { vendorTheme as themeColors } from '../../../theme';
@@ -16,7 +16,9 @@ const passwordSchema = z.string()
   .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
 
 const ResetPassword = () => {
-  const { token } = useParams();
+  const { token: paramToken } = useParams();
+  const [searchParams] = useSearchParams();
+  const token = paramToken || searchParams.get('token');
   const navigate = useNavigate();
 
   const [isValidating, setIsValidating] = useState(true);

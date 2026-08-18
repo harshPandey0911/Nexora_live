@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom';
 
 // Import module routes
 import UserRoutes from '../modules/user/routes';
@@ -29,8 +29,19 @@ const AppRoutes = () => {
 
       {/* Admin Routes */}
       <Route path="/admin/*" element={<AdminRoutes />} />
+
+      {/* Root Fallback Reset Password Routes */}
+      <Route path="/reset-password/:token" element={<UserResetRedirect />} />
+      <Route path="/reset-password" element={<UserResetRedirect />} />
     </Routes>
   );
+};
+
+const UserResetRedirect = () => {
+  const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const activeToken = token || searchParams.get('token') || '';
+  return <Navigate to={`/user/reset-password/${activeToken}`} replace />;
 };
 
 export default AppRoutes;

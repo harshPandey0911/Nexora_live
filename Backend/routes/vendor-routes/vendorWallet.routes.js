@@ -11,6 +11,7 @@ const {
   getSettlements,
   getWalletSummary,
   payWorker,
+  receiveCashHandover,
   requestWithdrawal,
   getWithdrawals
 } = require('../../controllers/vendorControllers/vendorWalletController');
@@ -45,6 +46,9 @@ router.get('/wallet/transactions', authenticate, isVendor, getTransactions);
 
 // Record cash collection (creates negative entry - vendor owes admin)
 router.post('/wallet/cash-collection', authenticate, isVendor, cashCollectionValidation, recordCashCollection);
+
+// Receive cash handover from worker for a booking/order
+router.post('/wallet/receive-cash', authenticate, isVendor, receiveCashHandover);
 
 // Request settlement (vendor pays admin)
 router.post('/wallet/settlement', authenticate, isVendor, settlementValidation, requestSettlement);

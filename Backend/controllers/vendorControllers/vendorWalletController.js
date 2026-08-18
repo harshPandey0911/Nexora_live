@@ -735,6 +735,9 @@ const getWalletSummary = async (req, res) => {
 /**
  * Pay worker for a booking
  */
+/**
+ * Pay worker for a specific booking or product delivery order
+ */
 const payWorker = async (req, res) => {
   try {
     const vendorId = req.user.id;
@@ -743,34 +746,46 @@ const payWorker = async (req, res) => {
     if (!bookingId || !amount || isNaN(amount) || amount <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'Valid booking ID and amount are required'
+        message: 'Valid booking/order ID and amount are required'
       });
     }
 
-    const booking = await Booking.findOne({ _id: bookingId, vendorId });
+    const ProductOrder = require('../../models/ProductOrder');
+    let item = await Booking.findOne({ _id: bookingId, vendorId });
+    let isProductOrder = false;
 
-    if (!booking) {
+    if (!item) {
+      item = await ProductOrder.findOne({
+        $or: [{ _id: bookingId }, { orderId: bookingId }],
+        vendorId
+      });
+      if (item) isProductOrder = true;
+    }
+
+    if (!item) {
       return res.status(404).json({
         success: false,
-        message: 'Booking not found or not authorized'
+        message: 'Booking or Product Order not found or not authorized'
       });
     }
 
-    if (!booking.workerId) {
+    const assignedWorkerId = isProductOrder ? (item.workerId || item.assignedWorkerId) : item.workerId;
+
+    if (!assignedWorkerId) {
       return res.status(400).json({
         success: false,
-        message: 'No worker assigned to this booking'
+        message: 'No worker assigned to this order'
       });
     }
 
-    if (booking.workerPaymentStatus === 'PAID') {
+    if (item.workerPaymentStatus === 'PAID' || item.isWorkerPaid) {
       return res.status(400).json({
         success: false,
-        message: 'Worker already paid for this booking'
+        message: 'Worker already paid for this order'
       });
     }
 
-    const worker = await Worker.findById(booking.workerId);
+    const worker = await Worker.findById(assignedWorkerId);
     if (!worker) {
       return res.status(404).json({
         success: false,
@@ -782,59 +797,77 @@ const payWorker = async (req, res) => {
     let screenshotUrl = null;
     if (screenshot) {
       try {
-        // Check if screenshot is base64
         if (screenshot.startsWith('data:image')) {
           screenshotUrl = await uploadPaymentScreenshot(screenshot, bookingId);
-          console.log('Payment screenshot uploaded to Cloudinary:', screenshotUrl);
         } else {
-          // If already a URL, use it as is
           screenshotUrl = screenshot;
         }
       } catch (uploadError) {
         console.error('Failed to upload payment screenshot:', uploadError);
-        // Continue without screenshot rather than failing the entire payment
         screenshotUrl = null;
       }
     }
 
     // Record Transaction
+    const orderTitle = isProductOrder ? `Order #${item.orderId}` : `Booking #${item.bookingNumber}`;
     const transaction = new Transaction({
       vendorId,
       workerId: worker._id,
-      bookingId: booking._id,
+      bookingId: isProductOrder ? null : item._id,
       type: 'worker_payment',
       amount: parseFloat(amount),
       status: 'completed',
       paymentMethod: paymentMethod || 'cash',
-      description: `Payment for booking #${booking.bookingNumber}. ${notes || ''}`,
+      description: `Payment for ${orderTitle}. ${notes || ''}`,
       referenceId: transactionId || null,
       metadata: {
         notes,
         transactionId,
-        screenshot: screenshotUrl, // Store Cloudinary URL instead of base64
-        paymentMethod
+        screenshot: screenshotUrl,
+        paymentMethod,
+        orderId: isProductOrder ? item.orderId : null
       }
     });
 
-    // Update Worker balance (optional - depends on if we track worker earnings in wallet)
+    // Update Worker balance
     if (!worker.wallet) worker.wallet = { balance: 0 };
     worker.wallet.balance += parseFloat(amount);
 
-    // Update Booking
-    booking.workerPaymentStatus = 'PAID';
-    booking.isWorkerPaid = true;
-    booking.workerPaidAt = new Date();
+    // Update Order / Booking
+    item.workerPaymentStatus = 'PAID';
+    item.isWorkerPaid = true;
+    item.workerPaidAt = new Date();
+    item.cashCollected = true;
+    item.cashHandedOverAt = new Date();
 
-    // Only mark booking status completed if the customer has also paid
-    if (booking.cashCollected === true || ['success', 'paid', 'collected_by_vendor', 'paid_online'].includes(booking.paymentStatus?.toLowerCase())) {
-      booking.status = 'completed';
-      booking.completedAt = booking.completedAt || new Date();
+    if (!isProductOrder) {
+      if (['success', 'paid', 'collected_by_vendor', 'paid_online'].includes(item.paymentStatus?.toLowerCase()) || item.cashCollected === true) {
+        item.status = 'completed';
+        item.completedAt = item.completedAt || new Date();
+      }
+    }
+
+    // Record cash collected transaction if applicable
+    const codAmount = item.financialBreakdown?.totalAmount || item.totalAmount || item.finalAmount || 0;
+    let cashTxn = null;
+    if (codAmount > 0 && item.paymentMethod?.toUpperCase() === 'COD') {
+      cashTxn = new Transaction({
+        vendorId,
+        workerId: worker._id,
+        bookingId: isProductOrder ? null : item._id,
+        type: 'cash_collected',
+        amount: parseFloat(codAmount),
+        status: 'completed',
+        paymentMethod: 'cash',
+        description: `COD Cash ₹${codAmount} received from ${worker.name} for ${orderTitle}`
+      });
     }
 
     await Promise.all([
       transaction.save(),
+      cashTxn ? cashTxn.save() : Promise.resolve(),
       worker.save(),
-      booking.save()
+      item.save()
     ]);
 
     // Notify worker about payment
@@ -843,13 +876,13 @@ const payWorker = async (req, res) => {
       workerId: worker._id,
       type: 'payment_received',
       title: '💰 Payment Received',
-      message: `You received ₹${amount.toLocaleString()} from ${booking.vendorId?.businessName || 'vendor'} for booking #${booking.bookingNumber}`,
-      relatedId: booking._id,
-      relatedType: 'booking',
+      message: `You received ₹${parseFloat(amount).toLocaleString()} from ${item.vendorId?.businessName || 'vendor'} for ${orderTitle}`,
+      relatedId: item._id,
+      relatedType: isProductOrder ? 'product_order' : 'booking',
       priority: 'high',
       pushData: {
         type: 'payment_received',
-        bookingId: booking._id.toString(),
+        bookingId: item._id.toString(),
         amount: parseFloat(amount),
         link: `/worker/wallet`
       }
@@ -860,15 +893,15 @@ const payWorker = async (req, res) => {
     if (io) {
       io.to(`worker_${worker._id}`).emit('payment_received', {
         amount: parseFloat(amount),
-        bookingId: booking._id,
+        bookingId: item._id,
         balance: worker.wallet?.balance || 0
       });
       io.to(`worker_${worker._id}`).emit('wallet_updated', {
         balance: worker.wallet?.balance || 0
       });
       io.to(`worker_${worker._id}`).emit('booking_updated', {
-        bookingId: booking._id,
-        status: booking.status
+        bookingId: item._id,
+        status: item.status
       });
     }
 
@@ -876,7 +909,7 @@ const payWorker = async (req, res) => {
       success: true,
       message: `Payment of ₹${amount} recorded for ${worker.name}`,
       data: {
-        bookingId: booking._id,
+        bookingId: item._id,
         workerName: worker.name,
         amount: parseFloat(amount),
         screenshotUploaded: !!screenshotUrl
@@ -887,6 +920,84 @@ const payWorker = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to record payment'
+    });
+  }
+};
+
+/**
+ * Receive Cash Handover from worker for a booking/order
+ */
+const receiveCashHandover = async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { bookingId, amount, notes } = req.body;
+
+    if (!bookingId || !amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid booking/order ID and amount are required'
+      });
+    }
+
+    const ProductOrder = require('../../models/ProductOrder');
+    let item = await Booking.findOne({ _id: bookingId, vendorId });
+    let isProductOrder = false;
+
+    if (!item) {
+      item = await ProductOrder.findOne({
+        $or: [{ _id: bookingId }, { orderId: bookingId }],
+        vendorId
+      });
+      if (item) isProductOrder = true;
+    }
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking or Product Order not found'
+      });
+    }
+
+    const assignedWorkerId = isProductOrder ? (item.workerId || item.assignedWorkerId) : item.workerId;
+    const worker = assignedWorkerId ? await Worker.findById(assignedWorkerId) : null;
+
+    item.cashCollected = true;
+    item.cashHandedOverAt = new Date();
+    await item.save();
+
+    const orderTitle = isProductOrder ? `Order #${item.orderId}` : `Booking #${item.bookingNumber}`;
+
+    // Record Transaction
+    const transaction = new Transaction({
+      vendorId,
+      workerId: worker?._id || null,
+      bookingId: isProductOrder ? null : item._id,
+      type: 'cash_collected',
+      amount: parseFloat(amount),
+      status: 'completed',
+      paymentMethod: 'cash',
+      description: `COD Cash ₹${amount} received from ${worker ? worker.name : 'worker'} for ${orderTitle}. ${notes || ''}`
+    });
+    await transaction.save();
+
+    if (worker) {
+      const io = req.app.get('io');
+      if (io) {
+        io.to(`worker_${worker._id}`).emit('cash_collected', { amount: parseFloat(amount), bookingId: item._id });
+        io.to(`worker_${worker._id}`).emit('wallet_updated', {});
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Cash of ₹${amount} marked as received successfully`,
+      data: item
+    });
+  } catch (error) {
+    console.error('Receive cash handover error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to record cash handover'
     });
   }
 };
@@ -1096,6 +1207,7 @@ module.exports = {
   getSettlements,
   getWalletSummary,
   payWorker,
+  receiveCashHandover,
   requestWithdrawal,
   getWithdrawals,
   getEarningsAnalytics

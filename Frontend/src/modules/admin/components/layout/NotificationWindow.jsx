@@ -51,9 +51,11 @@ const NotificationWindow = ({
       navigate('/admin/settlements/withdrawals');
     } else if (type.includes('cash_limit') || type.includes('payout_processed') || type.includes('wallet')) {
       navigate('/admin/settlements/vendors');
+    } else if (type.includes('new_worker') || type.includes('worker_registration') || type.includes('worker_added') || type.includes('worker_approved') || type.includes('worker_rejected') || relatedType === 'worker') {
+      navigate('/admin/workers/all');
     } else if (type.includes('vendor') || type.includes('registration')) {
       navigate('/admin/vendors/all');
-    } else if (type.includes('booking') || type.includes('job') || type.includes('worker') || type.includes('visit') || type.includes('work') || type.includes('journey')) {
+    } else if (type.includes('booking') || type.includes('job') || type.includes('worker_assigned') || type.includes('visit') || type.includes('work') || type.includes('journey')) {
       navigate('/admin/bookings/all');
     } else if (relatedType === 'booking') {
       navigate('/admin/bookings/all');

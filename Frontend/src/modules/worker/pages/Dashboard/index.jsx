@@ -197,22 +197,26 @@ const Dashboard = () => {
         // Use database totals from stats API, fallback to current 15-job slice counts
         const pending = (typeof statsRes.data.pendingJobs === 'number')
           ? statsRes.data.pendingJobs
-          : fetchedJobsList.filter(j => ['ASSIGNED', 'PENDING', 'REQUESTED'].includes(j.status)).length;
+          : fetchedJobsList.filter(j => ['ASSIGNED', 'PENDING', 'REQUESTED', 'PLACED', 'PREPARING'].includes(j.status)).length;
 
         const active = (typeof statsRes.data.activeJobs === 'number')
           ? statsRes.data.activeJobs
-          : fetchedJobsList.filter(j => ['ACCEPTED', 'CONFIRMED', 'VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED'].includes(j.status)).length;
+          : fetchedJobsList.filter(j => ['ACCEPTED', 'CONFIRMED', 'VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'ON_THE_WAY', 'OUT_FOR_DELIVERY', 'DELIVERING'].includes(j.status)).length;
 
         const completed = (typeof statsRes.data.completedJobs === 'number')
           ? statsRes.data.completedJobs
-          : fetchedJobsList.filter(j => ['COMPLETED', 'WORK_DONE'].includes(j.status)).length;
+          : fetchedJobsList.filter(j => ['COMPLETED', 'WORK_DONE', 'DELIVERED', 'WORKER_PAID', 'PAID', 'DELIVERED_BY_WORKER'].includes(j.status)).length;
 
-        const fetchedRating = (typeof statsRes.data?.rating === 'number')
+        const fetchedRating = (typeof statsRes.data?.rating === 'number' && statsRes.data.rating > 0)
           ? statsRes.data.rating
-          : (typeof profileRes.worker?.rating === 'number' ? profileRes.worker.rating : 0);
+          : (typeof profileRes.worker?.rating === 'number' && profileRes.worker.rating > 0 ? profileRes.worker.rating : 5.0);
 
         const receivedSalary = (walletRes.success && walletRes.data)
           ? (walletRes.data.receivedSalary ?? walletRes.data.balance ?? 0)
+          : (statsRes.data?.receivedSalary ?? profileRes.worker?.wallet?.balance ?? 0);
+
+        const salaryOwed = (statsRes.data?.salaryOwed !== undefined)
+          ? statsRes.data.salaryOwed
           : (statsRes.data?.receivedSalary ?? profileRes.worker?.wallet?.balance ?? 0);
 
         const cashCollectedOnField = (walletRes.success && walletRes.data)
@@ -222,6 +226,7 @@ const Dashboard = () => {
         setStats({
           totalEarnings: totalEarnings || 0,
           receivedSalary,
+          salaryOwed,
           cashCollectedOnField,
           pendingJobs: pending,
           acceptedJobs: 0,
@@ -334,9 +339,9 @@ const Dashboard = () => {
   const dateFilteredJobs = useMemo(() => {
     return recentJobs.filter(job => {
       // 1. Status Tab filter
-      if (activeTab === 'PENDING' && !['ASSIGNED', 'PENDING', 'REQUESTED', 'ACCEPTED'].includes(job.status)) return false;
-      if (activeTab === 'ACTIVE' && !['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'CONFIRMED'].includes(job.status)) return false;
-      if (activeTab === 'COMPLETED' && !['COMPLETED', 'WORK_DONE'].includes(job.status)) return false;
+      if (activeTab === 'PENDING' && !['ASSIGNED', 'PENDING', 'REQUESTED', 'ACCEPTED', 'PLACED', 'PREPARING'].includes(job.status)) return false;
+      if (activeTab === 'ACTIVE' && !['VISITED', 'IN_PROGRESS', 'JOURNEY_STARTED', 'CONFIRMED', 'ON_THE_WAY', 'OUT_FOR_DELIVERY', 'DELIVERING'].includes(job.status)) return false;
+      if (activeTab === 'COMPLETED' && !['COMPLETED', 'WORK_DONE', 'DELIVERED', 'WORKER_PAID', 'PAID', 'DELIVERED_BY_WORKER'].includes(job.status)) return false;
 
       // 2. Date filter
       if (dateFilter === 'ALL') return true;

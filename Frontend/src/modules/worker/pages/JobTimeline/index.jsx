@@ -227,7 +227,51 @@ const JobTimeline = () => {
   };
 
   const isPending = (job?.status === 'assigned' || job?.status === 'confirmed' || job?.status === 'pending') && job?.workerResponse !== 'ACCEPTED';
-  const customerPaid = job?.cashCollected || job?.paymentStatus === 'SUCCESS' || job?.paymentStatus === 'success';
+  const getJourneyUnlockInfo = (scheduledDate, scheduledTime) => {
+    if (!scheduledDate) return { allowed: true };
+
+    const now = new Date();
+    const apptDay = new Date(scheduledDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    apptDay.setHours(0, 0, 0, 0);
+
+    if (apptDay > today) {
+      const dateFormatted = new Date(scheduledDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      return {
+        allowed: false,
+        message: `Scheduled for ${dateFormatted} (${scheduledTime || 'Slot Time'})`
+      };
+    }
+
+    const appointment = new Date(scheduledDate);
+    if (scheduledTime) {
+      const timeMatch = scheduledTime.match(/(\d{1,2}):(\d{2})/);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        if (scheduledTime.toLowerCase().includes('pm') && hours < 12) hours += 12;
+        if (scheduledTime.toLowerCase().includes('am') && hours === 12) hours = 0;
+        appointment.setHours(hours, minutes, 0, 0);
+      }
+    }
+
+    // 60 minutes buffer before appointment slot
+    const unlockTime = new Date(appointment.getTime() - 60 * 60 * 1000);
+
+    if (now < unlockTime) {
+      const unlockTimeString = unlockTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return {
+        allowed: false,
+        unlockTime: unlockTimeString,
+        message: `Journey unlocks 60 mins prior (${unlockTimeString})`
+      };
+    }
+
+    return { allowed: true };
+  };
+
+  const unlockStatus = getJourneyUnlockInfo(job?.scheduledDate, job?.scheduledTime);
 
   const timelineStages = [
     {
@@ -235,10 +279,10 @@ const JobTimeline = () => {
       title: isPending ? 'Job Assigned' : 'Job Accepted',
       icon: isPending ? FiUser : FiCheck,
       action: isPending
-        ? () => navigate(`/worker/jobs/${id}`)
-        : (currentStage === 1 ? () => handleAction('start') : null),
-      actionLabel: isPending ? 'View & Respond' : 'Start Journey',
-      description: isPending ? 'New job assigned. Waiting for response.' : 'You have accepted the job. Ready to start.',
+        ? () => navigate(`/worker/job/${id}`)
+        : (currentStage === 1 ? (unlockStatus.allowed ? () => handleAction('start') : null) : null),
+      actionLabel: isPending ? 'View & Respond' : (unlockStatus.allowed ? 'Start Journey' : unlockStatus.message),
+      description: isPending ? 'New job assigned. Waiting for response.' : (unlockStatus.allowed ? 'You have accepted the job. Ready to start.' : unlockStatus.message),
       timestamp: job?.workerAcceptedAt || job?.assignedAt
     },
     {
@@ -429,7 +473,7 @@ const JobTimeline = () => {
             <p className="text-sm text-gray-500 mb-4">Enter customer OTP</p>
             <div className="flex gap-2 justify-center mb-6">
               {[0, 1, 2, 3].map(i => (
-                <input key={i} id={`otp-${i}`} type="number" className="w-12 h-12 border rounded text-center text-xl"
+                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" pattern="[0-9]*" className="w-12 h-12 border rounded text-center text-xl"
                   value={otpInput[i]} onChange={e => handleOtpChange(i, e.target.value)} maxLength={1} />
               ))}
             </div>

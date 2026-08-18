@@ -356,7 +356,7 @@ const PaymentOverview = () => {
                       className={`transition-colors ${isClickable ? 'cursor-pointer hover:bg-gray-50/80' : ''}`}
                     >
                     <td className="py-3 px-4">
-                      <span className="text-xs font-mono text-gray-500">#{tx._id.slice(-6).toUpperCase()}</span>
+                      <span className="text-xs font-mono font-bold text-gray-900">{tx.referenceId || tx._id}</span>
                     </td>
                     <td className="py-3 px-4">
                       {(() => {
@@ -443,7 +443,7 @@ const PaymentOverview = () => {
                     </td>
                     <td className="py-3 px-4">
                       {(() => {
-                        const ref = tx.referenceId || tx.bookingId?.bookingNumber || tx.razorpayOrderId;
+                        const ref = tx.bookingId?.bookingNumber || tx.referenceId || tx.razorpayOrderId;
                         if (!ref) return <span className="text-gray-300">-</span>;
                         
                         if (isClickable) {
@@ -452,14 +452,14 @@ const PaymentOverview = () => {
                               className="text-xs text-blue-600 font-mono hover:underline font-semibold"
                               title={`View Booking Details: ${ref}`}
                             >
-                              {ref.length > 12 ? `${ref.slice(0, 10)}...` : ref}
+                              {ref}
                             </span>
                           );
                         }
 
                         return (
                           <span className="text-xs text-gray-500 font-mono" title={ref}>
-                            {ref.length > 12 ? `${ref.slice(0, 10)}...` : ref}
+                            {ref}
                           </span>
                         );
                       })()}

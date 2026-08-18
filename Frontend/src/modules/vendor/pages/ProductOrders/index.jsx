@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
+import { AnimatePresence, motion } from 'framer-motion';
 import { 
   FiPackage, FiPlus, FiTrash2, FiEye, FiSearch, 
   FiChevronDown, FiBox, FiUser, FiMapPin, FiClock, 
-  FiChevronRight, FiCheckCircle, FiTruck, FiUsers, FiPhone
+  FiChevronRight, FiCheckCircle, FiTruck, FiUsers, FiPhone,
+  FiDollarSign, FiX, FiCheck, FiCopy, FiFileText
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import vendorService from '../../services/vendorService';
+import api from '../../../../services/api';
 import Pagination from '../../../../components/common/Pagination';
 
 const getStatusBadgeClass = (status) => {
@@ -52,6 +55,19 @@ const ProductOrders = memo(() => {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pay Worker Modal State
+  const [payWorkerModalOrder, setPayWorkerModalOrder] = useState(null);
+  const [payAmountInput, setPayAmountInput] = useState('');
+  const [payMethodInput, setPayMethodInput] = useState('cash');
+  const [payNotesInput, setPayNotesInput] = useState('');
+  const [isPaySubmitting, setIsPaySubmitting] = useState(false);
+
+  // Receive Cash Modal State
+  const [receiveCashModalOrder, setReceiveCashModalOrder] = useState(null);
+  const [receiveCashAmountInput, setReceiveCashAmountInput] = useState('');
+  const [receiveCashNotesInput, setReceiveCashNotesInput] = useState('');
+  const [isReceiveCashSubmitting, setIsReceiveCashSubmitting] = useState(false);
+
   const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -68,6 +84,72 @@ const ProductOrders = memo(() => {
       setLoading(false);
     }
   }, []);
+
+  const handleOpenPayWorker = (order) => {
+    setPayWorkerModalOrder(order);
+    const suggestedPay = order.financialBreakdown?.deliveryCharge || 300;
+    setPayAmountInput(String(suggestedPay));
+    setPayMethodInput('cash');
+    setPayNotesInput('');
+  };
+
+  const handleConfirmPayWorker = async (e) => {
+    if (e) e.preventDefault();
+    if (!payWorkerModalOrder) return;
+    try {
+      setIsPaySubmitting(true);
+      const res = await api.post('/vendors/wallet/pay-worker', {
+        bookingId: payWorkerModalOrder._id,
+        amount: Number(payAmountInput),
+        paymentMethod: payMethodInput,
+        notes: payNotesInput
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message || 'Worker paid successfully!');
+        setPayWorkerModalOrder(null);
+        loadOrders();
+        window.dispatchEvent(new Event('vendorWorkersUpdated'));
+      }
+    } catch (err) {
+      console.error('Pay worker error:', err);
+      toast.error(err.response?.data?.message || 'Failed to pay worker');
+    } finally {
+      setIsPaySubmitting(false);
+    }
+  };
+
+  const handleOpenReceiveCash = (order) => {
+    setReceiveCashModalOrder(order);
+    const totalCOD = order.financialBreakdown?.totalAmount || order.totalAmount || 0;
+    setReceiveCashAmountInput(String(totalCOD));
+    setReceiveCashNotesInput('');
+  };
+
+  const handleConfirmReceiveCash = async (e) => {
+    if (e) e.preventDefault();
+    if (!receiveCashModalOrder) return;
+    try {
+      setIsReceiveCashSubmitting(true);
+      const res = await api.post('/vendors/wallet/receive-cash', {
+        bookingId: receiveCashModalOrder._id,
+        amount: Number(receiveCashAmountInput),
+        notes: receiveCashNotesInput
+      });
+
+      if (res.data.success) {
+        toast.success(res.data.message || 'Cash marked as received!');
+        setReceiveCashModalOrder(null);
+        loadOrders();
+        window.dispatchEvent(new Event('vendorWorkersUpdated'));
+      }
+    } catch (err) {
+      console.error('Receive cash error:', err);
+      toast.error(err.response?.data?.message || 'Failed to record cash received');
+    } finally {
+      setIsReceiveCashSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/api$/, '') || 'http://localhost:5000';
@@ -520,6 +602,29 @@ const ProductOrders = memo(() => {
                                 Mark Delivered
                               </button>
                             )}
+
+                            {/* MERGED: Receive Cash & Pay Worker Button */}
+                            {Boolean(order.workerId || order.assignedWorkerId) && (
+                              !(order.isWorkerPaid || order.workerPaymentStatus === 'PAID') ? (
+                                <button
+                                  onClick={() => handleOpenPayWorker(order)}
+                                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg uppercase shadow-2xs flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+                                  title="Receive COD Cash & Pay Worker Salary for this Order"
+                                >
+                                  <FiCheckCircle className="w-2.5 h-2.5" />
+                                  Receive Cash & Pay Worker
+                                </button>
+                              ) : (
+                                <button
+                                  disabled
+                                  className="px-2.5 py-1 bg-gray-100 text-gray-400 border border-gray-200 text-[9px] font-bold rounded-lg uppercase cursor-not-allowed opacity-65 flex items-center gap-1"
+                                  title="Worker has been paid and order settled"
+                                >
+                                  <FiCheckCircle className="w-2.5 h-2.5 text-emerald-500" />
+                                  Paid & Settled
+                                </button>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -545,6 +650,105 @@ const ProductOrders = memo(() => {
           className="mt-3"
         />
       )}
+
+      {/* ── UNIFIED RECEIVE CASH & PAY WORKER MODAL ── */}
+      <AnimatePresence>
+        {payWorkerModalOrder && (
+          <div className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-gray-100 text-gray-900 overflow-hidden z-10"
+            >
+              <div className="bg-emerald-600 p-4 flex items-center justify-between text-white">
+                <div className="flex items-center gap-2.5">
+                  <FiCheckCircle className="w-5 h-5" />
+                  <div>
+                    <h3 className="text-sm font-bold">Receive Cash & Pay Worker — Order #{payWorkerModalOrder.orderId}</h3>
+                    <p className="text-[10px] text-emerald-100">Settle physical COD cash & credit worker salary</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setPayWorkerModalOrder(null)}
+                  className="w-7 h-7 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                >
+                  <FiX className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleConfirmPayWorker} className="p-4 space-y-3">
+                {/* Physical COD Cash Notice */}
+                {(payWorkerModalOrder.paymentMethod?.toUpperCase() === 'COD' || payWorkerModalOrder.isCod) && (
+                  <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-amber-900 space-y-1">
+                    <p className="text-[10px] font-bold flex items-center gap-1">
+                      <span>💵 Physical COD Cash Handover</span>
+                    </p>
+                    <p className="text-[10px] text-amber-800">
+                      Receiving physical COD cash of <strong>₹{payWorkerModalOrder.financialBreakdown?.totalAmount || payWorkerModalOrder.totalAmount || 0}</strong> collected on field. This will reset the worker's <strong>Field Cash to ₹0</strong>.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Worker Salary Payout Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={payAmountInput}
+                    onChange={(e) => setPayAmountInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-gray-900 text-base"
+                    placeholder="Enter salary amount (e.g. 300)..."
+                  />
+                  <p className="text-[9px] text-gray-400 mt-1">This salary will be credited to the worker's salary wallet balance.</p>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Payment Mode</label>
+                  <select
+                    value={payMethodInput}
+                    onChange={(e) => setPayMethodInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-semibold text-gray-800 text-xs"
+                  >
+                    <option value="cash">Cash Handover</option>
+                    <option value="upi">UPI / GPay / PhonePe</option>
+                    <option value="bank_transfer">Bank Transfer / NEFT</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Notes / Transaction Ref (Optional)</label>
+                  <input
+                    type="text"
+                    value={payNotesInput}
+                    onChange={(e) => setPayNotesInput(e.target.value)}
+                    placeholder="e.g. Salary payout for noodles delivery"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-xs text-gray-800"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPayWorkerModalOrder(null)}
+                    className="flex-1 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPaySubmitting}
+                    className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isPaySubmitting ? 'Processing...' : 'Confirm Settlement & Pay Worker'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
