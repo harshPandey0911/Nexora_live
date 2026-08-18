@@ -152,33 +152,33 @@ const Signup = () => {
   const brandColor = themeColors.brand?.teal || '#347989';
 
   return (
-    <div className="min-h-[100dvh] bg-gray-50 flex flex-col justify-start sm:justify-center py-12 sm:px-6 lg:px-8 relative overflow-x-hidden">
+    <div className="h-[100dvh] sm:h-auto sm:min-h-screen overflow-hidden sm:overflow-auto bg-gray-50 flex flex-col justify-start sm:justify-center py-4 sm:py-12 sm:px-6 lg:px-8 relative">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--brand-teal)] opacity-[0.03] rounded-full blur-3xl" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[var(--brand-yellow)] opacity-[0.03] rounded-full blur-3xl" />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-8 relative z-10">
-        <Logo className="h-16 w-auto transform hover:scale-110 transition-transform duration-500 mx-auto" />
-        <h2 className="mt-4 text-3xl font-extrabold text-gray-900 tracking-tight">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-3 sm:mb-8 relative z-10 animate-fade-in">
+        <Logo className="h-12 sm:h-16 w-auto transform hover:scale-110 transition-transform duration-500 mx-auto" />
+        <h2 className="mt-2 sm:mt-4 text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
           Create Account
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-0.5 sm:mt-2 text-[10px] sm:text-sm text-gray-600">
           Join Nexora Go to start booking services
         </p>
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0 relative z-10">
-        <div className="bg-white py-8 px-4 shadow-2xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden">
+        <div className="bg-white py-4 px-4 shadow-2xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100 relative overflow-hidden animate-slide-in-bottom">
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[var(--brand-teal)] via-[var(--brand-yellow)] to-[var(--brand-orange)]" />
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Full Name
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiUser className="h-5 w-5 text-gray-400" />
+                  <FiUser className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   ref={nameInputRef}
@@ -188,7 +188,7 @@ const Signup = () => {
                   required
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
+                  className="block w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 text-xs sm:text-sm transition-all duration-300 hover:border-gray-400"
                   placeholder="Enter your name"
                   style={{ '--tw-ring-color': brandColor }}
                 />
@@ -196,15 +196,15 @@ const Signup = () => {
             </div>
 
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="phoneNumber" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Phone Number
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiPhone className="h-5 w-5 text-gray-400" />
+                  <FiPhone className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
-                <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
-                  <span className="text-gray-500 font-medium border-r border-gray-300 pr-2">+91</span>
+                <div className="absolute inset-y-0 left-9 sm:left-10 flex items-center pointer-events-none">
+                  <span className="text-gray-500 font-medium border-r border-gray-300 pr-2 text-xs sm:text-sm">+91</span>
                 </div>
                 <input
                   id="phoneNumber"
@@ -219,23 +219,23 @@ const Signup = () => {
                       setErrors(prev => ({ ...prev, phoneNumber: null }));
                     }
                   }}
-                  className="block w-full pl-24 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
+                  className="block w-full pl-20 sm:pl-24 pr-4 py-2 sm:py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 text-xs sm:text-sm transition-all duration-300 hover:border-gray-400"
                   placeholder="9876543210"
                   style={{ '--tw-ring-color': brandColor }}
                 />
               </div>
               {errors.phoneNumber && (
-                <p className="text-red-500 text-xs mt-1 ml-1">{errors.phoneNumber}</p>
+                <p className="text-red-500 text-[10px] sm:text-xs mt-1 ml-1">{errors.phoneNumber}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiLock className="h-5 w-5 text-gray-400" />
+                  <FiLock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   id="password"
@@ -244,7 +244,7 @@ const Signup = () => {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
+                  className="block w-full pl-9 sm:pl-10 pr-10 py-2 sm:py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 text-xs sm:text-sm transition-all duration-300 hover:border-gray-400"
                   placeholder="Set your password"
                   style={{ '--tw-ring-color': brandColor }}
                 />
@@ -254,21 +254,21 @@ const Signup = () => {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
                 >
                   {showPassword ? (
-                    <FiEyeOff className="h-5 w-5" />
+                    <FiEyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                   ) : (
-                    <FiEye className="h-5 w-5" />
+                    <FiEye className="h-4 w-4 sm:h-5 sm:w-5" />
                   )}
                 </button>
               </div>
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Email Address <span className="text-red-500">*</span>
               </label>
               <div className="relative rounded-xl shadow-sm group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none group-focus-within:text-[var(--brand-teal)] transition-colors">
-                  <FiMail className="h-5 w-5 text-gray-400" />
+                  <FiMail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
                 </div>
                 <input
                   id="email"
@@ -277,18 +277,18 @@ const Signup = () => {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 hover:border-gray-400"
+                  className="block w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 text-xs sm:text-sm transition-all duration-300 hover:border-gray-400"
                   placeholder="you@example.com"
                   style={{ '--tw-ring-color': brandColor }}
                 />
               </div>
               {errors.email && (
-                <p className="text-red-500 text-xs mt-1 ml-1">{errors.email}</p>
+                <p className="text-red-500 text-[10px] sm:text-xs mt-1 ml-1">{errors.email}</p>
               )}
             </div>
 
             <div className="flex items-start">
-              <div className="flex items-center h-5">
+              <div className="flex items-center h-5 mt-0.5">
                 <input
                   id="agreeToTerms"
                   name="agreeToTerms"
@@ -300,15 +300,15 @@ const Signup = () => {
                       setErrors(prev => ({ ...prev, agreeToTerms: null }));
                     }
                   }}
-                  className="h-4 w-4 rounded cursor-pointer"
+                  className="h-3.5 w-3.5 rounded cursor-pointer animate-fade-in"
                   style={{ accentColor: brandColor }}
                 />
               </div>
-              <div className="ml-3 text-xs">
+              <div className="ml-2.5 text-[10px] sm:text-xs leading-normal">
                 <label htmlFor="agreeToTerms" className="text-gray-500 cursor-pointer select-none">
                   I agree to the{' '}
                   <Link to="/user/terms" className="font-semibold hover:underline" style={{ color: brandColor }}>
-                    Terms & Conditions
+                    Terms &amp; Conditions
                   </Link>{' '}
                   and{' '}
                   <Link to="/user/privacy" className="font-semibold hover:underline" style={{ color: brandColor }}>
@@ -316,7 +316,7 @@ const Signup = () => {
                   </Link>
                 </label>
                 {errors.agreeToTerms && (
-                  <p className="text-red-500 text-xs mt-1">{errors.agreeToTerms}</p>
+                  <p className="text-red-500 text-[10px] sm:text-xs mt-0.5">{errors.agreeToTerms}</p>
                 )}
               </div>
             </div>
@@ -325,7 +325,7 @@ const Signup = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all duration-500 shadow-lg hover:shadow-xl hover:-translate-y-1 transform disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+                className="group relative w-full flex justify-center py-2.5 sm:py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white transition-all duration-500 shadow-lg hover:shadow-xl hover:-translate-y-1 transform disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
                 style={{
                   backgroundColor: brandColor,
                   boxShadow: `0 10px 15px -3px ${brandColor}4D`
@@ -333,7 +333,7 @@ const Signup = () => {
               >
                 <span className="absolute inset-0 w-full h-full bg-white/10 group-hover:translate-x-full transition-transform duration-700 -translate-x-full" />
                 {isLoading ? (
-                  <LogoLoader fullScreen={false} inline={true} size="w-6 h-6" />
+                  <LogoLoader fullScreen={false} inline={true} size="w-5 h-5 sm:w-6 sm:h-6" />
                 ) : (
                   <span className="flex items-center relative z-10">
                     Create Account
@@ -345,7 +345,7 @@ const Signup = () => {
           </form>
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-500">
+        <p className="mt-3 sm:mt-8 text-center text-sm text-gray-500">
           Already have an account?{' '}
           <Link to="/user/login" className="font-semibold text-[var(--brand-teal)] hover:text-[var(--brand-yellow)] transition-colors duration-300">
             Sign in

@@ -33,7 +33,17 @@ const AdminSettings = () => {
     adminAccountName: 'Nexora Platform Pvt Ltd',
     adminBankName: 'HDFC Bank Ltd',
     adminAccountNumber: '50200088991122',
-    adminIfscCode: 'HDFC0001234'
+    adminIfscCode: 'HDFC0001234',
+    commissionRates: {
+      level1: 10,
+      level2: 15,
+      level3: 20
+    },
+    platformFeeRates: {
+      level1: 0.5,
+      level2: 1.0,
+      level3: 2.0
+    }
   });
 
   const [slotConfig, setSlotConfig] = useState({
@@ -189,7 +199,9 @@ const AdminSettings = () => {
             adminAccountName: res.settings.adminAccountName || 'Nexora Platform Pvt Ltd',
             adminBankName: res.settings.adminBankName || 'HDFC Bank Ltd',
             adminAccountNumber: res.settings.adminAccountNumber || '50200088991122',
-            adminIfscCode: res.settings.adminIfscCode || 'HDFC0001234'
+            adminIfscCode: res.settings.adminIfscCode || 'HDFC0001234',
+            commissionRates: res.settings.commissionRates || { level1: 10, level2: 15, level3: 20 },
+            platformFeeRates: res.settings.platformFeeRates || { level1: 0.5, level2: 1.0, level3: 2.0 }
           });
           if (res.settings.slotConfig) {
             setSlotConfig(res.settings.slotConfig);
@@ -321,6 +333,10 @@ const AdminSettings = () => {
         ...slotConfig,
         gapInMinutes: parseInt(slotConfig.gapInMinutes, 10) || 60
       };
+      
+      const level1Payout = 100 - (financialSettings.commissionRates?.level1 ?? 10);
+      const level1PlatformFee = financialSettings.platformFeeRates?.level1 ?? 0.5;
+
       const formattedFinancials = {
         ...financialSettings,
         visitedCharges: Number(financialSettings.visitedCharges),
@@ -329,6 +345,8 @@ const AdminSettings = () => {
         partsGstPercentage: Number(financialSettings.partsGstPercentage),
         vendorCashLimit: Number(financialSettings.vendorCashLimit),
         cancellationPenalty: Number(financialSettings.cancellationPenalty),
+        servicePayoutPercentage: Number(level1Payout),
+        platformFeePercentage: Number(level1PlatformFee),
         slotConfig: finalSlotConfig
       };
       await updateSettings(formattedFinancials);
@@ -928,12 +946,39 @@ const AdminSettings = () => {
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                       <p className="text-[10px] text-gray-400 mt-1">GST rate applied to parts &amp; materials</p>
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Service Payout (%)</label>
-                      <input type="number" name="servicePayoutPercentage" value={financialSettings.servicePayoutPercentage} onChange={handleFinancialChange}
-                        min="0" max="100"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
-                      <p className="text-[10px] text-gray-400 mt-1">Vendor keeps this % of service charges</p>
+                    <div className="md:col-span-2 bg-gray-50/50 p-4 rounded-xl border border-gray-200 space-y-3">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase">Service Payout (%)</h4>
+                      <p className="text-[10px] text-gray-400">Vendor keeps this % of service charges (based on Level)</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[1, 2, 3].map(level => {
+                          const val = 100 - (financialSettings.commissionRates?.[`level${level}`] ?? (level === 1 ? 10 : level === 2 ? 15 : 20));
+                          return (
+                            <div key={level}>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Level {level}</label>
+                              <div className="relative">
+                                <input 
+                                  type="number" 
+                                  min="0" 
+                                  max="100" 
+                                  value={val}
+                                  onChange={(e) => {
+                                    const payoutVal = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+                                    setFinancialSettings(prev => ({
+                                      ...prev,
+                                      commissionRates: {
+                                        ...prev.commissionRates,
+                                        [`level${level}`]: 100 - payoutVal
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full pl-3 pr-7 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-green-500" 
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Parts Payout (%)</label>
@@ -948,12 +993,40 @@ const AdminSettings = () => {
                         min="0" max="100"
                         className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
                     </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Platform Fee (%)</label>
-                      <input type="number" name="platformFeePercentage" value={financialSettings.platformFeePercentage} onChange={handleFinancialChange}
-                        min="0" max="100"
-                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-green-500 transition-all" />
-                      <p className="text-[10px] text-gray-400 mt-1">Fee charged on vendor withdrawals</p>
+                    <div className="md:col-span-2 bg-gray-50/50 p-4 rounded-xl border border-gray-200 space-y-3">
+                      <h4 className="text-xs font-bold text-gray-700 uppercase">Platform Payout Fee (%)</h4>
+                      <p className="text-[10px] text-gray-400">Fees applied during the withdrawal process (based on Level)</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[1, 2, 3].map(level => {
+                          const val = financialSettings.platformFeeRates?.[`level${level}`] ?? (level === 1 ? 0.5 : level === 2 ? 1.0 : 2.0);
+                          return (
+                            <div key={level}>
+                              <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Level {level}</label>
+                              <div className="relative">
+                                <input 
+                                  type="number" 
+                                  step="0.1"
+                                  min="0" 
+                                  max="100" 
+                                  value={val}
+                                  onChange={(e) => {
+                                    const feeVal = Math.max(0, Math.min(100, parseFloat(e.target.value) || 0));
+                                    setFinancialSettings(prev => ({
+                                      ...prev,
+                                      platformFeeRates: {
+                                        ...prev.platformFeeRates,
+                                        [`level${level}`]: feeVal
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full pl-3 pr-7 py-2 bg-white border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-green-500" 
+                                />
+                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-[10px]">%</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Cancellation Penalty (₹)</label>

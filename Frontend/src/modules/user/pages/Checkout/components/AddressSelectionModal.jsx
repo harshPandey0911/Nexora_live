@@ -134,7 +134,7 @@ const AddressSelectionModal = ({
   if (!isOpen && !isClosing) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center sm:items-start justify-center p-4 sm:pt-24">
+    <div className="fixed inset-0 z-[100] flex items-center sm:items-start justify-center p-4 sm:pt-24">
       <div
         className={`fixed inset-0 bg-black/50 transition-opacity ${isClosing ? 'opacity-0' : 'opacity-100'}`}
         onClick={handleClose}

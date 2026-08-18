@@ -104,15 +104,15 @@ const AddressFormModal = ({ isOpen, onClose, address, onSave }) => {
       {/* Backdrop */}
       <div
         ref={backdropRef}
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+        className="fixed inset-0 bg-black bg-opacity-50 z-[100]"
         onClick={handleClose}
         style={{ opacity: 0 }}
       />
 
       {/* Modal Container with Close Button */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+      <div className="fixed bottom-0 left-0 right-0 z-[100] pointer-events-none">
         {/* Close Button - Above Modal */}
-        <div className="absolute -top-12 right-4 z-[60] pointer-events-auto">
+        <div className="absolute -top-12 right-4 z-[110] pointer-events-auto">
           <button
             onClick={handleClose}
             className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors"

@@ -38,16 +38,16 @@ const ServiceModal = ({ isOpen, onClose, service, location, cartCount }) => {
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/50 z-50 transition-opacity ${
+        className={`fixed inset-0 bg-black/50 z-[100] transition-opacity ${
           isClosing ? 'opacity-0' : 'opacity-100'
         }`}
         onClick={handleClose}
       />
 
       {/* Modal Container with Close Button */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
+      <div className="fixed bottom-0 left-0 right-0 z-[100]">
         {/* Close Button - Above Modal */}
-        <div className="absolute -top-12 right-4 z-[60]">
+        <div className="absolute -top-12 right-4 z-[110]">
           <button
             onClick={handleClose}
             className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-50 transition-colors"

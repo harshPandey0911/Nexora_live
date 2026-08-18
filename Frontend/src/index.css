@@ -489,3 +489,9 @@ input[type="number"] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
+
+/* Hide Bottom Navigation Bar when any modal is open (body scrolling is locked) */
+body[style*="position: fixed"] nav.fixed.bottom-4,
+body[style*="overflow: hidden"] nav.fixed.bottom-4 {
+  display: none !important;
+}
