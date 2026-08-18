@@ -865,23 +865,23 @@ const BillingPage = () => {
       {/* Unified Sticky Header */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
         {/* Title Bar */}
-        <div className="px-4 py-4 md:px-10 md:py-6 flex items-center justify-between">
-          <div className="flex items-center gap-4 md:gap-6">
-            <button onClick={() => navigate(`/vendor/booking/${id}`, { replace: true })} className="w-9 h-9 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-inner cursor-pointer">
-              <FiArrowLeft className="w-5 h-5 text-gray-400" />
+        <div className="px-3 py-3 md:px-10 md:py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3 md:gap-6">
+            <button onClick={() => navigate(`/vendor/booking/${id}`, { replace: true })} className="w-8 h-8 md:w-12 md:h-12 bg-gray-50 rounded-lg md:rounded-2xl border border-gray-100 flex items-center justify-center hover:bg-gray-100 transition-colors shadow-inner cursor-pointer">
+              <FiArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
             </button>
             <div>
-              <h1 className="text-lg md:text-2xl font-medium text-gray-900 tracking-tight leading-none">Generate Bill</h1>
-              <p className="text-[9px] md:text-[10px] font-medium text-blue-500 capitalize tracking-widest mt-1.5 md:mt-2">Booking #{booking.bookingNumber}</p>
+              <h1 className="text-sm md:text-2xl font-medium text-gray-900 tracking-tight leading-none">Generate Bill</h1>
+              <p className="text-[9px] md:text-[10px] font-medium text-blue-500 capitalize tracking-widest mt-1 md:mt-2">Booking #{booking.bookingNumber}</p>
             </div>
           </div>
-          <div className="w-9 h-9 md:w-12 md:h-12 bg-gray-50 rounded-xl md:rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner">
-            <FiFileText className="w-5 h-5 text-blue-500" />
+          <div className="w-8 h-8 md:w-12 md:h-12 bg-gray-50 rounded-lg md:rounded-2xl border border-gray-100 flex items-center justify-center shadow-inner">
+            <FiFileText className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />
           </div>
         </div>
 
         {/* Step Indicator */}
-        <div className="px-3 py-5 md:px-10 md:py-8 border-t border-gray-100 flex justify-between relative overflow-hidden bg-gray-50/50">
+        <div className="px-2 py-2.5 md:px-10 md:py-8 border-t border-gray-100 flex justify-between relative overflow-hidden bg-gray-50/50">
           {[
             { id: 1, label: 'Services', icon: FiTool },
             { id: 2, label: 'Parts', icon: FiPackage },
@@ -895,15 +895,15 @@ const BillingPage = () => {
 
             return (
               <button key={step.id} onClick={() => isReached && handleStepChange(step.id)}
-                className={`flex flex-col items-center gap-2 md:gap-3 z-10 relative transition-all duration-300 ${isActive ? 'scale-105 md:scale-110' : isReached ? 'opacity-100' : 'opacity-65'}`}>
-                <div className={`w-9 h-9 md:w-12 md:h-12 rounded-xl md:rounded-[18px] flex items-center justify-center text-xs md:text-sm font-bold transition-all duration-500 ${(isActive || isCompleted) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white text-gray-400 border border-gray-200'} ${isActive ? 'ring-6 md:ring-8 ring-blue-500/10' : ''}`}>
-                  {isCompleted ? <FiCheck className="w-4 h-4 md:w-5 md:h-5 stroke-[2.5]" /> : <step.icon className="w-4 h-4 md:w-5 md:h-5" />}
+                className={`flex flex-col items-center gap-1 md:gap-3 z-10 relative transition-all duration-300 ${isActive ? 'scale-105 md:scale-110' : isReached ? 'opacity-100' : 'opacity-65'}`}>
+                <div className={`w-7 h-7 md:w-12 md:h-12 rounded-lg md:rounded-[18px] flex items-center justify-center text-xs md:text-sm font-bold transition-all duration-500 ${(isActive || isCompleted) ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white text-gray-400 border border-gray-200'} ${isActive ? 'ring-4 md:ring-8 ring-blue-500/10' : ''}`}>
+                  {isCompleted ? <FiCheck className="w-3.5 h-3.5 md:w-5 md:h-5 stroke-[2.5]" /> : <step.icon className="w-3.5 h-3.5 md:w-5 md:h-5" />}
                 </div>
-                <span className={`text-[9px] md:text-xs font-bold capitalize tracking-wider transition-colors ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>{step.label}</span>
+                <span className={`text-[8px] md:text-xs font-bold capitalize tracking-wider transition-colors ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>{step.label}</span>
               </button>
             );
           })}
-          <div className="absolute top-[2.65rem] md:top-[3.75rem] left-0 right-0 h-1 bg-gray-200 -z-0 mx-10 md:mx-24 rounded-full overflow-hidden">
+          <div className="absolute top-[1.5rem] md:top-[3.75rem] left-0 right-0 h-1 bg-gray-200 -z-0 mx-8 md:mx-24 rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${((currentStep - 1) / 4) * 100}%` }}
@@ -913,24 +913,24 @@ const BillingPage = () => {
         </div>
       </header>
 
-      <main className="px-4 py-6 md:px-10 md:py-10 space-y-6 md:space-y-10 pb-36 md:pb-48 max-w-[1600px] mx-auto relative z-10">
+      <main className="px-3 py-4 md:px-10 md:py-10 space-y-4 md:space-y-10 pb-28 md:pb-48 max-w-[1600px] mx-auto relative z-10">
         {currentStep === 1 && (
           <div className="animate-in fade-in slide-in-from-right-8 duration-500">
-            <div className="bg-white p-5 md:p-10 rounded-2xl md:rounded-[40px] border border-gray-200 shadow-sm">
-              <div className="flex justify-between items-center mb-6 pb-4 md:mb-10 md:pb-6 border-b border-gray-100">
+            <div className="bg-white p-4 md:p-10 rounded-xl md:rounded-[40px] border border-gray-200 shadow-sm">
+              <div className="flex justify-between items-center gap-3 mb-4 pb-3 md:mb-10 md:pb-6 border-b border-gray-100">
                 <div>
-                  <h3 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight">Services & Labor</h3>
-                  <p className="text-xs font-medium text-gray-500 mt-1 md:mt-2">Add extra service items to the bill</p>
+                  <h3 className="text-sm md:text-2xl font-bold text-gray-900 tracking-tight">Services & Labor</h3>
+                  <p className="text-[11px] md:text-base font-medium text-gray-500 mt-0.5 md:mt-2">Add extra service items to the bill</p>
                 </div>
-                <button onClick={() => setViewMode('select-services')} className="px-4 py-2 md:px-8 md:py-3 bg-blue-600 text-white font-bold text-xs md:text-sm rounded-xl md:rounded-2xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center gap-2 md:gap-3">
-                  <FiPlus className="w-4 h-4" /> Add Services
+                <button onClick={() => setViewMode('select-services')} className="shrink-0 whitespace-nowrap px-3 py-2 md:px-8 md:py-3 bg-blue-600 text-white font-bold text-[11px] md:text-sm rounded-lg md:rounded-2xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center gap-1.5 md:gap-3">
+                  <FiPlus className="w-3.5 h-3.5 md:w-4 md:h-4" /> Add Services
                 </button>
               </div>
               {selectedServices.length === 0 ? (
-                <div className="text-center py-16 bg-gray-50 rounded-[32px] border border-dashed border-gray-300">
-                  <FiTool className="w-12 h-12 text-gray-400 mx-auto mb-3 opacity-60" />
-                  <p className="text-gray-500 font-bold text-sm">No extra services added</p>
-                  <button onClick={() => setViewMode('select-services')} className="mt-2 text-blue-600 hover:underline font-bold text-xs">Browse Services Catalog</button>
+                <div className="text-center py-8 md:py-16 bg-gray-50 rounded-2xl md:rounded-[32px] border border-dashed border-gray-300">
+                  <FiTool className="w-8 h-8 md:w-12 md:h-12 text-gray-400 mx-auto mb-2 md:mb-3 opacity-60" />
+                  <p className="text-gray-500 font-bold text-xs md:text-sm">No extra services added</p>
+                  <button onClick={() => setViewMode('select-services')} className="mt-1.5 md:mt-2 text-blue-600 hover:underline font-bold text-[11px] md:text-xs">Browse Services Catalog</button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1288,11 +1288,11 @@ const BillingPage = () => {
         )}
       </main>
 
-      <footer className="sticky bottom-0 left-0 right-0 p-4 md:p-6 bg-white/95 backdrop-blur-md border-t border-gray-200 z-[100] mt-auto">
+      <footer className="sticky bottom-0 left-0 right-0 p-3 md:p-6 bg-white/95 backdrop-blur-md border-t border-gray-200 z-[100] mt-auto">
         <div className="max-w-[1600px] mx-auto flex gap-3 md:gap-6">
           {currentStep === 1 && (
-            <button onClick={() => handleStepChange(2)} className="w-full py-4 bg-blue-600 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-3 shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all">
-              Next: Spare Parts <FiArrowRight className="w-5 h-5" />
+            <button onClick={() => handleStepChange(2)} className="w-full py-3 md:py-4 bg-blue-600 text-white font-bold text-sm rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-3 shadow-lg shadow-blue-600/20 hover:bg-blue-700 active:scale-95 transition-all">
+              Next: Spare Parts <FiArrowRight className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           )}
           {currentStep === 2 && (

@@ -55,32 +55,32 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
           className="relative w-full max-w-lg bg-white rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden"
         >
           {/* Top Bar (Mobile Drag Handle) */}
-          <div className="flex justify-center py-3 sm:hidden">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full" />
+          <div className="flex justify-center py-2 sm:hidden">
+            <div className="w-10 h-1 bg-gray-200 rounded-full" />
           </div>
 
-          <div className="p-6 sm:p-8">
+          <div className="p-4 sm:p-8">
             {/* Header */}
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-4 sm:mb-6">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 leading-tight">Rate your experience</h2>
-                <p className="text-gray-500 text-sm mt-1">How was the {bookingName} service?</p>
+                <h2 className="text-lg sm:text-2xl font-black text-gray-900 leading-tight">Rate your experience</h2>
+                <p className="text-gray-500 text-xs sm:text-sm mt-0.5 sm:mt-1">How was the {bookingName} service?</p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-full transition-colors"
                 disabled={isSubmitting}
               >
-                <FiX className="w-6 h-6 text-gray-400" />
+                <FiX className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
               </button>
             </div>
 
             {/* Content */}
-            <div className="space-y-8">
+            <div className="space-y-4 sm:space-y-8">
               {/* Stars Card */}
-              <div className="bg-gray-50 rounded-2xl p-6 text-center border border-gray-100 shadow-inner">
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Tap to rate</p>
-                <div className="flex justify-center gap-3">
+              <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center border border-gray-100 shadow-inner">
+                <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-widest mb-2.5 sm:mb-4">Tap to rate</p>
+                <div className="flex justify-center gap-2 sm:gap-3">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <motion.button
                       key={star}
@@ -92,7 +92,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
                       className="focus:outline-none"
                     >
                       <FiStar
-                        className={`w-10 h-10 transition-colors duration-200 ${star <= (hover || rating)
+                        className={`w-7 h-7 sm:w-10 sm:h-10 transition-colors duration-200 ${star <= (hover || rating)
                             ? 'fill-yellow-400 text-yellow-400'
                             : 'text-gray-300'
                           }`}
@@ -104,7 +104,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
                   <motion.p
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 text-sm font-bold text-gray-700"
+                    className="mt-2.5 sm:mt-4 text-xs sm:text-sm font-bold text-gray-700"
                   >
                     {rating === 5 ? 'Excellent! 🌟' :
                       rating === 4 ? 'Good! 👍' :
@@ -115,9 +115,9 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
               </div>
 
               {/* Review Textarea */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-gray-700 font-bold">
-                  <FiMessageSquare className="w-5 h-5 text-teal-600" />
+              <div className="space-y-2 sm:space-y-3">
+                <div className="flex items-center gap-2 text-gray-700 font-bold text-sm sm:text-base">
+                  <FiMessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600" />
                   <span>Share your feedback</span>
                 </div>
                 <div className="relative group">
@@ -125,10 +125,10 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
                     value={review}
                     onChange={(e) => setReview(e.target.value)}
                     placeholder="Tell us what you liked or what could be better..."
-                    className="w-full bg-white border-2 border-gray-100 focus:border-teal-500 rounded-2xl p-4 text-sm min-h-[120px] transition-all outline-none resize-none placeholder:text-gray-400"
+                    className="w-full bg-white border-2 border-gray-100 focus:border-teal-500 rounded-xl sm:rounded-2xl p-3 sm:p-4 text-sm min-h-[70px] sm:min-h-[120px] transition-all outline-none resize-none placeholder:text-gray-400"
                     disabled={isSubmitting}
                   />
-                  <div className="absolute bottom-3 right-3 text-[10px] font-bold text-gray-300 uppercase letter-spacing-1">
+                  <div className="absolute bottom-2 right-3 text-[10px] font-bold text-gray-300 uppercase letter-spacing-1">
                     {review.length} characters
                   </div>
                 </div>
@@ -138,7 +138,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
               <button
                 onClick={handleSubmit}
                 disabled={rating === 0 || isSubmitting}
-                className={`w-full py-4 rounded-2xl font-black text-white text-lg flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100`}
+                className={`w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black text-white text-sm sm:text-lg flex items-center justify-center gap-2 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100`}
                 style={{ background: rating > 0 ? themeColors.brand.gradient : '#CBD5E1' }}
               >
                 {isSubmitting ? (
@@ -149,7 +149,7 @@ const RatingModal = ({ isOpen, onClose, onSubmit, bookingName, workerName }) => 
                 ) : (
                   <>
                     <span>Submit Review</span>
-                    <FiArrowRight className="w-5 h-5" />
+                    <FiArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
                   </>
                 )}
               </button>

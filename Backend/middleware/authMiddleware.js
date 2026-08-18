@@ -114,5 +114,56 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+/**
+ * Optional authentication middleware - decodes JWT token if present,
+ * but never blocks the request when the token is missing or invalid.
+ * Used on public routes that behave differently for logged-in users
+ * (e.g. attaching a userId to a guest-accessible form) without requiring login.
+ */
+const optionalAuthenticate = async (req, res, next) => {
+  try {
+    let token;
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (!token) return next();
+
+    let decoded;
+    try {
+      decoded = verifyAccessToken(token);
+    } catch (error) {
+      return next();
+    }
+
+    let user;
+    switch (decoded.role) {
+      case USER_ROLES.USER:
+        user = await User.findById(decoded.userId).select('-password').lean();
+        break;
+      case USER_ROLES.VENDOR:
+        user = await Vendor.findById(decoded.userId).select('-password').lean();
+        break;
+      case USER_ROLES.WORKER:
+        user = await Worker.findById(decoded.userId).select('-password').lean();
+        break;
+      default:
+        return next();
+    }
+
+    if (user) {
+      req.user = { ...user, id: user._id.toString() };
+      req.userId = decoded.userId;
+      req.userRole = decoded.role;
+    }
+
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+module.exports = { authenticate, optionalAuthenticate };
 

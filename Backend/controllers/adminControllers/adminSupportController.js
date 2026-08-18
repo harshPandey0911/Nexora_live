@@ -128,6 +128,22 @@ const replyToTicket = async (req, res) => {
     ticket.updatedAt = new Date();
     await ticket.save();
 
+    // Notify the ticket creator (in-app + push) when a logged-in user is attached
+    if (message && ticket.creatorId && ticket.creatorModel === 'User') {
+      try {
+        const { createNotification } = require('../notificationControllers/notificationController');
+        await createNotification({
+          userId: ticket.creatorId,
+          type: 'general',
+          title: `Reply to your ticket: ${ticket.subject}`,
+          message: message.length > 120 ? `${message.slice(0, 120)}...` : message,
+          relatedId: ticket._id
+        });
+      } catch (nErr) {
+        console.warn('Ticket reply notification error:', nErr.message);
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Ticket updated successfully',

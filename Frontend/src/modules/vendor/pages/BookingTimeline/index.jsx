@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiCheck, FiClock, FiUser, FiMapPin, FiTool, FiDollarSign, FiFileText, FiCheckCircle, FiX } from 'react-icons/fi';
 import { vendorTheme as themeColors } from '../../../../theme';
@@ -49,10 +49,9 @@ const BookingTimeline = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const loadBooking = async () => {
-      try {
-        const response = await getBookingById(id);
+  const loadBooking = useCallback(async () => {
+    try {
+      const response = await getBookingById(id);
         const apiData = response.data || response;
 
         const isSelfJob = apiData.assignedAt && !apiData.workerId;
@@ -112,8 +111,9 @@ const BookingTimeline = () => {
       } catch (error) {
         console.error('Error loading booking:', error);
       }
-    };
+  }, [id]);
 
+  useEffect(() => {
     loadBooking();
 
     const handleUpdate = () => {
@@ -122,7 +122,7 @@ const BookingTimeline = () => {
 
     window.addEventListener('vendorJobsUpdated', handleUpdate);
     return () => window.removeEventListener('vendorJobsUpdated', handleUpdate);
-  }, [id, isWorkApproved]);
+  }, [loadBooking, isWorkApproved]);
 
   // Handle modal closing if payment is detected
   useEffect(() => {
@@ -148,7 +148,7 @@ const BookingTimeline = () => {
       await vendorWalletService.payWorker(id, Number(customPayAmount), customPayNotes);
       toast.success('Worker payment processed successfully');
       setIsPayWorkerModalOpen(false);
-      window.location.reload();
+      await loadBooking();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Payment failed');
     } finally {
@@ -167,7 +167,7 @@ const BookingTimeline = () => {
           setActionLoading(true);
           await updateBookingStatus(id, 'completed');
           toast.success('Work approved successfully');
-          window.location.reload();
+          await loadBooking();
         } catch (e) {
           toast.error(e.response?.data?.message || 'Approval failed');
         } finally {
@@ -189,7 +189,7 @@ const BookingTimeline = () => {
           // Using existing updateBookingStatus to mark settlement
           await updateBookingStatus(id, booking.status, { finalSettlementStatus: 'DONE' });
           toast.success('Final settlement completed!');
-          window.location.reload();
+          await loadBooking();
         } catch (e) {
           toast.error(e.response?.data?.message || 'Final settlement failed');
         } finally {
@@ -220,22 +220,35 @@ const BookingTimeline = () => {
     if (otp.length !== 4) return toast.error('Enter 4-digit OTP');
 
     setActionLoading(true);
-    // Location check for vendor? Optional or same as worker.
-    if (!navigator.geolocation) return toast.error('Geolocation required');
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
+    const performVerification = async (location = null) => {
       try {
-        const location = { lat: position.coords.latitude, lng: position.coords.longitude };
         await verifySelfVisit(id, otp, location);
         toast.success('Visit Verified');
         setIsVisitModalOpen(false);
-        window.location.reload();
+        await loadBooking();
+        setActionLoading(false);
       } catch (err) {
         toast.error(err.response?.data?.message || 'Verification failed');
-      } finally {
         setActionLoading(false);
       }
-    });
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+          await performVerification(location);
+        },
+        async (error) => {
+          console.warn('Geolocation failed, verifying without location:', error);
+          await performVerification(null);
+        },
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
+      );
+    } else {
+      await performVerification(null);
+    }
   };
 
   const handleCompleteWork = async (photos = []) => {
@@ -244,7 +257,7 @@ const BookingTimeline = () => {
       await completeSelfJob(id, { workPhotos: photos });
       toast.success('Work marked done');
       setIsWorkDoneModalOpen(false);
-      window.location.reload();
+      await loadBooking();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed');
     } finally {
@@ -381,8 +394,7 @@ const BookingTimeline = () => {
     try {
       // Try to mark as completed or work_done if backend supports it
       await updateBookingStatus(id, 'work_done');
-      setCurrentStage(5); // Update to stage 5
-      window.location.reload();
+      await loadBooking();
     } catch (error) {
       console.error('Error updating status to work done:', error);
       toast.error('Failed to update status. Please follow valid status flow.');
@@ -531,7 +543,7 @@ const BookingTimeline = () => {
             <p className="text-sm text-gray-500 mb-4">Enter user OTP to verify arrival.</p>
             <div className="flex gap-2 justify-center mb-4">
               {[0, 1, 2, 3].map((i) => (
-                <input key={i} id={`otp-${i}`} type="number" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
+                <input key={i} id={`otp-${i}`} type="text" inputMode="numeric" value={otpInput[i]} onChange={(e) => handleOtpChange(i, e.target.value)} className="w-10 h-10 border rounded text-center" maxLength={1} />
               ))}
             </div>
             <button onClick={handleVerifyVisit} disabled={actionLoading} className="w-full bg-blue-600 text-white py-2 rounded-lg">{actionLoading ? 'Verifying...' : 'Verify'}</button>
