@@ -490,10 +490,10 @@ const JobTimeline = () => {
         isOpen={isWorkDoneModalOpen}
         onClose={() => setIsWorkDoneModalOpen(false)}
         job={job}
-        onComplete={async (photos) => {
+        onComplete={async (photos, extraHours) => {
           try {
             setActionLoading(true);
-            const response = await workerService.completeJob(id, { workPhotos: photos });
+            const response = await workerService.completeJob(id, { workPhotos: photos, extraHours });
             if (response.success) {
               toast.success('Work marked done');
               setIsWorkDoneModalOpen(false);

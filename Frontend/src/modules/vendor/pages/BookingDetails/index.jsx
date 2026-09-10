@@ -535,10 +535,10 @@ export default function BookingDetails() {
     loadBooking();
   };
 
-  const handleCompleteWork = async (photos) => {
+  const handleCompleteWork = async (photos, extraHours) => {
     try {
       setActionLoading(true);
-      await completeSelfJob(id, { workPhotos: photos || [] });
+      await completeSelfJob(id, { workPhotos: photos || [], extraHours: extraHours || 0 });
       toast.success('Work marked done');
       setIsWorkDoneModalOpen(false);
       window.location.reload();

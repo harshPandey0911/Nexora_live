@@ -204,7 +204,7 @@ const getBookingById = async (req, res) => {
     })
       .populate('userId', 'name phone email profilePhoto')
       .populate('vendorId', 'name businessName phone email')
-      .populate('serviceId', 'title description iconUrl images')
+      .populate('serviceId', 'title description iconUrl images hourlyRate minHours maxHours pricingType basePrice')
       .populate('categoryId', 'title slug')
       .populate('workerId', 'name phone rating totalJobs completedJobs')
       .populate('vendorBillId', 'vendorTotalEarning companyRevenue');
@@ -1640,7 +1640,7 @@ const completeSelfJob = async (req, res) => {
   try {
     const vendorId = req.user._id || req.user.id;
     const { id } = req.params;
-    const { workPhotos, workDoneDetails, billDetails } = req.body;
+    let { workPhotos, workDoneDetails, billDetails, extraHours } = req.body;
 
     const booking = await Booking.findOne({ _id: id, vendorId });
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -1649,6 +1649,28 @@ const completeSelfJob = async (req, res) => {
     const allowedStatuses = [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.VISITED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.ASSIGNED];
     if (!allowedStatuses.includes(booking.status)) {
       return res.status(400).json({ success: false, message: 'Cannot complete from current status' });
+    }
+
+    // Handle extraHours for hourly bookings
+    const isHourly = booking.pricingType === 'HOURLY' || booking.pricingSnapshot?.pricingType === 'HOURLY';
+    if (isHourly && Number(extraHours) > 0) {
+      const initialDuration = booking.durationHours || booking.pricingSnapshot?.durationHours || 1;
+      const hourlyRate = booking.hourlyRate || booking.pricingSnapshot?.hourlyRate || Math.round((booking.basePrice || 0) / initialDuration);
+      const addedHours = Number(extraHours);
+      const extraCost = hourlyRate * addedHours;
+
+      booking.extraHours = (booking.extraHours || 0) + addedHours;
+      booking.extraChargesTotal = (booking.extraChargesTotal || 0) + extraCost;
+
+      if (!billDetails) billDetails = {};
+      if (!billDetails.services) billDetails.services = [];
+      billDetails.services.push({
+        name: `Extra Hours Worked (${addedHours} hrs)`,
+        price: hourlyRate,
+        quantity: addedHours
+      });
+
+      console.log(`[VendorCompleteJob] Added ${addedHours} extra hrs at ₹${hourlyRate}/hr to bill details.`);
     }
 
     // Prevent duplicate bills

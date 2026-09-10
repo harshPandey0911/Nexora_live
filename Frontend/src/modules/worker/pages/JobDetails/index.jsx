@@ -693,13 +693,13 @@ const JobDetails = () => {
           isOpen={isCompletionModalOpen}
           onClose={() => setIsCompletionModalOpen(false)}
           job={job}
-          onComplete={(photos) => {
-            // Pass photos to the handler
+          onComplete={(photos, extraHours) => {
+            // Pass photos and extraHours to the handler
             setWorkPhotos(photos);
             (async () => {
               try {
                 setActionLoading(true);
-                const response = await workerService.completeJob(id, { workPhotos: photos });
+                const response = await workerService.completeJob(id, { workPhotos: photos, extraHours });
                 if (response && response.success) {
                   toast.success(response.message || 'Updated successfully');
                   setIsCompletionModalOpen(false);

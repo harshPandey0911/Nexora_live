@@ -926,6 +926,98 @@ const BillingPage = () => {
                   <FiPlus className="w-3.5 h-3.5 md:w-4 md:h-4" /> Add Services
                 </button>
               </div>
+
+              {/* Extra Hours Counter - Always available on Step 1 */}
+              {(() => {
+                const resolvedHourlyRate = 
+                  booking?.hourlyRate || 
+                  booking?.pricingSnapshot?.hourlyRate || 
+                  booking?.serviceId?.hourlyRate || 
+                  (booking?.durationHours > 1 ? Math.round((booking?.basePrice || 0) / booking.durationHours) : (booking?.basePrice || 200));
+                
+                const bookedHours = booking?.durationHours || booking?.pricingSnapshot?.durationHours || 1;
+
+                return (
+                  <div className="mb-6 p-4 md:p-6 bg-teal-50/80 rounded-2xl md:rounded-[28px] border border-teal-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-teal-800">
+                        <FiClock className="w-5 h-5 text-teal-600 shrink-0" />
+                        <span className="font-bold text-sm md:text-base">Extra Hours Worked</span>
+                        <span className="text-[10px] md:text-xs font-semibold text-teal-700 bg-white px-2.5 py-0.5 rounded-md border border-teal-200">
+                          Rate: ₹{resolvedHourlyRate}/hr
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1 font-medium">
+                        Booked Duration: {bookedHours} Hrs
+                        {selectedServices.some(s => s.isExtraHours) ? ` | Added: +${selectedServices.find(s => s.isExtraHours)?.quantity} Extra Hr (₹${(selectedServices.find(s => s.isExtraHours)?.quantity || 0) * resolvedHourlyRate})` : ''}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-teal-200 shadow-xs self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentItem = selectedServices.find(s => s.isExtraHours);
+                          const currentQty = currentItem ? currentItem.quantity : 0;
+                          const newQty = Math.max(0, currentQty - 1);
+
+                          setSelectedServices(prev => {
+                            const filtered = prev.filter(s => !s.isExtraHours);
+                            if (newQty > 0) {
+                              const base = resolvedHourlyRate * newQty;
+                              const gst = parseFloat(((base * 18) / 100).toFixed(2));
+                              return [...filtered, {
+                                name: `Extra Hours Worked (${newQty} hrs)`,
+                                price: resolvedHourlyRate,
+                                quantity: newQty,
+                                gstPercentage: 18,
+                                gstAmount: gst,
+                                total: parseFloat((base + gst).toFixed(2)),
+                                isExtraHours: true
+                              }];
+                            }
+                            return filtered;
+                          });
+                        }}
+                        disabled={!selectedServices.some(s => s.isExtraHours)}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-base disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-200 active:scale-95 transition-all"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center font-extrabold text-base md:text-lg text-gray-900">
+                        {selectedServices.find(s => s.isExtraHours)?.quantity || 0}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const currentItem = selectedServices.find(s => s.isExtraHours);
+                          const currentQty = currentItem ? currentItem.quantity : 0;
+                          const newQty = currentQty + 1;
+
+                          setSelectedServices(prev => {
+                            const filtered = prev.filter(s => !s.isExtraHours);
+                            const base = resolvedHourlyRate * newQty;
+                            const gst = parseFloat(((base * 18) / 100).toFixed(2));
+                            return [...filtered, {
+                              name: `Extra Hours Worked (${newQty} hrs)`,
+                              price: resolvedHourlyRate,
+                              quantity: newQty,
+                              gstPercentage: 18,
+                              gstAmount: gst,
+                              total: parseFloat((base + gst).toFixed(2)),
+                              isExtraHours: true
+                            }];
+                          });
+                        }}
+                        className="w-8 h-8 md:w-9 md:h-9 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-base shadow hover:bg-teal-700 active:scale-95 transition-all"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {selectedServices.length === 0 ? (
                 <div className="text-center py-8 md:py-16 bg-gray-50 rounded-2xl md:rounded-[32px] border border-dashed border-gray-300">
                   <FiTool className="w-8 h-8 md:w-12 md:h-12 text-gray-400 mx-auto mb-2 md:mb-3 opacity-60" />
@@ -938,13 +1030,15 @@ const BillingPage = () => {
                     <div key={idx} className="flex justify-between items-center p-4 md:p-6 bg-gray-50 rounded-2xl md:rounded-[28px] border border-gray-200 group hover:bg-white hover:shadow-md transition-all">
                       <div>
                         <p className="font-bold text-sm md:text-lg text-gray-900 tracking-tight">{s.name}</p>
-                        <div className="flex items-center gap-4 mt-2.5 md:mt-3">
-                          <div className="flex items-center gap-2.5 md:gap-3 bg-white rounded-lg md:rounded-xl p-1 border border-gray-200 shadow-sm">
-                            <button onClick={() => updateServiceQty(idx, -1)} className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-gray-100 rounded-md md:rounded-lg text-blue-600 hover:bg-gray-200 transition-all font-bold text-lg">-</button>
-                            <span className="text-xs font-bold text-gray-900 w-5 md:w-6 text-center">{s.quantity}</span>
-                            <button onClick={() => updateServiceQty(idx, 1)} className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-blue-600 rounded-md md:rounded-lg text-white shadow hover:bg-blue-700 transition-all"><FiPlus className="w-3.5 h-3.5" /></button>
+                        {!s.isExtraHours && (
+                          <div className="flex items-center gap-4 mt-2.5 md:mt-3">
+                            <div className="flex items-center gap-2.5 md:gap-3 bg-white rounded-lg md:rounded-xl p-1 border border-gray-200 shadow-sm">
+                              <button onClick={() => updateServiceQty(idx, -1)} className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-gray-100 rounded-md md:rounded-lg text-blue-600 hover:bg-gray-200 transition-all font-bold text-lg">-</button>
+                              <span className="text-xs font-bold text-gray-900 w-5 md:w-6 text-center">{s.quantity}</span>
+                              <button onClick={() => updateServiceQty(idx, 1)} className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center bg-blue-600 rounded-md md:rounded-lg text-white shadow hover:bg-blue-700 transition-all"><FiPlus className="w-3.5 h-3.5" /></button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                       <p className="font-extrabold text-lg md:text-2xl text-gray-900 tracking-tight">₹{s.total.toFixed(2)}</p>
                     </div>
