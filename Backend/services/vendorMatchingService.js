@@ -113,13 +113,26 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
     let candidateVendors = [];
     if (Array.isArray(nearbyVendorsList) && nearbyVendorsList.length > 0) {
       candidateVendors = nearbyVendorsList.filter(v => v.isOnline !== false);
-    } else {
+    }
+    
+    if (candidateVendors.length === 0) {
+      console.log(`[VendorMatching] Checking DB for online active approved vendors...`);
       candidateVendors = await Vendor.find({
         isOnline: true,
-        isActive: true,
-        approvalStatus: 'approved',
+        isActive: { $ne: false },
+        approvalStatus: { $in: ['approved', 'APPROVED'] },
         'wallet.isBlocked': { $ne: true }
-      }).select('_id name businessName phone categories service address location settings level performanceScore').lean();
+      }).select('_id name businessName phone categories service address location settings level performanceScore isOnline').lean();
+    }
+
+    // Fallback: If no vendor has explicitly marked isOnline: true in DB, query all active approved vendors
+    if (candidateVendors.length === 0) {
+      console.log(`[VendorMatching] No vendors with isOnline:true found. Fallback: Fetching all active approved vendors...`);
+      candidateVendors = await Vendor.find({
+        isActive: { $ne: false },
+        approvalStatus: { $in: ['approved', 'APPROVED'] },
+        'wallet.isBlocked': { $ne: true }
+      }).select('_id name businessName phone categories service address location settings level performanceScore isOnline').lean();
     }
 
     console.log(`[VendorMatching] System online & active candidate vendors count: ${candidateVendors.length}`);
@@ -137,8 +150,13 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
 
       const busySet = new Set(busyVendorIds.map(id => id ? id.toString() : ''));
       if (busySet.size > 0) {
-        console.log(`[VendorMatching] Filtering out ${busySet.size} vendors busy during ${booking.startAt} - ${booking.endAt}`);
-        candidateVendors = candidateVendors.filter(v => !busySet.has(v._id.toString()));
+        console.log(`[VendorMatching] Found ${busySet.size} busy vendors during ${booking.startAt} - ${booking.endAt}`);
+        const availableVendors = candidateVendors.filter(v => !busySet.has(v._id.toString()));
+        if (availableVendors.length > 0) {
+          candidateVendors = availableVendors;
+        } else {
+          console.log(`[VendorMatching] All candidates busy during slot, keeping candidate vendors to allow multi-tasking/assignment.`);
+        }
       }
     }
 
