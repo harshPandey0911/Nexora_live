@@ -1,28 +1,38 @@
-import React from 'react';
-import { FiX, FiDollarSign, FiCheckCircle } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiX, FiDollarSign, FiCheckCircle, FiClock, FiPlus, FiMinus } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import flutterBridge from '../../../../utils/flutterBridge';
 
 const WorkCompletionModal = ({ isOpen, onClose, job, onComplete, loading }) => {
+  const [extraHours, setExtraHours] = useState(0);
+
+  const isHourly = job?.pricingType === 'HOURLY' || job?.pricingSnapshot?.pricingType === 'HOURLY';
+  const initialDuration = job?.durationHours || job?.pricingSnapshot?.durationHours || 1;
+  const hourlyRate = job?.hourlyRate || job?.pricingSnapshot?.hourlyRate || Math.round((job?.basePrice || 0) / initialDuration);
 
   const calculateTotal = () => {
     // For Plan Benefit, user only pays for Extra Charges
     if (job?.paymentMethod === 'plan_benefit') {
-      return job?.extraChargesTotal || 0;
+      const baseExtra = job?.extraChargesTotal || 0;
+      return baseExtra + (isHourly ? extraHours * hourlyRate : 0);
     }
 
+    let base = 0;
     // For normal bookings, prefer finalAmount (even if 0)
     if (typeof job?.finalAmount === 'number') {
-      return job.finalAmount;
+      base = job.finalAmount;
+    } else {
+      base = ((job?.basePrice || 0) + (job?.tax || 0) - (job?.discount || 0));
     }
 
-    return ((job?.basePrice || 0) + (job?.tax || 0) - (job?.discount || 0));
+    const extraHoursCost = isHourly ? extraHours * hourlyRate : 0;
+    return base + extraHoursCost;
   };
 
   const handleSubmit = () => {
-    // Photos no longer mandatory as per simplified flow
-    onComplete([]);
+    // Pass empty photos array and extraHours
+    onComplete([], extraHours);
   };
 
   return (
@@ -82,6 +92,49 @@ const WorkCompletionModal = ({ isOpen, onClose, job, onComplete, loading }) => {
                     ))}
                   </ul>
                 </div>
+
+                {/* Hourly Extra Hours Selection */}
+                {isHourly && (
+                  <div className="bg-teal-50/70 p-3.5 rounded-xl border border-teal-100 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-teal-800">
+                        <FiClock className="w-4 h-4 text-teal-600" />
+                        <span className="font-bold text-xs">Extra Hours Worked</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-teal-600 bg-white px-2 py-0.5 rounded-md border border-teal-200">
+                        Rate: ₹{hourlyRate}/hr
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-teal-100 shadow-2xs">
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-800">Booked: {initialDuration} Hrs</p>
+                        <p className="text-[10px] text-gray-400 font-medium">
+                          {extraHours > 0 ? `+${extraHours} Extra Hr (₹${extraHours * hourlyRate})` : 'No extra hours added'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg p-1">
+                        <button
+                          type="button"
+                          onClick={() => setExtraHours(prev => Math.max(0, prev - 1))}
+                          disabled={extraHours === 0}
+                          className="w-7 h-7 rounded-md bg-white text-gray-700 flex items-center justify-center font-bold text-xs shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed active:scale-90 transition-all"
+                        >
+                          <FiMinus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-6 text-center font-bold text-sm text-gray-900">{extraHours}</span>
+                        <button
+                          type="button"
+                          onClick={() => setExtraHours(prev => prev + 1)}
+                          className="w-7 h-7 rounded-md bg-teal-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs active:scale-90 transition-all hover:bg-teal-700"
+                        >
+                          <FiPlus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Payment Info */}
                 <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
