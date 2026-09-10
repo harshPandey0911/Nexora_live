@@ -483,7 +483,7 @@ const completeJob = async (req, res) => {
   try {
     const workerId = req.user.id;
     const { id } = req.params;
-    const { workPhotos, workDoneDetails } = req.body;
+    const { workPhotos, workDoneDetails, extraHours } = req.body;
 
     const booking = await Booking.findOne({ _id: id, workerId });
 
@@ -499,6 +499,26 @@ const completeJob = async (req, res) => {
         success: false,
         message: `Cannot complete job with status: ${booking.status}`
       });
+    }
+
+    // Handle extra hours calculation for hourly bookings
+    const isHourly = booking.pricingType === 'HOURLY' || booking.pricingSnapshot?.pricingType === 'HOURLY';
+    if (isHourly && Number(extraHours) > 0) {
+      const initialDuration = booking.durationHours || booking.pricingSnapshot?.durationHours || 1;
+      const hourlyRate = booking.hourlyRate || booking.pricingSnapshot?.hourlyRate || Math.round((booking.basePrice || 0) / initialDuration);
+      const addedHours = Number(extraHours);
+      const extraCost = hourlyRate * addedHours;
+
+      booking.extraHours = (booking.extraHours || 0) + addedHours;
+      booking.extraChargesTotal = (booking.extraChargesTotal || 0) + extraCost;
+      booking.finalAmount = (booking.finalAmount || booking.basePrice || 0) + extraCost;
+      booking.userPayableAmount = booking.finalAmount;
+
+      if (booking.pricingSnapshot) {
+        booking.pricingSnapshot.durationHours = (booking.pricingSnapshot.durationHours || initialDuration) + addedHours;
+        booking.pricingSnapshot.total = booking.finalAmount;
+      }
+      console.log(`[WorkerCompleteJob] Added ${addedHours} extra hrs at ₹${hourlyRate}/hr. Updated finalAmount: ₹${booking.finalAmount}`);
     }
 
     // Update booking
