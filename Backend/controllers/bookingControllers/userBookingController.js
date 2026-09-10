@@ -79,7 +79,7 @@ const createBooking = async (req, res) => {
 
     // 1. Parallel Fetching: Service and User
     const [service, user] = await Promise.all([
-      Service.findById(serviceId).select('title basePrice discountPrice description images iconUrl categoryId category categoryIds vendorId offeringType').lean(),
+      Service.findById(serviceId).select('title basePrice discountPrice description images iconUrl categoryId category categoryIds vendorId offeringType pricingType hourlyRate minHours maxHours gstPercentage').lean(),
       User.findById(userId).select('name phone wallet plans')
     ]);
 
@@ -418,6 +418,76 @@ const createBooking = async (req, res) => {
     }
 
 
+    // Calculate startAt & endAt timestamps
+    const parseStartDateTime = (sDate, sTime, tSlot) => {
+      try {
+        let dateStr = sDate;
+        if (sDate instanceof Date) {
+          dateStr = sDate.toISOString().split('T')[0];
+        } else if (typeof sDate === 'string' && sDate.includes('T')) {
+          dateStr = sDate.split('T')[0];
+        }
+        
+        let timeStr = sTime || tSlot?.start || '10:00 AM';
+        let hours = 10;
+        let minutes = 0;
+
+        const ampmMatch = String(timeStr).match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)?/i);
+        if (ampmMatch) {
+          hours = parseInt(ampmMatch[1], 10);
+          minutes = ampmMatch[2] ? parseInt(ampmMatch[2], 10) : 0;
+          const ampm = ampmMatch[3] ? ampmMatch[3].toUpperCase() : null;
+          if (ampm === 'PM' && hours < 12) hours += 12;
+          if (ampm === 'AM' && hours === 12) hours = 0;
+        }
+
+        const [yr, mo, dy] = String(dateStr || '').split('-').map(Number);
+        if (yr && mo && dy) {
+          return new Date(yr, mo - 1, dy, hours, minutes, 0, 0);
+        }
+        return new Date(sDate);
+      } catch (e) {
+        return new Date(sDate);
+      }
+    };
+
+    const isHourlyBooking = service.pricingType === 'HOURLY' || req.body.pricingType === 'HOURLY' || req.body.bookingType === 'HOURLY';
+    const durationHours = isHourlyBooking ? Number(req.body.durationHours || service.minHours || 1) : 1;
+    const hourlyRate = isHourlyBooking ? (service.hourlyRate || Number(req.body.hourlyRate) || 0) : 0;
+
+    // Validate bookingOptions — check requested mode is admin-enabled
+    const bookingOpts = service.bookingOptions || {
+      normal: { enabled: service.pricingType !== 'HOURLY' },
+      hourly: { enabled: service.pricingType === 'HOURLY' }
+    };
+    if (isHourlyBooking && !bookingOpts.hourly?.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'This service does not support Hourly booking.'
+      });
+    }
+    if (!isHourlyBooking && !bookingOpts.normal?.enabled) {
+      return res.status(400).json({
+        success: false,
+        message: 'This service does not support Normal booking. Please select Hourly booking.'
+      });
+    }
+    // Validate hourly duration bounds
+    if (isHourlyBooking) {
+      const minH = service.minHours || 1;
+      const maxH = service.maxHours || 8;
+      if (durationHours < minH || durationHours > maxH) {
+        return res.status(400).json({
+          success: false,
+          message: `Duration ${durationHours}h is outside the allowed range (${minH}-${maxH}h) for this service.`
+        });
+      }
+    }
+
+    const startAt = parseStartDateTime(scheduledDate, scheduledTime, timeSlot);
+    const endAt = new Date(startAt.getTime() + durationHours * 3600000);
+
+
     const booking = await Booking.create({
       bookingNumber,
       userId,
@@ -431,6 +501,21 @@ const createBooking = async (req, res) => {
       brandName: reqBrandName || brandName,
       brandIcon: reqBrandIcon || brandIcon,
       bookingType: bookingType || 'scheduled',
+      pricingType: isHourlyBooking ? 'HOURLY' : 'FIXED',
+      durationHours,
+      hourlyRate,
+      startAt,
+      endAt,
+      pricingSnapshot: {
+        pricingType: isHourlyBooking ? 'HOURLY' : 'FIXED',
+        hourlyRate,
+        durationHours,
+        unitPrice: isHourlyBooking ? (hourlyRate * durationHours) : basePrice,
+        subtotal: basePrice - discount,
+        gstPercentage: service.gstPercentage || 18,
+        gstAmount: tax,
+        total: finalAmount
+      },
       offeringType: isProduct ? 'PRODUCT' : 'SERVICE',
 
       description: service.description,

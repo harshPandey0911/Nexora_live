@@ -1153,6 +1153,18 @@ const BookingDetails = () => {
                     {formatDate(booking.scheduledDate)}
                   </p>
                   <p className="text-sm text-gray-500">{booking.scheduledTime || booking.timeSlot?.start || 'N/A'}</p>
+                  {booking.pricingType === 'HOURLY' && (
+                    <div className="mt-1.5 inline-block bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200">
+                      <span className="text-[11px] font-black text-teal-700 uppercase tracking-wider block">
+                        HOURLY SERVICE • {booking.durationHours || 1} Hours @ ₹{booking.hourlyRate}/hr
+                      </span>
+                      {booking.timeSlot?.start && booking.timeSlot?.end && (
+                        <span className="text-[10px] font-bold text-teal-600 block">
+                          Service Window: {booking.timeSlot.start} - {booking.timeSlot.end}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

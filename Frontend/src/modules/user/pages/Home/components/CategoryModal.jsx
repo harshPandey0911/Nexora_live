@@ -97,6 +97,9 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
         reviews: service.reviews || null,
         vendorId: service.vendorId || selectedBrand?.vendorId || null,
         gstPercentage: service.gstPercentage,
+        bookingType: service.pricingType === 'HOURLY' ? 'HOURLY' : 'FIXED',
+        durationHours: service.pricingType === 'HOURLY' ? (service.minHours || 1) : 1,
+        hourlyRate: service.pricingType === 'HOURLY' ? (service.hourlyRate || 0) : 0,
         card: {
           title: service.title,
           subtitle: service.description || '',
@@ -263,8 +266,12 @@ const CategoryModal = React.memo(({ isOpen, onClose, category, location, cartCou
 
                                   <div className="mt-auto flex items-center justify-between gap-2">
                                     <div className="flex flex-col">
-                                      <span className="text-sm font-black text-teal-600">₹{svc.basePrice}</span>
-                                      {svc.originalPrice && svc.originalPrice > svc.basePrice && (
+                                      {svc.pricingType === 'HOURLY' ? (
+                                        <span className="text-xs font-black text-teal-600">₹{svc.hourlyRate || svc.basePrice}/hr</span>
+                                      ) : (
+                                        <span className="text-sm font-black text-teal-600">₹{svc.basePrice}</span>
+                                      )}
+                                      {svc.originalPrice && svc.originalPrice > (svc.hourlyRate || svc.basePrice) && (
                                         <span className="text-[9px] text-gray-400 line-through opacity-60">₹{svc.originalPrice}</span>
                                       )}
                                     </div>

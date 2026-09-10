@@ -10,7 +10,11 @@ import { z } from "zod";
 // Schema for Service Entity (Child of Brand)
 const serviceSchema = z.object({
   title: z.string().min(2, "Title is required"),
-  basePrice: z.number().gt(0, "Price must be greater than 0"),
+  pricingType: z.enum(["FIXED", "HOURLY"]).default("FIXED"),
+  basePrice: z.number().min(0, "Price must be at least 0"),
+  hourlyRate: z.number().min(0).optional(),
+  minHours: z.number().min(1).default(1),
+  maxHours: z.number().min(1).default(8),
   discountPrice: z.number().optional(),
   categoryId: z.string().min(1, "Category is required"),
   iconUrl: z.string().min(1, "Service image is required"),
@@ -240,7 +244,12 @@ const ServicesPage = () => {
 
     setForm({
       title: "",
+      normalEnabled: true,
+      hourlyEnabled: false,
       basePrice: "",
+      hourlyRate: "",
+      minHours: 1,
+      maxHours: 8,
       discountPrice: "",
       categoryId: defaultCat,
       iconUrl: "",
@@ -251,9 +260,18 @@ const ServicesPage = () => {
 
   const handleEdit = (service) => {
     setEditingId(service.id || service._id);
+    // Resolve bookingOptions from service (new structure preferred, fallback to pricingType)
+    const bOpts = service.bookingOptions;
+    const normalEnabled = bOpts ? (bOpts.normal?.enabled !== false) : (service.pricingType !== 'HOURLY');
+    const hourlyEnabled = bOpts ? (bOpts.hourly?.enabled === true) : (service.pricingType === 'HOURLY');
     setForm({
       title: service.title,
-      basePrice: service.basePrice,
+      normalEnabled,
+      hourlyEnabled,
+      basePrice: service.basePrice || "",
+      hourlyRate: service.hourlyRate || "",
+      minHours: service.minHours || 1,
+      maxHours: service.maxHours || 8,
       discountPrice: service.discountPrice || "",
       categoryId: service.categoryId?._id || service.categoryId || "",
       iconUrl: service.iconUrl || "",
@@ -266,32 +284,64 @@ const ServicesPage = () => {
     e.preventDefault();
     if (!activeBrandId) return;
 
+    const normalEnabled = form.normalEnabled !== false;
+    const hourlyEnabled = form.hourlyEnabled === true;
+
+    // At least one mode must be enabled
+    if (!normalEnabled && !hourlyEnabled) {
+      toast.error("Please enable at least one booking mode (Normal or Hourly)");
+      return;
+    }
+
+    // Validate normal pricing
+    if (normalEnabled && (!form.basePrice || Number(form.basePrice) <= 0)) {
+      toast.error("Base price must be greater than 0 for Normal Booking");
+      return;
+    }
+
+    // Validate hourly pricing
+    if (hourlyEnabled) {
+      if (!form.hourlyRate || Number(form.hourlyRate) <= 0) {
+        toast.error("Hourly rate must be greater than 0 for Hourly Booking");
+        return;
+      }
+      if (Number(form.minHours) < 1) {
+        toast.error("Minimum hours must be at least 1");
+        return;
+      }
+      if (Number(form.maxHours) < Number(form.minHours)) {
+        toast.error("Maximum hours cannot be less than minimum hours");
+        return;
+      }
+    }
+
+    const bookingOptions = {
+      normal: { enabled: normalEnabled },
+      hourly: { enabled: hourlyEnabled }
+    };
+
     const data = {
       title: form.title,
-      basePrice: Number(form.basePrice),
+      bookingOptions,
+      basePrice: normalEnabled ? Number(form.basePrice || 0) : Number(form.hourlyRate || 0) * Number(form.minHours || 1),
+      hourlyRate: hourlyEnabled ? Number(form.hourlyRate) : 0,
+      minHours: hourlyEnabled ? Number(form.minHours || 1) : 1,
+      maxHours: hourlyEnabled ? Number(form.maxHours || 8) : 8,
       discountPrice: form.discountPrice ? Number(form.discountPrice) : undefined,
       categoryId: form.categoryId,
       iconUrl: form.iconUrl || null,
       description: form.description || ""
     };
 
-    const result = serviceSchema.safeParse(data);
-    if (!result.success) {
-      toast.error(result.error.issues[0].message);
-      return;
-    }
-
     try {
       setSaving(true);
       if (editingId) {
         const response = await serviceService.update(editingId, {
-          ...result.data,
+          ...data,
           brandId: activeBrandId
         });
         if (response.success) {
           toast.success("Service updated");
-          // Refresh list locally
-          setBrandServices(prev => prev.map(s => (s.id === editingId || s._id === editingId ? { ...s, ...result.data, categoryId: result.data.categoryId } : s)));
           resetForm();
           // Reload to ensure population
           const reloadRes = await serviceService.getAll({ brandId: activeBrandId });
@@ -299,7 +349,7 @@ const ServicesPage = () => {
         }
       } else {
         const response = await serviceService.create({
-          ...result.data,
+          ...data,
           brandId: activeBrandId
         });
         if (response.success) {
@@ -552,10 +602,16 @@ const ServicesPage = () => {
 
                         <div className="space-y-1 mt-2">
                           <div className="flex justify-between items-baseline">
-                            <span className="text-xs text-gray-500">{priceLabel}</span>
-                            <span className="font-semibold text-gray-900">₹{service.basePrice}</span>
+                            <span className="text-xs text-gray-500">{service.pricingType === 'HOURLY' ? 'Hourly Rate' : priceLabel}</span>
+                            {service.pricingType === 'HOURLY' ? (
+                              <span className="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 text-xs">
+                                ₹{service.hourlyRate || service.basePrice}/hr ({service.minHours || 1}-{service.maxHours || 8}h)
+                              </span>
+                            ) : (
+                              <span className="font-semibold text-gray-900">₹{service.basePrice}</span>
+                            )}
                           </div>
-                          {service.discountPrice && (
+                          {service.discountPrice && service.pricingType !== 'HOURLY' && (
                             <div className="flex justify-between items-baseline">
                               <span className="text-xs text-gray-500">Discounted</span>
                               <span className="font-bold text-primary-600">₹{service.discountPrice}</span>
@@ -632,29 +688,107 @@ const ServicesPage = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">{priceLabel} (₹)</label>
-            <input
-              type="number"
-              min="0.01"
-              step="any"
-              value={form.basePrice}
-              onChange={e => {
-                const val = e.target.value;
-                if (val === '' || parseFloat(val) > 0) {
-                  setForm({ ...form, basePrice: val });
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
-                  e.preventDefault();
-                }
-              }}
-              placeholder="e.g. 100"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-              required
-            />
-          </div>
+          {!isProductMode && (
+            <div className="bg-blue-50/60 p-4 rounded-xl border border-blue-200 space-y-3">
+              <label className="block text-sm font-bold text-gray-700 mb-1">Booking Options</label>
+              <p className="text-xs text-gray-500 mb-2">Select which booking modes are available for this service.</p>
+              
+              {/* Normal Booking Checkbox */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={form.normalEnabled !== false}
+                    onChange={e => setForm({ ...form, normalEnabled: e.target.checked })}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                  <span className="text-sm font-bold text-gray-800 group-hover:text-blue-700 transition-colors">Normal Booking (Fixed Price)</span>
+                </label>
+                {form.normalEnabled !== false && (
+                  <div className="ml-7">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">{priceLabel} (₹)</label>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="any"
+                      value={form.basePrice}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === '' || parseFloat(val) > 0) {
+                          setForm({ ...form, basePrice: val });
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') {
+                          e.preventDefault();
+                        }
+                      }}
+                      placeholder="e.g. 999"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      required={form.normalEnabled !== false}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Hourly Booking Checkbox */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={form.hourlyEnabled === true}
+                    onChange={e => setForm({ ...form, hourlyEnabled: e.target.checked })}
+                    className="w-4 h-4 accent-teal-600 cursor-pointer"
+                  />
+                  <span className="text-sm font-bold text-gray-800 group-hover:text-teal-700 transition-colors">Hourly Booking (Per Hour Rate)</span>
+                </label>
+                {form.hourlyEnabled === true && (
+                  <div className="ml-7 bg-teal-50/80 p-3 rounded-xl border border-teal-200 space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-teal-800 mb-1">Hourly Rate (₹/hour)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={form.hourlyRate}
+                        onChange={e => setForm({ ...form, hourlyRate: e.target.value })}
+                        placeholder="e.g. 299"
+                        className="w-full px-3 py-2 border border-teal-300 rounded-lg text-sm bg-white font-bold"
+                        required={form.hourlyEnabled === true}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-teal-800 mb-1">Minimum Hours</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={form.minHours}
+                          onChange={e => setForm({ ...form, minHours: e.target.value })}
+                          className="w-full px-3 py-2 border border-teal-300 rounded-lg text-sm bg-white"
+                          required={form.hourlyEnabled === true}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-teal-800 mb-1">Maximum Hours</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={form.maxHours}
+                          onChange={e => setForm({ ...form, maxHours: e.target.value })}
+                          className="w-full px-3 py-2 border border-teal-300 rounded-lg text-sm bg-white"
+                          required={form.hourlyEnabled === true}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!form.normalEnabled && !form.hourlyEnabled && (
+                <p className="text-xs text-red-600 font-semibold">⚠ At least one booking mode must be enabled.</p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Discount Price (Optional)</label>

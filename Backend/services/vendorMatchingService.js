@@ -124,6 +124,24 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
 
     console.log(`[VendorMatching] System online & active candidate vendors count: ${candidateVendors.length}`);
 
+    // Slot Conflict Check for HOURLY or Time-Window Bookings
+    if (booking.startAt && booking.endAt && candidateVendors.length > 0) {
+      const busyVendorIds = await Booking.distinct('vendorId', {
+        vendorId: { $in: candidateVendors.map(v => v._id) },
+        status: { $nin: [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.REJECTED, BOOKING_STATUS.COMPLETED] },
+        $and: [
+          { startAt: { $lt: booking.endAt } },
+          { endAt: { $gt: booking.startAt } }
+        ]
+      });
+
+      const busySet = new Set(busyVendorIds.map(id => id ? id.toString() : ''));
+      if (busySet.size > 0) {
+        console.log(`[VendorMatching] Filtering out ${busySet.size} vendors busy during ${booking.startAt} - ${booking.endAt}`);
+        candidateVendors = candidateVendors.filter(v => !busySet.has(v._id.toString()));
+      }
+    }
+
     if (candidateVendors.length === 0) {
       return await handleNoVendorsOnline(booking);
     }

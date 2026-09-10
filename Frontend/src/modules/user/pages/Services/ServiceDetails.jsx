@@ -32,8 +32,11 @@ const ServiceDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [durationHours, setDurationHours] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [homeContent, setHomeContent] = useState(null);
+  // Booking mode: 'FIXED' or 'HOURLY' (only relevant when service supports both)
+  const [selectedBookingMode, setSelectedBookingMode] = useState('FIXED');
 
   const isInCart = Boolean(
     cartItems && cartItems.some(item => 
@@ -60,6 +63,18 @@ const ServiceDetailsPage = () => {
         const res = await publicCatalogService.getServiceDetails(id);
         if (res.success) {
           setService(res.service);
+          // Derive booking modes from bookingOptions or fallback to pricingType
+          const bOpts = res.service.bookingOptions || {
+            normal: { enabled: res.service.pricingType !== 'HOURLY' },
+            hourly: { enabled: res.service.pricingType === 'HOURLY' }
+          };
+          const normalEnabled = bOpts.normal?.enabled !== false;
+          const hourlyEnabled = bOpts.hourly?.enabled === true;
+          // Default mode: Normal if available, else Hourly
+          setSelectedBookingMode(normalEnabled ? 'FIXED' : 'HOURLY');
+          if (hourlyEnabled) {
+            setDurationHours(res.service.minHours || 1);
+          }
         }
         
         const homeRes = await publicCatalogService.getHomeData();
@@ -80,18 +95,24 @@ const ServiceDetailsPage = () => {
   const handleAddToCart = async () => {
     try {
       setAddingToCart(true);
+      const isHourly = selectedBookingMode === 'HOURLY';
+      const itemUnitPrice = isHourly ? (service.hourlyRate * durationHours) : service.basePrice;
+
       const cartItemData = {
         serviceId: service.id || service._id,
         title: service.title,
         description: service.description || '',
         icon: toAssetUrl(service.iconUrl || service.icon || ''),
         category: service.categoryTitle || 'General',
-        price: service.basePrice * quantity,
-        unitPrice: service.basePrice,
+        price: itemUnitPrice * quantity,
+        unitPrice: itemUnitPrice,
         serviceCount: quantity,
         vendorId: service.vendorId,
         vendorName: service.vendorName,
-        gstPercentage: service.gstPercentage
+        gstPercentage: service.gstPercentage,
+        bookingType: isHourly ? 'HOURLY' : 'FIXED',
+        durationHours: isHourly ? durationHours : 1,
+        hourlyRate: isHourly ? service.hourlyRate : 0
       };
 
       const res = await addToCart(cartItemData);
@@ -231,12 +252,127 @@ const ServiceDetailsPage = () => {
               </div>
 
               <div>
-                <div className="flex items-baseline gap-3 mb-4 lg:mb-5">
-                  <span className="text-3xl sm:text-4xl font-bold text-gray-900">₹{service.basePrice}</span>
-                  {service.originalPrice && service.originalPrice > service.basePrice && (
-                    <span className="text-lg text-gray-400 line-through font-semibold">₹{service.originalPrice}</span>
-                  )}
-                </div>
+                {/* Resolve booking modes */}
+                {(() => {
+                  const bOpts = service.bookingOptions || {
+                    normal: { enabled: service.pricingType !== 'HOURLY' },
+                    hourly: { enabled: service.pricingType === 'HOURLY' }
+                  };
+                  const normalEnabled = bOpts.normal ? (bOpts.normal.enabled !== false) : true;
+                  const hourlyEnabled = bOpts.hourly ? (bOpts.hourly.enabled === true) : false;
+                  const bothEnabled = normalEnabled && hourlyEnabled;
+
+                  return (
+                    <>
+                      {/* Booking Type Info badge — shown for hourly-only */}
+                      {!normalEnabled && hourlyEnabled && (
+                        <div className="mb-3 inline-flex items-center gap-2 bg-teal-100 text-teal-800 text-xs font-bold px-3 py-1.5 rounded-full border border-teal-300">
+                          <FiClock className="w-3.5 h-3.5" />
+                          Hourly Service — Pay per hour
+                        </div>
+                      )}
+
+                      {/* Mode selector — shown when both modes are enabled */}
+                      {bothEnabled && (
+                        <div className="mb-4 bg-gradient-to-br from-gray-50 to-blue-50/40 p-4 rounded-2xl border border-gray-200 shadow-sm">
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                            <p className="text-xs font-black uppercase tracking-wider text-gray-600">Choose Booking Type</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Normal Booking card */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBookingMode('FIXED')}
+                              className={`p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${
+                                selectedBookingMode === 'FIXED'
+                                  ? 'border-blue-500 bg-blue-50 shadow-md shadow-blue-100'
+                                  : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-sm'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">Normal</span>
+                                {selectedBookingMode === 'FIXED' && (
+                                  <span className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <FiCheckCircle className="w-3 h-3 text-white" />
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xl font-black text-blue-700">₹{service.basePrice}</span>
+                              <span className="block text-[9px] text-gray-400 font-semibold mt-0.5">Fixed price</span>
+                            </button>
+                            {/* Hourly Booking card */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBookingMode('HOURLY')}
+                              className={`p-3.5 rounded-xl border-2 text-left transition-all duration-200 ${
+                                selectedBookingMode === 'HOURLY'
+                                  ? 'border-teal-500 bg-teal-50 shadow-md shadow-teal-100'
+                                  : 'border-gray-200 bg-white hover:border-teal-300 hover:shadow-sm'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">Hourly</span>
+                                {selectedBookingMode === 'HOURLY' && (
+                                  <span className="w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center">
+                                    <FiCheckCircle className="w-3 h-3 text-white" />
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xl font-black text-teal-700">₹{service.hourlyRate}<span className="text-xs font-semibold text-teal-600">/hr</span></span>
+                              <span className="block text-[9px] text-gray-400 font-semibold mt-0.5">Pay per hour</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hourly pricing block — shown when Hourly is selected */}
+                      {hourlyEnabled && selectedBookingMode === 'HOURLY' && (
+                        <div className="mb-5 bg-teal-50/60 p-4 rounded-2xl border border-teal-100">
+                          <div className="flex items-baseline gap-2 mb-2">
+                            <span className="text-3xl sm:text-4xl font-black text-teal-700">₹{service.hourlyRate}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-teal-600">/ hour</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t border-teal-100">
+                            <div>
+                              <span className="text-[11px] font-black uppercase tracking-wider text-gray-500 block">Select Duration</span>
+                              <span className="text-xs font-bold text-gray-800">Est. Cost: ₹{service.hourlyRate * durationHours} + GST</span>
+                            </div>
+                            <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-xl shadow-sm border border-teal-200">
+                              <button
+                                type="button"
+                                onClick={() => setDurationHours(prev => Math.max(service.minHours || 1, prev - 1))}
+                                disabled={durationHours <= (service.minHours || 1)}
+                                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700 disabled:opacity-30"
+                              >
+                                <FiMinus className="w-3.5 h-3.5" />
+                              </button>
+                              <span className="w-12 text-center text-xs font-black text-gray-900">{durationHours} Hrs</span>
+                              <button
+                                type="button"
+                                onClick={() => setDurationHours(prev => Math.min(service.maxHours || 8, prev + 1))}
+                                disabled={durationHours >= (service.maxHours || 8)}
+                                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center font-bold text-gray-700 disabled:opacity-30"
+                              >
+                                <FiPlus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Normal pricing block — shown when Normal is selected */}
+                      {normalEnabled && selectedBookingMode === 'FIXED' && (
+                        <div className="flex items-baseline gap-3 mb-4 lg:mb-5">
+                          <span className="text-3xl sm:text-4xl font-bold text-gray-900">₹{service.basePrice}</span>
+                          {service.originalPrice && service.originalPrice > service.basePrice && (
+                            <span className="text-lg text-gray-400 line-through font-semibold">₹{service.originalPrice}</span>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* Add to Cart / Go to Cart Action */}
                 <div className="flex gap-4 items-center">

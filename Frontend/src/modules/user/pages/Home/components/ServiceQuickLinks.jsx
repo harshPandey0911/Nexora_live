@@ -146,6 +146,8 @@ const ServiceQuickLinks = ({ categories = [], onCategoryClick, onSeeAllClick, ti
         >
           {visibleCategories.map((category, index) => {
             const meta = getCategoryMeta(category);
+            const imgSrc = typeof category.icon === 'string' && category.icon ? category.icon : (typeof category.image === 'string' && category.image ? category.image : null);
+
             return (
               <motion.div
                 key={category.id || index}
@@ -155,34 +157,57 @@ const ServiceQuickLinks = ({ categories = [], onCategoryClick, onSeeAllClick, ti
                 whileHover={{ y: -6, boxShadow: '0 16px 40px rgba(0,0,0,0.1)' }}
                 whileTap={{ scale: 0.96 }}
                 onClick={() => onCategoryClick?.(category)}
-                className="flex-shrink-0 flex flex-col items-center bg-white rounded-2xl p-3 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100/80 cursor-pointer transition-all duration-300 hover:border-blue-200/60 group"
-                style={{ minWidth: '115px', maxWidth: '125px' }}
+                className="flex-shrink-0 flex flex-col items-center bg-white rounded-2xl p-2.5 sm:p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100/80 cursor-pointer transition-all duration-300 hover:border-blue-200/60 group"
+                style={{ minWidth: '135px', maxWidth: '145px' }}
               >
-                {/* Icon Container */}
+                {/* Full Image Container */}
                 <div 
-                  className="w-11 h-11 sm:w-12 sm:h-12 mb-2 sm:mb-2.5 flex items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110"
-                  style={{ backgroundColor: meta.bg }}
+                  className="w-full h-24 sm:h-28 rounded-xl overflow-hidden mb-2.5 bg-gray-50 flex items-center justify-center relative group-hover:shadow-md transition-all"
+                  style={{ backgroundColor: !imgSrc ? meta.bg : undefined }}
                 >
-                  {category.icon ? (
-                    <img 
-                      src={category.icon} 
-                      alt={category.title} 
-                      className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-                    />
+                  {imgSrc ? (
+                    <>
+                      <img 
+                        src={imgSrc} 
+                        alt={category.title} 
+                        className="w-full h-full object-cover rounded-xl transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.nextSibling) {
+                            e.currentTarget.nextSibling.style.display = 'flex';
+                          }
+                        }}
+                      />
+                      <div 
+                        className="hidden w-full h-full items-center justify-center rounded-xl"
+                        style={{ backgroundColor: meta.bg }}
+                      >
+                        <div className="text-3xl" style={{ color: meta.color }}>
+                          {meta.icon}
+                        </div>
+                      </div>
+                    </>
                   ) : (
-                    <div className="text-xl sm:text-2xl" style={{ color: meta.color }}>
+                    <div className="text-3xl sm:text-4xl transition-transform duration-300 group-hover:scale-110" style={{ color: meta.color }}>
                       {meta.icon}
                     </div>
+                  )}
+
+                  {/* Optional Sale Badge */}
+                  {(category.hasSaleBadge || category.badge) && (
+                    <span className="absolute top-1.5 right-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-md shadow-sm z-10">
+                      {category.badge || 'OFFER'}
+                    </span>
                   )}
                 </div>
                 
                 {/* Title */}
-                <span className="text-[12px] sm:text-[13px] font-bold text-gray-900 text-center leading-tight mb-1">
+                <span className="text-[12px] sm:text-[13px] font-bold text-gray-900 text-center leading-tight mb-1 w-full truncate px-1">
                   {category.title}
                 </span>
                 
                 {/* Description */}
-                <span className="text-[9px] sm:text-[10px] font-medium text-gray-400 text-center leading-tight line-clamp-2">
+                <span className="text-[9px] sm:text-[10px] font-medium text-gray-400 text-center leading-tight line-clamp-1 w-full px-1">
                   {category.description || 'Service at your doorstep'}
                 </span>
               </motion.div>
@@ -198,17 +223,17 @@ const ServiceQuickLinks = ({ categories = [], onCategoryClick, onSeeAllClick, ti
               whileHover={{ y: -6, boxShadow: '0 16px 40px rgba(0,0,0,0.1)' }}
               whileTap={{ scale: 0.96 }}
               onClick={onSeeAllClick}
-              className="flex-shrink-0 flex flex-col items-center bg-white rounded-2xl p-3 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100/80 cursor-pointer transition-all duration-300 hover:border-blue-200/60 group"
-              style={{ minWidth: '115px', maxWidth: '125px' }}
+              className="flex-shrink-0 flex flex-col items-center bg-white rounded-2xl p-2.5 sm:p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100/80 cursor-pointer transition-all duration-300 hover:border-blue-200/60 group"
+              style={{ minWidth: '135px', maxWidth: '145px' }}
             >
-              <div className="w-11 h-11 sm:w-12 sm:h-12 mb-2 sm:mb-2.5 flex items-center justify-center rounded-xl bg-blue-50 transition-transform duration-300 group-hover:scale-110">
-                <HiDotsHorizontal className="text-xl sm:text-2xl text-blue-500" />
+              <div className="w-full h-24 sm:h-28 rounded-xl bg-blue-50/80 flex flex-col items-center justify-center mb-2.5 transition-colors group-hover:bg-blue-100/80">
+                <HiDotsHorizontal className="text-3xl text-blue-500 transition-transform duration-300 group-hover:scale-110" />
               </div>
               <span className="text-[12px] sm:text-[13px] font-bold text-gray-900 text-center leading-tight mb-1">
                 More
               </span>
               <span className="text-[9px] sm:text-[10px] font-medium text-gray-400 text-center leading-tight">
-                Many more
+                Explore all
               </span>
             </motion.div>
           )}

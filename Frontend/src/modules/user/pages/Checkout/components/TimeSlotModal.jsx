@@ -2,6 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { FiArrowLeft, FiX } from 'react-icons/fi';
 import { themeColors } from '../../../../../theme';
 
+const calculateEndTime = (startStr, durationHours = 1) => {
+  if (!startStr) return '';
+  const match = String(startStr).match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)?/i);
+  if (!match) return startStr;
+  let hours = parseInt(match[1], 10);
+  let minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const ampm = match[3] ? match[3].toUpperCase() : 'AM';
+  if (ampm === 'PM' && hours < 12) hours += 12;
+  if (ampm === 'AM' && hours === 12) hours = 0;
+
+  const endHoursTotal = hours + (Number(durationHours) || 1);
+  let endHours = endHoursTotal % 24;
+  const endAmpm = endHours >= 12 ? 'PM' : 'AM';
+  let endDispHours = endHours % 12;
+  if (endDispHours === 0) endDispHours = 12;
+
+  const minDisp = minutes < 10 ? `0${minutes}` : `${minutes}`;
+  return `${endDispHours}:${minDisp} ${endAmpm}`;
+};
+
 const TimeSlotModal = ({
   isOpen,
   onClose,
@@ -14,7 +34,8 @@ const TimeSlotModal = ({
   getTimeSlots,
   formatDate,
   isDateSelected,
-  isTimeSelected
+  isTimeSelected,
+  hourlyDuration = 0
 }) => {
   const [isClosing, setIsClosing] = useState(false);
 
@@ -95,7 +116,13 @@ const TimeSlotModal = ({
             }}
           >
             <h2 className="text-xl font-bold text-black mb-1">When should the professional arrive?</h2>
-            <p className="text-sm text-gray-600 mb-4">Service will take approx. 45 mins</p>
+            {hourlyDuration > 0 ? (
+              <p className="text-sm font-bold text-teal-700 mb-4 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200 inline-block">
+                Hourly Service ({hourlyDuration} Hours) {selectedTime ? `• Window: ${selectedTime} - ${calculateEndTime(selectedTime, hourlyDuration)}` : ''}
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600 mb-4">Service will take approx. 45 mins</p>
+            )}
 
             {/* Date Selection */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide mb-4" style={{ WebkitOverflowScrolling: 'touch' }}>

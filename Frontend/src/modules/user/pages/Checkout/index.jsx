@@ -1975,6 +1975,7 @@ const Checkout = () => {
         formatDate={formatDate}
         isDateSelected={isDateSelected}
         isTimeSelected={isTimeSelected}
+        hourlyDuration={cartItems[0]?.bookingType === 'HOURLY' ? (cartItems[0]?.durationHours || 1) : 0}
       />
     </div>
   );

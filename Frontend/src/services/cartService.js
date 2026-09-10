@@ -19,10 +19,18 @@ export const cartService = {
     return response.data;
   },
 
-  // Update cart item quantity
-  updateItem: async (itemId, serviceCount) => {
+  // Update cart item quantity, duration, or bookingType mode
+  updateItem: async (itemId, serviceCount, options = {}) => {
     console.log("URL:", `/users/cart/${itemId}`);
-    const response = await api.put(`/users/cart/${itemId}`, { serviceCount });
+    const payload = { serviceCount };
+    if (typeof options === 'object' && options !== null) {
+      if (options.durationHours !== undefined) payload.durationHours = options.durationHours;
+      if (options.bookingType !== undefined) payload.bookingType = options.bookingType;
+    } else if (options !== undefined) {
+      // Legacy positional arg fallback
+      payload.durationHours = options;
+    }
+    const response = await api.put(`/users/cart/${itemId}`, payload);
     console.log("cartService.updateItem RETURN VALUE:", response.data);
     return response.data;
   },

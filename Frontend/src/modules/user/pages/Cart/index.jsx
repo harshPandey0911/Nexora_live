@@ -22,7 +22,7 @@ import { userAuthService } from '../../../../services/authService';
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { cartItems, isLoading: loading, removeItem, updateItem, platformFeeRate, maxCartItemQuantity, flushCartUpdates } = useCart();
+  const { cartItems, isLoading: loading, addToCart, removeItem, updateItem, platformFeeRate, maxCartItemQuantity, flushCartUpdates } = useCart();
   const [homeContent, setHomeContent] = useState(null);
   const [planBenefits, setPlanBenefits] = useState({ name: '', freeCategories: [], freeBrands: [], freeServices: [] });
   const [userPlanActive, setUserPlanActive] = useState(false);
@@ -147,6 +147,52 @@ const Cart = () => {
     }
   };
 
+  const handleDurationChange = async (item, change) => {
+    const itemId = item?.id || item?._id;
+    const currentDur = item?.durationHours || 1;
+    const newDur = currentDur + change;
+    const minH = item?.minHours || item?.serviceId?.minHours || 1;
+    const maxH = item?.maxHours || item?.serviceId?.maxHours || 8;
+
+    if (newDur < minH || newDur > maxH) {
+      if (newDur > maxH) {
+        toast.error(`Maximum allowed booking duration for this service is ${maxH} hours`, { id: 'dur-max-limit' });
+      }
+      return;
+    }
+
+    try {
+      const res = await updateItem(itemId, item?.serviceCount || 1, { durationHours: newDur });
+      if (res && !res.success) {
+        toast.error(res.message || 'Failed to update duration', { id: 'failed-dur-update' });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error updating duration', { id: 'failed-dur-update' });
+    }
+  };
+
+  const handleModeSwitch = async (item, newMode) => {
+    const itemId = item?.id || item?._id;
+    if (!itemId) return;
+
+    try {
+      const isHourly = newMode === 'HOURLY';
+      const minH = item.serviceId?.minHours || 1;
+      const res = await updateItem(itemId, item.serviceCount || 1, {
+        bookingType: isHourly ? 'HOURLY' : 'FIXED',
+        durationHours: isHourly ? minH : 1
+      });
+
+      if (res && res.success !== false) {
+        toast.success(`Switched to ${isHourly ? 'Hourly' : 'Fixed'} Booking!`);
+      }
+    } catch (error) {
+      console.error('Failed to switch booking mode:', error);
+      toast.error('Failed to switch booking mode');
+    }
+  };
+
   const handleItemClick = (item) => {
     const rawId = item.serviceId;
     const id = normalizeId(rawId);
@@ -253,9 +299,45 @@ const Cart = () => {
                     <div className="flex-1 min-w-0 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <span className="text-[8px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block mb-0.5">
-                            {item.serviceId?.offeringType === 'PRODUCT' ? 'Product' : (item.category || 'Service')}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <span className="text-[8px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 inline-block">
+                              {(item.offeringType === 'PRODUCT' || item.serviceId?.offeringType === 'PRODUCT' || (item.category && ['food', 'products', 'product', 'grocery', 'store', 'items'].some(k => item.category.toLowerCase().includes(k)))) ? 'Product' : (item.category || 'Service')}
+                            </span>
+
+                            {/* Booking Mode Selector (Normal vs Hourly) - ONLY FOR SERVICES */}
+                            {!(item.offeringType === 'PRODUCT' || item.serviceId?.offeringType === 'PRODUCT' || (item.category && ['food', 'products', 'product', 'grocery', 'store', 'items'].some(k => item.category.toLowerCase().includes(k)))) && (
+                              <div className="inline-flex items-center p-0.5 bg-gray-100 rounded-lg border border-gray-200" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); if (item.bookingType === 'HOURLY') handleModeSwitch(item, 'FIXED'); }}
+                                  className={`px-1.5 py-0.5 text-[8px] font-bold rounded transition-all cursor-pointer ${
+                                    item.bookingType !== 'HOURLY'
+                                      ? 'bg-blue-600 text-white shadow-2xs'
+                                      : 'text-gray-600 hover:text-gray-900'
+                                  }`}
+                                >
+                                  Fixed
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); if (item.bookingType !== 'HOURLY') handleModeSwitch(item, 'HOURLY'); }}
+                                  className={`px-1.5 py-0.5 text-[8px] font-bold rounded transition-all cursor-pointer ${
+                                    item.bookingType === 'HOURLY'
+                                      ? 'bg-teal-600 text-white shadow-2xs'
+                                      : 'text-gray-600 hover:text-gray-900'
+                                  }`}
+                                >
+                                  Hourly
+                                </button>
+                              </div>
+                            )}
+
+                            {!(item.offeringType === 'PRODUCT' || item.serviceId?.offeringType === 'PRODUCT' || (item.category && ['food', 'products', 'product', 'grocery', 'store', 'items'].some(k => item.category.toLowerCase().includes(k)))) && item.bookingType === 'HOURLY' && (
+                              <span className="text-[8px] font-bold text-teal-700 uppercase tracking-wider bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200 inline-block">
+                                {item.durationHours || 1} Hours @ ₹{item.hourlyRate}/hr
+                              </span>
+                            )}
+                          </div>
                           <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate uppercase tracking-tight">
                             {item.title}
                           </h3>
@@ -276,8 +358,8 @@ const Cart = () => {
                         </p>
                       )}
 
-                      {/* Price & Quantity Bar */}
-                      <div className="flex items-center justify-between pt-1">
+                      {/* Price & Quantity / Duration Bar */}
+                      <div className="flex items-center justify-between pt-1 flex-wrap gap-2">
                         <div className="flex items-baseline gap-1.5">
                           <span className="text-sm font-bold text-gray-900">₹{item.price}</span>
                           {item.serviceCount > 1 && (
@@ -292,40 +374,66 @@ const Cart = () => {
                           )}
                         </div>
 
-                        {/* Quantity Counter */}
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-200 shadow-2xs"
-                        >
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, -1); }}
-                            className="w-6 h-6 rounded bg-white flex items-center justify-center text-gray-700 shadow-2xs hover:bg-gray-100 transition-colors cursor-pointer"
-                          >
-                            <FiMinus className="w-3 h-3" />
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.serviceCount || 1}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value, 10);
-                              if (!isNaN(val) && val >= 1) {
-                                if (val > maxCartItemQuantity) {
-                                  toast.error(`Maximum quantity limit is ${maxCartItemQuantity}`);
-                                  handleQuantityChange(item, maxCartItemQuantity - (item.serviceCount || 1));
-                                } else {
-                                  handleQuantityChange(item, val - (item.serviceCount || 1));
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Hourly Duration Stepper (ONLY FOR SERVICES) */}
+                          {!(item.offeringType === 'PRODUCT' || item.serviceId?.offeringType === 'PRODUCT' || (item.category && ['food', 'products', 'product', 'grocery', 'store', 'items'].some(k => item.category.toLowerCase().includes(k)))) && (item.bookingType === 'HOURLY' || item.hourlyRate > 0) && (
+                            <div className="flex items-center bg-teal-50/80 rounded-lg p-0.5 border border-teal-200 shadow-2xs">
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleDurationChange(item, -1); }}
+                                disabled={(item.durationHours || 1) <= (item.minHours || item.serviceId?.minHours || 1)}
+                                className="w-5 h-5 rounded bg-white flex items-center justify-center text-teal-700 shadow-2xs hover:bg-teal-100 transition-colors disabled:opacity-40 cursor-pointer"
+                                title="Decrease duration hours"
+                              >
+                                <FiMinus className="w-2.5 h-2.5" />
+                              </button>
+                              <span className="px-1.5 text-[10px] font-black text-teal-800 select-none">
+                                {item.durationHours || 1} Hrs
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleDurationChange(item, 1); }}
+                                disabled={(item.durationHours || 1) >= (item.maxHours || item.serviceId?.maxHours || 8)}
+                                className="w-5 h-5 rounded bg-white flex items-center justify-center text-teal-700 shadow-2xs hover:bg-teal-100 transition-colors disabled:opacity-40 cursor-pointer"
+                                title="Increase duration hours"
+                              >
+                                <FiPlus className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Quantity Counter */}
+                          <div className="flex items-center bg-gray-50 rounded-lg p-0.5 border border-gray-200 shadow-2xs">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, -1); }}
+                              className="w-6 h-6 rounded bg-white flex items-center justify-center text-gray-700 shadow-2xs hover:bg-gray-100 transition-colors cursor-pointer"
+                            >
+                              <FiMinus className="w-3 h-3" />
+                            </button>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.serviceCount || 1}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 1) {
+                                  if (val > maxCartItemQuantity) {
+                                    toast.error(`Maximum quantity limit is ${maxCartItemQuantity}`);
+                                    handleQuantityChange(item, maxCartItemQuantity - (item.serviceCount || 1));
+                                  } else {
+                                    handleQuantityChange(item, val - (item.serviceCount || 1));
+                                  }
                                 }
-                              }
-                            }}
-                            className="w-7 text-center text-xs font-bold bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          />
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, 1); }}
-                            className="w-6 h-6 rounded bg-white flex items-center justify-center text-gray-700 shadow-2xs hover:bg-gray-100 transition-colors cursor-pointer"
-                          >
-                            <FiPlus className="w-3 h-3" />
-                          </button>
+                              }}
+                              className="w-7 text-center text-xs font-bold bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, 1); }}
+                              className="w-6 h-6 rounded bg-white flex items-center justify-center text-gray-700 shadow-2xs hover:bg-gray-100 transition-colors cursor-pointer"
+                            >
+                              <FiPlus className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

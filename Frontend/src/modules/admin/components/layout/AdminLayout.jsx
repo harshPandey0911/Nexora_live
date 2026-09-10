@@ -299,26 +299,96 @@ const AdminLayout = () => {
                 </div>
               )}
 
-              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
-                <span className="text-[9px] text-gray-400 font-bold uppercase">Requested Service</span>
-                <h4 className="font-bold text-gray-800 text-sm">
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                <div className="flex items-center justify-between gap-1 flex-wrap">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase">Requested Service</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Instant vs Scheduled Badge */}
+                    {(() => {
+                      const timeVal = activeAlert.timeSlot?.time || activeAlert.scheduledTime || '';
+                      const isInstant = !timeVal || timeVal.toLowerCase().includes('asap') || timeVal.toLowerCase().includes('now') || timeVal.toLowerCase().includes('instant');
+                      return isInstant ? (
+                        <span className="text-[8px] font-black text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 uppercase tracking-wider flex items-center gap-1 animate-pulse">
+                          ⚡ INSTANT
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 uppercase tracking-wider">
+                          📅 SCHEDULED
+                        </span>
+                      );
+                    })()}
+
+                    {/* Booking Mode Badge */}
+                    {activeAlert.pricingType === 'HOURLY' ? (
+                      <span className="text-[8px] font-black text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 uppercase tracking-wider">
+                        HOURLY • {activeAlert.durationHours || 1}h @ ₹{activeAlert.hourlyRate}/hr
+                      </span>
+                    ) : (
+                      <span className="text-[8px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 uppercase tracking-wider">
+                        FIXED • ₹{activeAlert.basePrice || activeAlert.finalAmount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <h4 className="font-bold text-gray-900 text-sm uppercase">
                   {activeAlert.items?.[0]?.serviceId?.title || activeAlert.serviceName || 'Nexora Service'}
                 </h4>
-                <p className="text-xs text-gray-500 font-semibold">
-                  Scheduled Time: {activeAlert.timeSlot?.time || 'ASAP'}
+                
+                {activeAlert.pricingType === 'HOURLY' && (
+                  <p className="text-[11px] font-bold text-teal-700">
+                    Est. Cost: ₹{(activeAlert.hourlyRate || 0) * (activeAlert.durationHours || 1)} ({activeAlert.durationHours || 1} Hours)
+                  </p>
+                )}
+
+                <p className="text-xs text-gray-500 font-semibold pt-1.5 border-t border-gray-200/80">
+                  Scheduled Time: {(() => {
+                    const dateVal = activeAlert.timeSlot?.date || activeAlert.scheduledDate;
+                    let formattedDate = 'Today';
+                    if (dateVal && dateVal !== 'Invalid Date') {
+                      const d = new Date(dateVal);
+                      if (!isNaN(d.getTime())) {
+                        formattedDate = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+                      } else if (typeof dateVal === 'string' && dateVal.trim()) {
+                        formattedDate = dateVal;
+                      }
+                    }
+                    const timeVal = activeAlert.timeSlot?.time || (activeAlert.timeSlot?.start && activeAlert.timeSlot?.end ? `${activeAlert.timeSlot.start} - ${activeAlert.timeSlot.end}` : activeAlert.scheduledTime);
+                    const formattedTime = (timeVal && timeVal !== 'N/A') ? timeVal : 'ASAP';
+                    return `${formattedDate} • ${formattedTime}`;
+                  })()}
                 </p>
               </div>
 
               <div className="space-y-1">
                 <span className="text-[9px] text-gray-400 font-bold uppercase">Customer Details</span>
                 <p className="text-xs text-gray-800 font-bold">
-                  {activeAlert.userId?.name || activeAlert.customerName || 'Guest'}
+                  {activeAlert.userId?.name || activeAlert.customerName || activeAlert.address?.name || 'Customer'}
                 </p>
                 <p className="text-xs text-gray-500 font-medium">
-                  Phone: {activeAlert.userId?.phone || activeAlert.customerPhone}
+                  Phone: {activeAlert.userId?.phone || activeAlert.customerPhone || activeAlert.address?.phone || 'N/A'}
                 </p>
-                <p className="text-[11px] text-gray-500 leading-tight">
-                  Address: {activeAlert.location?.address}
+                <p className="text-[11px] text-gray-600 leading-snug font-medium">
+                  <span className="font-bold text-gray-500">Address:</span> {(() => {
+                    if (typeof activeAlert.location?.address === 'string' && activeAlert.location.address.trim()) {
+                      return activeAlert.location.address;
+                    }
+                    if (typeof activeAlert.address === 'string' && activeAlert.address.trim()) {
+                      return activeAlert.address;
+                    }
+                    if (activeAlert.address && typeof activeAlert.address === 'object') {
+                      const parts = [
+                        activeAlert.address.addressLine1,
+                        activeAlert.address.addressLine2,
+                        activeAlert.address.landmark,
+                        activeAlert.address.city,
+                        activeAlert.address.state,
+                        activeAlert.address.pincode
+                      ].filter(Boolean);
+                      if (parts.length > 0) return parts.join(', ');
+                    }
+                    return activeAlert.fullAddress || activeAlert.addressLine1 || 'Address not specified';
+                  })()}
                 </p>
               </div>
             </div>

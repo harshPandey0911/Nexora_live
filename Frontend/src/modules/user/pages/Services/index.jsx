@@ -170,21 +170,38 @@ const ServicesPage = () => {
   const handleAddToCart = async (service) => {
     try {
       setAddingToCart(service.id || service._id);
+      // Resolve booking modes from bookingOptions (prefer) or fallback to pricingType
+      const bOpts = service.bookingOptions || {
+        normal: { enabled: service.pricingType !== 'HOURLY' },
+        hourly: { enabled: service.pricingType === 'HOURLY' }
+      };
+      const normalEnabled = bOpts.normal?.enabled !== false;
+      const hourlyEnabled = bOpts.hourly?.enabled === true;
+
+      // Quick-add from card: default to Normal if available, else Hourly
+      const isHourly = !normalEnabled && hourlyEnabled;
+      const minH = service.minHours || 1;
+      const rate = service.hourlyRate || Math.round((service.basePrice || 0) / minH);
+      const itemUnitPrice = isHourly ? (rate * minH) : service.basePrice;
+
       const cartItemData = {
         serviceId: service.id || service._id,
         title: service.title,
         description: service.description || '',
         icon: toAssetUrl(service.iconUrl || service.icon || ''),
         category: service.categoryTitle || 'General',
-        price: service.basePrice,
-        unitPrice: service.basePrice,
+        price: itemUnitPrice,
+        unitPrice: itemUnitPrice,
         serviceCount: 1,
         vendorId: service.vendorId,
         gstPercentage: service.gstPercentage,
+        bookingType: isHourly ? 'HOURLY' : 'FIXED',
+        durationHours: isHourly ? minH : 1,
+        hourlyRate: isHourly ? rate : 0,
         card: {
           title: service.title,
           subtitle: service.description || '',
-          price: service.basePrice,
+          price: itemUnitPrice,
           imageUrl: toAssetUrl(service.iconUrl || service.icon || ''),
         }
       };
@@ -455,7 +472,37 @@ const ServicesPage = () => {
                       </p>
 
                       <div className="flex items-center justify-between gap-2 mt-auto">
-                        <span className="text-xs sm:text-lg font-bold text-blue-600 shrink-0">₹{svc.basePrice}</span>
+                        {(() => {
+                          const bOpts = svc.bookingOptions || {
+                            normal: { enabled: svc.pricingType !== 'HOURLY' },
+                            hourly: { enabled: svc.pricingType === 'HOURLY' }
+                          };
+                          const normalOn = bOpts.normal?.enabled !== false;
+                          const hourlyOn = bOpts.hourly?.enabled === true;
+
+                          if (normalOn && hourlyOn) {
+                            // Both modes — show dual pricing badge
+                            return (
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs sm:text-sm font-bold text-blue-600 shrink-0">₹{svc.basePrice}</span>
+                                <span className="text-[10px] text-gray-400">or</span>
+                                <span className="text-xs font-black text-teal-600 shrink-0 bg-teal-50 px-1.5 py-0.5 rounded-md border border-teal-200">₹{svc.hourlyRate}/hr</span>
+                              </div>
+                            );
+                          } else if (hourlyOn) {
+                            // Hourly only
+                            return (
+                              <span className="text-xs sm:text-base font-black text-teal-600 shrink-0 bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-200">
+                                ₹{svc.hourlyRate || Math.round((svc.basePrice || 0) / (svc.minHours || 1))}/hr
+                              </span>
+                            );
+                          } else {
+                            // Normal only (default)
+                            return (
+                              <span className="text-xs sm:text-lg font-bold text-blue-600 shrink-0">₹{svc.basePrice}</span>
+                            );
+                          }
+                        })()}
                         
                         {(() => {
                           const isInCart = Boolean(

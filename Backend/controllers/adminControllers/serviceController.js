@@ -5,6 +5,50 @@ const { validationResult } = require('express-validator');
 const { SERVICE_STATUS } = require('../../utils/constants');
 
 /**
+ * Derive backward-compat pricingType from bookingOptions
+ * If only hourly → 'HOURLY', else → 'FIXED'
+ */
+const derivePricingType = (bookingOptions) => {
+  const normalEnabled = bookingOptions?.normal?.enabled !== false;
+  const hourlyEnabled = bookingOptions?.hourly?.enabled === true;
+  if (hourlyEnabled && !normalEnabled) return 'HOURLY';
+  return 'FIXED';
+};
+
+/**
+ * Validate bookingOptions configuration
+ * Returns null if valid, error message string if invalid
+ */
+const validateBookingOptions = (bookingOptions, basePrice, hourlyRate, minHours, maxHours) => {
+  const normalEnabled = bookingOptions?.normal?.enabled !== false;
+  const hourlyEnabled = bookingOptions?.hourly?.enabled === true;
+
+  if (!normalEnabled && !hourlyEnabled) {
+    return 'At least one booking mode (Normal or Hourly) must be enabled.';
+  }
+
+  if (normalEnabled) {
+    if (!basePrice || Number(basePrice) <= 0) {
+      return 'Base price must be greater than 0 for Normal Booking.';
+    }
+  }
+
+  if (hourlyEnabled) {
+    if (!hourlyRate || Number(hourlyRate) <= 0) {
+      return 'Hourly rate must be greater than 0 for Hourly Booking.';
+    }
+    if (Number(minHours) < 1) {
+      return 'Minimum hours must be at least 1.';
+    }
+    if (Number(maxHours) < Number(minHours)) {
+      return 'Maximum hours cannot be less than minimum hours.';
+    }
+  }
+
+  return null;
+};
+
+/**
  * Get all services (with filter by brandId)
  * GET /api/admin/services
  */
@@ -91,8 +135,42 @@ const createService = async (req, res) => {
       gstPercentage,
       description,
       status,
-      iconUrl
+      iconUrl,
+      hourlyRate = 0,
+      minHours = 1,
+      maxHours = 8,
+      // New bookingOptions structure (preferred)
+      bookingOptions: reqBookingOptions,
+      // Legacy pricingType support (backward compat)
+      pricingType: legacyPricingType
     } = req.body;
+
+    // Resolve bookingOptions — prefer new structure, fall back to legacy pricingType
+    let bookingOptions;
+    if (reqBookingOptions) {
+      bookingOptions = {
+        normal: { enabled: reqBookingOptions.normal?.enabled !== false },
+        hourly: { enabled: reqBookingOptions.hourly?.enabled === true }
+      };
+    } else if (legacyPricingType === 'HOURLY') {
+      // Legacy: pricingType HOURLY → hourly-only mode
+      bookingOptions = { normal: { enabled: false }, hourly: { enabled: true } };
+    } else {
+      // Default: normal booking only
+      bookingOptions = { normal: { enabled: true }, hourly: { enabled: false } };
+    }
+
+    // Validate booking options
+    const validationError = validateBookingOptions(
+      bookingOptions,
+      basePrice,
+      hourlyRate,
+      minHours,
+      maxHours
+    );
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
 
     // Verify brand exists
     const brand = await Brand.findById(brandId);
@@ -107,13 +185,25 @@ const createService = async (req, res) => {
     const category = await Category.findById(categoryId);
     const offeringType = category ? (category.offeringType || 'SERVICE') : 'SERVICE';
 
-    // Try to create service
-    // If slug collision happens within same brand, mongoose throws duplicate key error
+    const normalEnabled = bookingOptions.normal.enabled;
+    const hourlyEnabled = bookingOptions.hourly.enabled;
+
+    // Compute basePrice: for normal use provided price; for hourly-only derive from rate*minHours
+    const computedBasePrice = normalEnabled
+      ? Number(basePrice || 0)
+      : (hourlyEnabled ? Number(hourlyRate) * Number(minHours) : 0);
+
+    // Create service
     const service = await Service.create({
       brandId,
       categoryId,
       title,
-      basePrice,
+      basePrice: computedBasePrice,
+      pricingType: derivePricingType(bookingOptions), // backward compat field
+      hourlyRate: hourlyEnabled ? Number(hourlyRate) : 0,
+      minHours: hourlyEnabled ? Number(minHours) : 1,
+      maxHours: hourlyEnabled ? Number(maxHours) : 8,
+      bookingOptions,
       gstPercentage: gstPercentage || 18,
       description,
       status: status || SERVICE_STATUS.ACTIVE,
@@ -171,7 +261,7 @@ const updateService = async (req, res) => {
       }
     }
 
-    // Update fields
+    // Update basic fields
     if (updates.title) service.title = updates.title;
     if (updates.categoryId) {
       service.categoryId = updates.categoryId;
@@ -180,23 +270,63 @@ const updateService = async (req, res) => {
         service.offeringType = category.offeringType || 'SERVICE';
       }
     }
-    if (updates.basePrice !== undefined) service.basePrice = updates.basePrice;
     if (updates.gstPercentage !== undefined) service.gstPercentage = updates.gstPercentage;
     if (updates.description !== undefined) service.description = updates.description;
     if (updates.status) service.status = updates.status;
     if (updates.iconUrl !== undefined) service.iconUrl = updates.iconUrl;
     if (updates.brandId) service.brandId = updates.brandId;
 
-    // Slugs are auto-updated if title changes via pre-save hook? 
-    // Wait, the pre-save hook only runs if slug is empty or we explicitly modify it?
-    // In Mongoose schemas, I usually rely on logic. 
-    // My previous Service.js schema had logic: if (this.isModified('title') && !this.slug)
-    // This implies slug is created once.
-    // If user changes title, slug might remain old? 
-    // If they want to regenerate usage, they should clear slug?
-    // UserService.js has: if (this.isModified('title') && !this.slug)
-    // So updating title WON'T update slug unless slug is cleared.
-    // This is generally safer for URLs.
+    // Resolve bookingOptions from request
+    let bookingOptions;
+    if (updates.bookingOptions) {
+      // New structure provided
+      bookingOptions = {
+        normal: { enabled: updates.bookingOptions.normal?.enabled !== false },
+        hourly: { enabled: updates.bookingOptions.hourly?.enabled === true }
+      };
+    } else if (updates.pricingType !== undefined) {
+      // Legacy pricingType fallback
+      const isHourlyOnly = updates.pricingType === 'HOURLY';
+      bookingOptions = {
+        normal: { enabled: !isHourlyOnly },
+        hourly: { enabled: isHourlyOnly }
+      };
+    } else {
+      // Keep existing bookingOptions unchanged
+      bookingOptions = service.bookingOptions || { normal: { enabled: true }, hourly: { enabled: false } };
+    }
+
+    // Update hourly pricing fields
+    if (updates.hourlyRate !== undefined) service.hourlyRate = Number(updates.hourlyRate);
+    if (updates.minHours !== undefined) service.minHours = Number(updates.minHours);
+    if (updates.maxHours !== undefined) service.maxHours = Number(updates.maxHours);
+
+    // Validate the resolved bookingOptions
+    const validationError = validateBookingOptions(
+      bookingOptions,
+      updates.basePrice !== undefined ? updates.basePrice : service.basePrice,
+      service.hourlyRate,
+      service.minHours,
+      service.maxHours
+    );
+    if (validationError) {
+      return res.status(400).json({ success: false, message: validationError });
+    }
+
+    // Apply bookingOptions
+    service.bookingOptions = bookingOptions;
+    service.pricingType = derivePricingType(bookingOptions); // keep backward compat field in sync
+
+    const normalEnabled = bookingOptions.normal.enabled;
+    const hourlyEnabled = bookingOptions.hourly.enabled;
+
+    // Update basePrice
+    if (normalEnabled && updates.basePrice !== undefined) {
+      service.basePrice = Number(updates.basePrice);
+    } else if (!normalEnabled && hourlyEnabled) {
+      // Hourly-only: derive basePrice from hourlyRate * minHours
+      service.basePrice = service.hourlyRate * service.minHours;
+    }
 
     await service.save();
 
@@ -206,7 +336,6 @@ const updateService = async (req, res) => {
       service
     });
   } catch (error) {
-    // Handle duplicate slug error specifically
     if (error.code === 11000 && error.keyPattern && error.keyPattern.slug) {
       return res.status(409).json({
         success: false,

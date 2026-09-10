@@ -258,15 +258,45 @@ const BookingAlertCard = ({ booking, onAccept, onReject, onAssign, onOpenDecline
             )}
           </div>
 
+          {/* Booking Type Badge (HOURLY vs FIXED) */}
+          {(() => {
+            const isHourly = booking.pricingType === 'HOURLY' || booking.pricingSnapshot?.pricingType === 'HOURLY' || booking.serviceId?.pricingType === 'HOURLY';
+            const dur = booking.durationHours || booking.pricingSnapshot?.durationHours || booking.serviceId?.minHours || 1;
+            const rate = booking.hourlyRate || booking.pricingSnapshot?.hourlyRate || booking.serviceId?.hourlyRate || Math.round((booking.basePrice || booking.finalAmount || 200) / dur);
+            const fixedPrice = booking.basePrice || booking.finalAmount || booking.pricingSnapshot?.unitPrice;
+
+            return isHourly ? (
+              <div className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white px-3 py-2 rounded-xl shadow-xs flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <FiClock className="w-3.5 h-3.5" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">HOURLY BOOKING</span>
+                </div>
+                <span className="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-md backdrop-blur-xs">
+                  {dur} Hrs @ ₹{rate}/hr
+                </span>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 px-3 py-1.5 rounded-xl flex items-center justify-between">
+                <span className="text-[9px] font-black text-blue-800 uppercase tracking-wider">FIXED PRICE BOOKING</span>
+                <span className="text-[11px] font-bold text-blue-700">₹{fixedPrice}</span>
+              </div>
+            );
+          })()}
+
           {/* Service Details Card */}
           <div className="bg-white rounded-[1rem] p-3 border border-gray-100 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 left-0 w-1 h-full bg-teal-500" />
             <div className="pl-2">
-              <h4 className="text-[14px] font-medium text-gray-900 leading-tight">
+              <h4 className="text-[14px] font-bold text-gray-900 leading-tight uppercase">
                 {booking.serviceName || booking.serviceType || booking.serviceId?.title || 'Service Request'}
               </h4>
+              {(booking.pricingType === 'HOURLY' || booking.pricingSnapshot?.pricingType === 'HOURLY' || booking.serviceId?.pricingType === 'HOURLY') && (
+                <p className="text-[11px] font-bold text-teal-700 mt-1">
+                  Est. Total: ₹{(booking.hourlyRate || booking.pricingSnapshot?.hourlyRate || Math.round((booking.basePrice || booking.finalAmount || 200)/(booking.durationHours || 1))) * (booking.durationHours || booking.pricingSnapshot?.durationHours || 1)} ({booking.durationHours || booking.pricingSnapshot?.durationHours || 1} Hours)
+                </p>
+              )}
               {(booking.brandName || booking.brandIcon) && (
-                <div className="flex items-center gap-1.5 mt-1.5 opacity-80">
+                <div className="flex items-center gap-1.5 mt-1 opacity-80">
                   <span className="text-[9px] font-normal text-gray-500 capitalize">Brand:</span>
                   <span className="text-[10px] font-medium text-gray-800 capitalize tracking-wider">{booking.brandName}</span>
                 </div>

@@ -89,10 +89,15 @@ const PendingJobCard = ({ booking, onAccept, onReject, onClick, loadingAction, s
       <div className="p-6">
         <div className="flex items-start justify-between mb-5 gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <span className="text-[8px] font-medium px-2 py-1 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 capitalize tracking-[0.2em]">
                 {booking.serviceCategory || 'OPERATIONAL'}
               </span>
+              {booking.pricingType === 'HOURLY' && (
+                <span className="text-[8px] font-bold px-2 py-1 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 tracking-wider">
+                  HOURLY • {booking.durationHours || 1} Hrs @ ₹{booking.hourlyRate}/hr
+                </span>
+              )}
               <span className="text-[9px] font-medium text-gray-400 capitalize tracking-widest">
                 {booking.customerName || 'AUTHORIZED CLIENT'}
               </span>

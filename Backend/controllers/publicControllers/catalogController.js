@@ -519,7 +519,18 @@ const getPublicServices = async (req, res) => {
           slug: svc.slug,
           icon: svc.iconUrl,
           basePrice: svc.basePrice,
+          pricingType: svc.pricingType || "FIXED",
+          hourlyRate: svc.hourlyRate || 0,
+          minHours: svc.minHours || 1,
+          maxHours: svc.maxHours || 12,
           gstPercentage: svc.gstPercentage,
+          // Booking options: which modes the admin has enabled
+          bookingOptions: svc.bookingOptions
+            ? svc.bookingOptions
+            : {
+                normal: { enabled: svc.pricingType !== 'HOURLY' },
+                hourly: { enabled: svc.pricingType === 'HOURLY' }
+              },
           description: svc.description,
           brandId: svc.brandId?._id,
           brandName: svc.brandId?.title,
@@ -591,7 +602,18 @@ const getPublicServiceById = async (req, res) => {
         title: svc.title,
         iconUrl: svc.iconUrl,
         basePrice: svc.basePrice,
+        pricingType: svc.pricingType || "FIXED",
+        hourlyRate: svc.hourlyRate || 0,
+        minHours: svc.minHours || 1,
+        maxHours: svc.maxHours || 12,
         gstPercentage: svc.gstPercentage,
+        // Booking options: which modes the admin has enabled
+        bookingOptions: svc.bookingOptions
+          ? svc.bookingOptions
+          : {
+              normal: { enabled: svc.pricingType !== 'HOURLY' },
+              hourly: { enabled: svc.pricingType === 'HOURLY' }
+            },
         description: svc.description,
         detailedDescription: svc.detailedDescription,
         features: svc.features || [],

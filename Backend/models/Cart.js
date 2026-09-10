@@ -44,6 +44,20 @@ const cartItemSchema = new mongoose.Schema({
     enum: ['SERVICE', 'PRODUCT'],
     default: 'SERVICE'
   },
+  bookingType: {
+    type: String,
+    enum: ['FIXED', 'HOURLY'],
+    default: 'FIXED'
+  },
+  durationHours: {
+    type: Number,
+    default: 1,
+    min: 1
+  },
+  hourlyRate: {
+    type: Number,
+    default: 0
+  },
   price: {
     type: Number,
     required: true,

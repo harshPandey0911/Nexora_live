@@ -89,6 +89,8 @@ const ProductDetailsPage = () => {
         description: product.description || '',
         icon: toAssetUrl(product.iconUrl || product.icon || ''),
         category: product.categoryTitle || 'General',
+        offeringType: 'PRODUCT',
+        bookingType: 'FIXED',
         price: product.basePrice * quantity,
         unitPrice: product.basePrice,
         serviceCount: quantity,

@@ -107,8 +107,7 @@ class BookingScheduler {
         console.error('[BookingScheduler] Settings fetch error:', sErr);
       }
 
-      // --- HANDLE EXPIRED ADMIN-ASSIGNED BOOKINGS ---
-      // If vendor didn't accept within the 30-min window, re-escalate back to admin queue
+      // --- HANDLE EXPIRED ADMIN-ASSIGNED BOOKINGS (30 MIN VENDOR ACCEPT TIMEOUT) ---
       try {
         const now_check = new Date();
         const expiredAdminBookings = await Booking.find({
@@ -140,6 +139,73 @@ class BookingScheduler {
         }
       } catch (adminExpErr) {
         console.error('[BookingScheduler] Error handling expired admin bookings:', adminExpErr);
+      }
+
+      // --- HANDLE 24-HOUR EXPIRED ESCALATED (ADMIN MANUAL ALLOCATION) BOOKINGS ---
+      // If admin does not assign a vendor within 24 hours, automatically cancel the booking & process refund
+      try {
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const expiredEscalatedBookings = await Booking.find({
+          status: { $in: [BOOKING_STATUS.ESCALATED, BOOKING_STATUS.REQUESTED] },
+          isEscalatedToAdmin: true,
+          assignedByAdmin: { $ne: true },
+          createdAt: { $lt: twentyFourHoursAgo }
+        }).lean();
+
+        if (expiredEscalatedBookings.length > 0) {
+          console.log(`[BookingScheduler] Found ${expiredEscalatedBookings.length} escalated booking(s) pending >24h — auto cancelling`);
+          await Promise.all(expiredEscalatedBookings.map(async (b) => {
+            const updateRes = await Booking.updateOne(
+              { _id: b._id, status: { $in: [BOOKING_STATUS.ESCALATED, BOOKING_STATUS.REQUESTED] } },
+              {
+                $set: {
+                  status: BOOKING_STATUS.CANCELLED,
+                  cancellationReason: 'Auto-cancelled: No vendor assigned within 24 hours',
+                  cancelledBy: 'system',
+                  cancelledAt: new Date()
+                }
+              }
+            );
+
+            if (updateRes.modifiedCount > 0) {
+              console.log(`[BookingScheduler] Auto-cancelled booking ${b.bookingNumber} (24h admin allocation timeout)`);
+
+              // Refund logic if payment was collected
+              if (b.paymentStatus === 'COMPLETED' || b.paymentStatus === 'PAID') {
+                try {
+                  const User = require('../models/User');
+                  const Transaction = require('../models/Transaction');
+                  const refundAmount = b.finalAmount || b.basePrice || 0;
+                  if (refundAmount > 0) {
+                    await User.findByIdAndUpdate(b.userId, { $inc: { walletBalance: refundAmount } });
+                    await Transaction.create({
+                      userId: b.userId,
+                      bookingId: b._id,
+                      amount: refundAmount,
+                      type: 'CREDIT',
+                      category: 'REFUND',
+                      description: `Refund for auto-cancelled booking #${b.bookingNumber} (No vendor assigned within 24 hrs)`,
+                      status: 'SUCCESS'
+                    });
+                  }
+                } catch (refErr) {
+                  console.error(`[BookingScheduler] Error processing refund for auto-cancelled booking ${b.bookingNumber}:`, refErr);
+                }
+              }
+
+              if (this.io) {
+                this.io.to(`user_${b.userId}`).emit('booking_cancelled', {
+                  bookingId: b._id,
+                  bookingNumber: b.bookingNumber,
+                  reason: 'Auto-cancelled: No vendor assigned within 24 hours. Refund issued to wallet.'
+                });
+                this.io.emit('adminBookingCancelled', { bookingId: b._id });
+              }
+            }
+          }));
+        }
+      } catch (escExpErr) {
+        console.error('[BookingScheduler] Error handling 24h expired escalated bookings:', escExpErr);
       }
 
       // --- CIRCUIT BREAKER: Fast query to detect if any work is needed ---

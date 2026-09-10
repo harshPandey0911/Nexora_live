@@ -508,7 +508,28 @@ const ManualAssignment = () => {
                       </div>
                       <div className="flex items-start gap-2">
                         <FiMapPin className="text-gray-400 w-3.5 h-3.5 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1 text-gray-500">{booking.location?.address || 'N/A'}</span>
+                        <span className="line-clamp-2 text-gray-700 font-medium">
+                          {(() => {
+                            if (typeof booking.location?.address === 'string' && booking.location.address.trim()) {
+                              return booking.location.address;
+                            }
+                            if (typeof booking.address === 'string' && booking.address.trim()) {
+                              return booking.address;
+                            }
+                            if (booking.address && typeof booking.address === 'object') {
+                              const parts = [
+                                booking.address.addressLine1,
+                                booking.address.addressLine2,
+                                booking.address.landmark,
+                                booking.address.city,
+                                booking.address.state,
+                                booking.address.pincode
+                              ].filter(Boolean);
+                              if (parts.length > 0) return parts.join(', ');
+                            }
+                            return booking.fullAddress || booking.addressLine1 || 'N/A';
+                          })()}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <FiClock className="text-gray-400 w-3.5 h-3.5 shrink-0" />

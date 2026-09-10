@@ -66,7 +66,41 @@ const serviceSchema = new mongoose.Schema({
     enum: ['SERVICE', 'PRODUCT'],
     default: 'SERVICE',
     index: true
+  },
+  pricingType: {
+    type: String,
+    enum: ['FIXED', 'HOURLY'],
+    default: 'FIXED',
+    index: true
+  },
+  hourlyRate: {
+    type: Number,
+    default: 0,
+    min: [0, 'Hourly rate cannot be negative']
+  },
+  minHours: {
+    type: Number,
+    default: 1,
+    min: [1, 'Minimum hours must be at least 1']
+  },
+  maxHours: {
+    type: Number,
+    default: 8,
+    min: [1, 'Maximum hours must be at least 1']
+  },
+  // Booking mode availability (admin-controlled)
+  // normal.enabled → standard fixed-price booking
+  // hourly.enabled → per-hour rate booking
+  // Both can be true simultaneously (user chooses at booking time)
+  bookingOptions: {
+    normal: {
+      enabled: { type: Boolean, default: true }
+    },
+    hourly: {
+      enabled: { type: Boolean, default: false }
+    }
   }
+
 }, {
   timestamps: true
 });

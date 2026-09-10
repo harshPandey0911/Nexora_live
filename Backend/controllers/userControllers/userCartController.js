@@ -9,7 +9,7 @@ const getUserCart = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    let cart = await Cart.findOne({ userId }).populate('items.serviceId', 'title iconUrl slug offeringType').populate('items.categoryId', 'title slug');
+    let cart = await Cart.findOne({ userId }).populate('items.serviceId', 'title iconUrl slug offeringType minHours maxHours basePrice hourlyRate').populate('items.categoryId', 'title slug');
 
     if (!cart) {
       // Create empty cart if doesn't exist
@@ -104,6 +104,57 @@ const addToCart = async (req, res) => {
       }
     }
 
+    const isHourly = req.body.bookingType === 'HOURLY';
+    let durationHours = 1;
+    let hourlyRate = 0;
+    let computedUnitPrice = unitPrice || (price && serviceCount ? price / serviceCount : price) || 0;
+
+    if (service) {
+      // Resolve effective bookingOptions (new structure) with backward compat fallback
+      const bookingOpts = service.bookingOptions || {
+        normal: { enabled: service.pricingType !== 'HOURLY' },
+        hourly: { enabled: service.pricingType === 'HOURLY' }
+      };
+
+      if (isHourly) {
+        // Validate that hourly mode is enabled for this service
+        if (!bookingOpts.hourly?.enabled) {
+          return res.status(400).json({
+            success: false,
+            message: 'This service does not support Hourly booking.'
+          });
+        }
+
+        durationHours = Number(req.body.durationHours || service.minHours || 1);
+        const minHours = service.minHours || 1;
+        const maxHours = service.maxHours || 8;
+
+        if (durationHours < minHours || durationHours > maxHours) {
+          return res.status(400).json({
+            success: false,
+            message: `Selected duration (${durationHours} hrs) is outside allowed range (${minHours}-${maxHours} hrs).`
+          });
+        }
+
+        hourlyRate = service.hourlyRate || 0;
+        if (hourlyRate <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid hourly service configuration.'
+          });
+        }
+        computedUnitPrice = hourlyRate * durationHours;
+      } else {
+        // Normal/FIXED booking
+        if (!bookingOpts.normal?.enabled) {
+          return res.status(400).json({
+            success: false,
+            message: 'This service does not support Normal booking. Please select Hourly booking.'
+          });
+        }
+      }
+    }
+
     // Get or create cart
     let cart = await Cart.findOne({ userId });
 
@@ -162,30 +213,37 @@ const addToCart = async (req, res) => {
     }
 
     // Check if item already exists in cart
+    // Key includes bookingType so Normal and Hourly of same service are distinct items
+    const requestedBookingType = isHourly ? 'HOURLY' : 'FIXED';
     const existingItemIndex = cart.items.findIndex(item => {
       const sId1 = item.serviceId ? (item.serviceId._id ? item.serviceId._id.toString() : item.serviceId.toString()) : null;
       const sId2 = serviceId ? serviceId.toString() : null;
+      const typeMatch = (item.bookingType || 'FIXED') === requestedBookingType;
       if (sId1 && sId2) {
-        return sId1 === sId2;
+        return sId1 === sId2 && typeMatch;
       }
-      return item.title && title && item.title.trim().toLowerCase() === title.trim().toLowerCase();
+      return item.title && title && item.title.trim().toLowerCase() === title.trim().toLowerCase() && typeMatch;
     });
 
     if (existingItemIndex !== -1) {
       // Update quantity if item exists
-      const existingItem = cart.items[existingItemIndex];
       const addedCount = serviceCount || 1;
-      const newCount = (existingItem.serviceCount || 1) + addedCount;
-      const unit = existingItem.unitPrice || (existingItem.serviceCount ? existingItem.price / existingItem.serviceCount : existingItem.price) || (unitPrice || price || 0);
+      const newCount = (cart.items[existingItemIndex].serviceCount || 1) + addedCount;
+      const unit = isHourly ? computedUnitPrice : (cart.items[existingItemIndex].unitPrice || computedUnitPrice);
       const newPrice = unit * newCount;
 
       cart.items[existingItemIndex].serviceCount = newCount;
       cart.items[existingItemIndex].unitPrice = unit;
       cart.items[existingItemIndex].price = newPrice;
+      if (isHourly) {
+        cart.items[existingItemIndex].bookingType = 'HOURLY';
+        cart.items[existingItemIndex].durationHours = durationHours;
+        cart.items[existingItemIndex].hourlyRate = hourlyRate;
+      }
     } else {
       // Add new item
       const count = serviceCount || 1;
-      const unit = unitPrice || (price && count ? price / count : price) || 0;
+      const unit = computedUnitPrice;
 
       const newItem = {
         title,
@@ -202,6 +260,9 @@ const addToCart = async (req, res) => {
         sectionTitle: sectionTitle || '',
         sectionIcon: sectionIcon || null,
         offeringType: req.body.offeringType || service?.offeringType || (['food', 'products', 'product', 'grocery', 'store', 'items', 'snack', 'beverage'].some(k => String(category || '').toLowerCase().includes(k)) ? 'PRODUCT' : 'SERVICE'),
+        bookingType: isHourly ? 'HOURLY' : 'FIXED',
+        durationHours: isHourly ? durationHours : 1,
+        hourlyRate: isHourly ? hourlyRate : 0,
         card: card || null,
         gstPercentage: gstPercentage !== undefined ? gstPercentage : (service?.gstPercentage !== undefined ? service.gstPercentage : 18)
       };
@@ -283,8 +344,49 @@ const updateCartItem = async (req, res) => {
     }
 
     const item = cart.items[itemIndex];
-    item.serviceCount = serviceCount;
-    item.price = item.unitPrice * serviceCount;
+    if (serviceCount) {
+      item.serviceCount = serviceCount;
+    }
+
+    // Direct mode switch support (FIXED <-> HOURLY)
+    if (req.body.bookingType) {
+      const newType = req.body.bookingType;
+      const service = item.serviceId ? (item.serviceId.maxHours !== undefined ? item.serviceId : await Service.findById(item.serviceId._id || item.serviceId)) : null;
+      
+      if (newType === 'HOURLY') {
+        const minH = service?.minHours || 1;
+        const maxH = service?.maxHours || 8;
+        const rate = service?.hourlyRate || item.hourlyRate || Math.round((item.unitPrice || item.price || 200) / minH);
+        let dur = Number(req.body.durationHours || item.durationHours || minH);
+        dur = Math.max(minH, Math.min(maxH, dur));
+        
+        item.bookingType = 'HOURLY';
+        item.durationHours = dur;
+        item.hourlyRate = rate;
+        item.unitPrice = rate * dur;
+      } else {
+        // FIXED / Normal booking
+        const base = service?.basePrice || item.unitPrice || item.price || 200;
+        item.bookingType = 'FIXED';
+        item.durationHours = 1;
+        item.unitPrice = base;
+      }
+    } else if (req.body.durationHours && (item.bookingType === 'HOURLY' || item.hourlyRate > 0)) {
+      const service = item.serviceId ? (item.serviceId.maxHours !== undefined ? item.serviceId : await Service.findById(item.serviceId._id || item.serviceId)) : null;
+      const minH = service?.minHours || 1;
+      const maxH = service?.maxHours || 8;
+      let dur = Number(req.body.durationHours);
+      if (dur < minH || dur > maxH) {
+        return res.status(400).json({
+          success: false,
+          message: `Duration hours must be between ${minH} and ${maxH} hours`
+        });
+      }
+      item.durationHours = dur;
+      item.unitPrice = (item.hourlyRate || 0) * dur;
+    }
+
+    item.price = item.unitPrice * item.serviceCount;
     await cart.save();
 
     res.status(200).json({

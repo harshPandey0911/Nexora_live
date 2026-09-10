@@ -338,23 +338,43 @@ export const CartProvider = ({ children }) => {
     }
   }, [cartItems, fetchCart]);
 
-  // Update item quantity
-  const updateItem = useCallback(async (itemId, serviceCount) => {
+  // Update item quantity, duration or booking mode
+  const updateItem = useCallback(async (itemId, serviceCount, options = {}) => {
     if (serviceCount > maxCartItemQuantity) {
       toast.error(`Maximum quantity limit is ${maxCartItemQuantity}`, { id: 'cart-limit' });
       return { success: false, message: 'Quantity limit reached' };
     }
 
+    const opts = typeof options === 'object' && options !== null ? options : { durationHours: options };
+
     // Optimistic update
     setCartItems(prev =>
       prev.map(item => {
         if (item._id === itemId || item.id === itemId) {
-          const unitPrice = item.unitPrice || (item.serviceCount ? item.price / item.serviceCount : item.price);
-          return {
-            ...item,
-            serviceCount,
-            price: unitPrice * serviceCount
-          };
+          const updatedItem = { ...item, serviceCount };
+          
+          if (opts.bookingType) {
+            updatedItem.bookingType = opts.bookingType;
+            if (opts.bookingType === 'HOURLY') {
+              const dur = opts.durationHours || item.durationHours || 1;
+              const rate = item.hourlyRate || Math.round((item.unitPrice || item.price || 200) / dur);
+              updatedItem.durationHours = dur;
+              updatedItem.hourlyRate = rate;
+              updatedItem.unitPrice = rate * dur;
+            } else {
+              updatedItem.bookingType = 'FIXED';
+              updatedItem.durationHours = 1;
+              const base = item.serviceId?.basePrice || Math.round((item.price || 200) / (item.durationHours || 1));
+              updatedItem.unitPrice = base;
+            }
+          } else if (opts.durationHours !== undefined && (item.bookingType === 'HOURLY' || item.hourlyRate > 0)) {
+            updatedItem.durationHours = opts.durationHours;
+            const unitPrice = (item.hourlyRate || 0) * opts.durationHours;
+            updatedItem.unitPrice = unitPrice;
+          }
+
+          updatedItem.price = (updatedItem.unitPrice || item.unitPrice || item.price) * serviceCount;
+          return updatedItem;
         }
         return item;
       })
@@ -389,7 +409,7 @@ export const CartProvider = ({ children }) => {
           } catch (e) {
             // Ignore previous errors so they don't block subsequent actions
           }
-          return cartService.updateItem(targetId, serviceCount);
+          return cartService.updateItem(targetId, serviceCount, opts);
         })();
 
         pendingOperations.current[targetId] = currentOp;

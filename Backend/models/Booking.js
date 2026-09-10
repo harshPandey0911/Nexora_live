@@ -267,6 +267,40 @@ const bookingSchema = new mongoose.Schema({
     date: { type: String }, // redundant but kept for frontend convenience format
     time: { type: String }  // redundant but kept for frontend convenience format
   },
+  pricingType: {
+    type: String,
+    enum: ['FIXED', 'HOURLY'],
+    default: 'FIXED',
+    index: true
+  },
+  durationHours: {
+    type: Number,
+    default: 1
+  },
+  hourlyRate: {
+    type: Number,
+    default: 0
+  },
+  startAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  endAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  pricingSnapshot: {
+    pricingType: { type: String, enum: ['FIXED', 'HOURLY'], default: 'FIXED' },
+    hourlyRate: { type: Number, default: 0 },
+    durationHours: { type: Number, default: 1 },
+    unitPrice: { type: Number, default: 0 },
+    subtotal: { type: Number, default: 0 },
+    gstPercentage: { type: Number, default: 18 },
+    gstAmount: { type: Number, default: 0 },
+    total: { type: Number, default: 0 }
+  },
 
   // ==========================================
   // 7. STATUS & TRACKING

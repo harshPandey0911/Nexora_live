@@ -152,6 +152,8 @@ const ProductsPage = () => {
         description: service.description || '',
         icon: toAssetUrl(service.icon || ''),
         category: service.categoryTitle || 'General',
+        offeringType: 'PRODUCT',
+        bookingType: 'FIXED',
         price: service.basePrice,
         unitPrice: service.basePrice,
         serviceCount: 1,

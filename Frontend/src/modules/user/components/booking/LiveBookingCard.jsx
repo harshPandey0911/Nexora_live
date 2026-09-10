@@ -30,6 +30,23 @@ const LiveBookingCard = ({ hasBottomNav }) => {
     }
   }, [activeBooking?._id, activeBooking?.id, activeBooking?.status]);
 
+  // Auto-dismiss notification card after 7 seconds for ASSIGNED and CONFIRMED statuses
+  useEffect(() => {
+    if (activeBooking && !isDismissed) {
+      const status = activeBooking.status?.toUpperCase();
+      if (['ASSIGNED', 'CONFIRMED'].includes(status)) {
+        const timer = setTimeout(() => {
+          const bookingId = activeBooking._id || activeBooking.id;
+          if (bookingId && activeBooking.status) {
+            localStorage.setItem(`live_card_dismissed_${bookingId}`, activeBooking.status);
+          }
+          setIsDismissed(true);
+        }, 7000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeBooking, isDismissed]);
+
   // Status mapping for UI
   const getStatusInfo = (status) => {
     switch (status?.toUpperCase()) {
@@ -195,7 +212,11 @@ const LiveBookingCard = ({ hasBottomNav }) => {
               className={`h-full ${statusInfo.color}`}
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              transition={
+                ['ASSIGNED', 'CONFIRMED'].includes(activeBooking?.status?.toUpperCase())
+                  ? { duration: 7, ease: "linear" }
+                  : { duration: 2, repeat: Infinity, ease: "linear" }
+              }
             />
           </div>
 
