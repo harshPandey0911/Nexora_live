@@ -114,7 +114,7 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
     if (Array.isArray(nearbyVendorsList) && nearbyVendorsList.length > 0) {
       candidateVendors = nearbyVendorsList.filter(v => v.isOnline !== false);
     }
-    
+
     // NOTE: No "all vendors" DB fallback here. Candidates come only from the distance/service-filtered
     // nearby list built by the booking controller. If none are online, the booking goes to
     // handleNoVendorsOnline (admin escalation) instead of notifying every approved vendor.
@@ -134,6 +134,13 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
 
       const busySet = new Set(busyVendorIds.map(id => id ? id.toString() : ''));
       if (busySet.size > 0) {
+        console.log(`[VendorMatching] Found ${busySet.size} busy vendors during ${booking.startAt} - ${booking.endAt}`);
+        const availableVendors = candidateVendors.filter(v => !busySet.has(v._id.toString()));
+        if (availableVendors.length > 0) {
+          candidateVendors = availableVendors;
+        } else {
+          console.log(`[VendorMatching] All candidates busy during slot, keeping candidate vendors to allow multi-tasking/assignment.`);
+        }
         console.log(`[VendorMatching] Found ${busySet.size} busy vendors during ${booking.startAt} - ${booking.endAt}`);
         const availableVendors = candidateVendors.filter(v => !busySet.has(v._id.toString()));
         if (availableVendors.length > 0) {
@@ -178,7 +185,7 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
           if (!allOfferedServiceIds.has(reqServiceId)) {
             // Check fallback by category title or service name match
             const categoryMatch = (vendor.categories && vendor.categories.includes(booking.serviceCategory)) ||
-                                  (vendor.service && vendor.service.includes(booking.serviceCategory));
+              (vendor.service && vendor.service.includes(booking.serviceCategory));
             const titleMatch = userServiceTitles.includes(booking.serviceName);
 
             if (!categoryMatch && !titleMatch) {
@@ -190,7 +197,7 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
       } else {
         // Fallback category check
         const categoryMatch = (vendor.categories && vendor.categories.includes(booking.serviceCategory)) ||
-                              (vendor.service && vendor.service.includes(booking.serviceCategory));
+          (vendor.service && vendor.service.includes(booking.serviceCategory));
         if (!categoryMatch) {
           offersAllServices = false;
         }
@@ -211,11 +218,11 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
     const sortedVendors = matchingVendors.sort((a, b) => {
       const distA = Math.round((a.distance || 0) * 10) / 10;
       const distB = Math.round((b.distance || 0) * 10) / 10;
-      
+
       if (distA !== distB) {
         return distA - distB;
       }
-      
+
       const levelA = a.level || 3;
       const levelB = b.level || 3;
       return levelA - levelB;
