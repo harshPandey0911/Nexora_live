@@ -103,8 +103,8 @@ const Subscribe = () => {
               
               // Redirect to Dashboard
               setTimeout(() => {
+                // SubscriptionGuard re-verifies status from the server on mount
                 navigate('/vendor/dashboard', { replace: true });
-                window.location.reload(); // Force full reload to rebuild routes
               }, 1500);
             } else {
               toast.error(verifyRes.data?.message || 'Payment verification failed', { id: 'payment-verify' });

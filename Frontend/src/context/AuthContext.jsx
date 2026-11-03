@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 
 const AuthContext = createContext();
 
@@ -6,7 +6,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUser = () => {
+  const loadUser = useCallback(() => {
     try {
       const userData = localStorage.getItem('userData');
       const token = localStorage.getItem('accessToken');
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadUser();
@@ -36,25 +36,30 @@ export const AuthProvider = ({ children }) => {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('userAuthUpdated', handleStorage);
     };
-  }, []);
+  }, [loadUser]);
 
-  const login = (userData, token) => {
+  const login = useCallback((userData, token) => {
     localStorage.setItem('userData', JSON.stringify(userData));
     localStorage.setItem('accessToken', token);
     setUser(userData);
     window.dispatchEvent(new Event('userAuthUpdated'));
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('userData');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     setUser(null);
     window.dispatchEvent(new Event('userAuthUpdated'));
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, login, logout, refreshUser: loadUser }),
+    [user, loading, login, logout, loadUser]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser: loadUser }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

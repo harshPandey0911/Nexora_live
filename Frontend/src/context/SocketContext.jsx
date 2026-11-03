@@ -175,6 +175,12 @@ export const SocketProvider = ({ children }) => {
 
   const userType = getUserType(location.pathname);
 
+  const tokenStorageKey = userType === 'vendor' ? 'vendorAccessToken'
+    : userType === 'worker' ? 'workerAccessToken'
+    : userType === 'admin' ? 'adminAccessToken'
+    : userType ? 'accessToken' : '';
+  const authToken = tokenStorageKey ? localStorage.getItem(tokenStorageKey) : null;
+
   useEffect(() => {
     if (!userType) {
       if (socket) {
@@ -768,7 +774,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [userType, localStorage.getItem(userType ? (userType === 'vendor' ? 'vendorAccessToken' : userType === 'worker' ? 'workerAccessToken' : userType === 'admin' ? 'adminAccessToken' : 'accessToken') : '')]); // Re-run when userType OR token changes
+  }, [userType, authToken]); // Re-run when userType OR token changes
 
   return (
     <SocketContext.Provider value={socket}>

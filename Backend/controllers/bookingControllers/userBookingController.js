@@ -487,6 +487,59 @@ const createBooking = async (req, res) => {
     const startAt = parseStartDateTime(scheduledDate, scheduledTime, timeSlot);
     const endAt = new Date(startAt.getTime() + durationHours * 3600000);
 
+    // Give back the penalty we already cleared from the wallet if we reject the booking below
+    const restorePenaltyOnReject = async () => {
+      if (pendingPenalty > 0) {
+        try {
+          await User.updateOne({ _id: userId }, { $inc: { 'wallet.penalty': pendingPenalty } });
+        } catch (e) {
+          console.error('[CreateBooking] Failed to restore penalty after rejected booking:', e);
+        }
+      }
+    };
+
+    // --- VALIDATION: scheduled time must not be in the past ---
+    // (tolerances keep this lenient so server/user timezone differences never reject a valid booking)
+    if (!isProduct && startAt instanceof Date && !isNaN(startAt.getTime())) {
+      const isScheduledBooking = String(bookingType || '').toLowerCase() === 'scheduled';
+      const graceMs = isScheduledBooking ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000;
+      if (startAt.getTime() < Date.now() - graceMs) {
+        await restorePenaltyOnReject();
+        return res.status(400).json({
+          success: false,
+          message: 'Scheduled date and time must be in the future. Please choose a valid slot.'
+        });
+      }
+    }
+
+    // --- VALIDATION: prevent duplicate bookings (double tap / resubmit) ---
+    if (!isProduct) {
+      const inactiveStatuses = [BOOKING_STATUS.CANCELLED, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.REJECTED];
+      const duplicateFilter = {
+        userId,
+        serviceId,
+        offeringType: { $ne: 'PRODUCT' },
+        status: { $nin: inactiveStatuses }
+      };
+      if (String(bookingType || '').toLowerCase() === 'scheduled') {
+        // Same service in the same scheduled slot that is still active
+        duplicateFilter.scheduledDate = new Date(scheduledDate);
+        duplicateFilter.scheduledTime = scheduledTime;
+      } else {
+        // Instant booking: same service submitted again within 2 minutes
+        duplicateFilter.createdAt = { $gte: new Date(Date.now() - 2 * 60 * 1000) };
+      }
+      const duplicateBooking = await Booking.findOne(duplicateFilter).select('_id bookingNumber').lean();
+      if (duplicateBooking) {
+        await restorePenaltyOnReject();
+        return res.status(409).json({
+          success: false,
+          message: `You already have an active booking for this service (${duplicateBooking.bookingNumber}).`,
+          data: { bookingId: duplicateBooking._id, bookingNumber: duplicateBooking.bookingNumber }
+        });
+      }
+    }
+
 
     const booking = await Booking.create({
       bookingNumber,
@@ -549,30 +602,19 @@ const createBooking = async (req, res) => {
       paymentStatus: bookingPaymentStatus
     });
 
-    // --- IMMEDIATE RESPONSE ---
-    // Send immediate response to the client. All subsequent operations will run in the background.
-    res.status(201).json({
-      success: true,
-      message: 'Booking created successfully. We are finding vendors for you.',
-      data: {
-        _id: booking._id,
-        bookingNumber: booking.bookingNumber,
-        status: booking.status,
-        paymentStatus: booking.paymentStatus,
-        finalAmount: booking.finalAmount,
-        scheduledDate: booking.scheduledDate,
-        scheduledTime: booking.scheduledTime,
-        address: booking.address,
-        serviceName: booking.serviceName,
-        categoryIcon: booking.categoryIcon,
-        brandName: booking.brandName,
-        brandIcon: booking.brandIcon,
-      }
-    });
+    // Clear cart right after the booking is created (independent of vendor matching/notifications),
+    // so a later failure can never leave a stale cart that causes a duplicate booking on retry.
+    try {
+      await Cart.findOneAndUpdate({ userId }, { $set: { items: [] } });
+      console.log(`[CreateBooking] Cart cleared for user ${userId}`);
+    } catch (cartErr) {
+      console.error('[CreateBooking] Failed to clear cart:', cartErr);
+    }
 
-    // --- DEFERRED POST-BOOKING OPERATIONS ---
-    // All operations below will run non-blocking after the HTTP response has been sent.
-    setImmediate(async () => {
+    // --- POST-BOOKING OPERATIONS (vendor matching + notifications) ---
+    // Awaited BEFORE responding, so the user is only told "Booking Created" after vendors were notified.
+    // If matching fails, the booking is escalated to admin instead of being left unattended.
+    await (async () => {
       try {
         // Re-fetch user and booking for background tasks to ensure latest state
         const userForBackground = await User.findById(userId);
@@ -701,10 +743,6 @@ const createBooking = async (req, res) => {
             // dataOnly: true // Removed to ensure User sees the visual notification
           }
         });
-        // Clear cart — single atomic operation
-        await Cart.findOneAndUpdate({ userId }, { $set: { items: [] } });
-        console.log(`[CreateBooking][bg] Cart cleared for user ${userId}`);
-
         // Send vendor notification if it was a direct booking (vendorId provided)
         if (vendorId) {
           await createNotification({
@@ -724,7 +762,37 @@ const createBooking = async (req, res) => {
           .catch(err => console.error('[CreateBooking][bg] Email error:', err));
 
       } catch (bgErr) {
-        console.error('[CreateBooking][bg] Background task failed:', bgErr);
+        console.error('[CreateBooking][bg] Post-booking task failed:', bgErr);
+        // Don't leave the booking unattended: hand it to admin for manual assignment (service bookings only)
+        if (!isProduct) {
+          try {
+            await Booking.updateOne(
+              { _id: booking._id, status: { $in: [BOOKING_STATUS.SEARCHING, BOOKING_STATUS.REQUESTED, BOOKING_STATUS.PENDING, BOOKING_STATUS.WAITING_FOR_VENDOR_RESPONSE] } },
+              { $set: { status: BOOKING_STATUS.ESCALATED, isEscalatedToAdmin: true } }
+            );
+          } catch (escErr) {
+            console.error('[CreateBooking] Failed to escalate booking after matching error:', escErr);
+          }
+        }
+      }
+    })();
+
+    res.status(201).json({
+      success: true,
+      message: 'Booking created successfully. We are finding vendors for you.',
+      data: {
+        _id: booking._id,
+        bookingNumber: booking.bookingNumber,
+        status: booking.status,
+        paymentStatus: booking.paymentStatus,
+        finalAmount: booking.finalAmount,
+        scheduledDate: booking.scheduledDate,
+        scheduledTime: booking.scheduledTime,
+        address: booking.address,
+        serviceName: booking.serviceName,
+        categoryIcon: booking.categoryIcon,
+        brandName: booking.brandName,
+        brandIcon: booking.brandIcon,
       }
     });
 

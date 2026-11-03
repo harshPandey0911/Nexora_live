@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { cartService } from '../services/cartService';
 import api from '../services/api';
 import { toast } from 'react-hot-toast';
@@ -619,7 +619,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     cartItems,
     cartCount,
     isLoading,
@@ -635,7 +635,7 @@ export const CartProvider = ({ children }) => {
     clearCart,
     resetCart,
     flushCartUpdates,
-  };
+  }), [cartItems, cartCount, isLoading, isInitialized, platformFeeRate, productDeliveryChargeRate, maxCartItemQuantity, fetchCart, addToCart, updateItem, removeItem, removeCategoryItems, clearCart, resetCart, flushCartUpdates]);
 
   return (
     <CartContext.Provider value={value}>

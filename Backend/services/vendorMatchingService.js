@@ -115,25 +115,9 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
       candidateVendors = nearbyVendorsList.filter(v => v.isOnline !== false);
     }
     
-    if (candidateVendors.length === 0) {
-      console.log(`[VendorMatching] Checking DB for online active approved vendors...`);
-      candidateVendors = await Vendor.find({
-        isOnline: true,
-        isActive: { $ne: false },
-        approvalStatus: { $in: ['approved', 'APPROVED'] },
-        'wallet.isBlocked': { $ne: true }
-      }).select('_id name businessName phone categories service address location settings level performanceScore isOnline').lean();
-    }
-
-    // Fallback: If no vendor has explicitly marked isOnline: true in DB, query all active approved vendors
-    if (candidateVendors.length === 0) {
-      console.log(`[VendorMatching] No vendors with isOnline:true found. Fallback: Fetching all active approved vendors...`);
-      candidateVendors = await Vendor.find({
-        isActive: { $ne: false },
-        approvalStatus: { $in: ['approved', 'APPROVED'] },
-        'wallet.isBlocked': { $ne: true }
-      }).select('_id name businessName phone categories service address location settings level performanceScore isOnline').lean();
-    }
+    // NOTE: No "all vendors" DB fallback here. Candidates come only from the distance/service-filtered
+    // nearby list built by the booking controller. If none are online, the booking goes to
+    // handleNoVendorsOnline (admin escalation) instead of notifying every approved vendor.
 
     console.log(`[VendorMatching] System online & active candidate vendors count: ${candidateVendors.length}`);
 
@@ -237,9 +221,9 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
       return levelA - levelB;
     });
 
-    // Wave 1: First 3 vendors
-    const WAVE_1_COUNT = 3;
-    const wave1Vendors = sortedVendors.slice(0, WAVE_1_COUNT);
+    // BROADCAST: notify ALL matching vendors at once (sorted by distance/level only for ordering).
+    // The first vendor to accept wins (atomic status guard in acceptBooking).
+    const wave1Vendors = sortedVendors;
 
     // Save potential vendors, currentWave, and status in booking document
     booking.potentialVendors = sortedVendors.map(v => ({
@@ -252,7 +236,7 @@ const matchAndNotifyVendors = async (bookingId, nearbyVendorsList = null) => {
     booking.notifiedVendors = wave1Vendors.map(v => v._id);
     await booking.save();
 
-    console.log(`[VendorMatching] Wave 1: Alerting ${wave1Vendors.length} closest vendors (of ${sortedVendors.length} total)`);
+    console.log(`[VendorMatching] Broadcast: Alerting all ${wave1Vendors.length} matching vendors`);
 
     // Create BookingRequest entries for Wave 1 vendors
     if (wave1Vendors.length > 0) {

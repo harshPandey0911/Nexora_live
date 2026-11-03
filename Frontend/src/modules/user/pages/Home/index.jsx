@@ -130,9 +130,6 @@ const Home = () => {
       if (!cityLoading && currentId && matchedId !== currentId) {
         selectCity(matchedCity);
         toast.success(`Location updated to ${matchedCity.name}`);
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       }
     } else {
       setIsLocationSupported(false);
@@ -180,9 +177,6 @@ const Home = () => {
         }
 
         toast.success(`Location set to ${city}`);
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       }
       if (locationObj.lat && locationObj.lng) {
         const newCoords = { lat: locationObj.lat, lng: locationObj.lng };
@@ -296,36 +290,51 @@ const Home = () => {
 
   // Fetch categories and home content on mount (and when city changes)
   useEffect(() => {
+    // Wait for cities to load so we don't fetch twice (once without city, once with)
+    if (cityLoading) return;
+
+    let cancelled = false;
+
+    const applyHomeResponse = (response) => {
+      if (!response?.success) return;
+      if (response.categories) {
+        const mappedCategories = response.categories.map(cat => ({
+          id: cat.id,
+          title: cat.title,
+          slug: cat.slug,
+          icon: toAssetUrl(cat.icon),
+          hasSaleBadge: cat.hasSaleBadge,
+          badge: cat.badge,
+          description: cat.description,
+          offeringType: cat.offeringType || 'SERVICE'
+        }));
+        setCategories(mappedCategories);
+      }
+      if (response.homeContent) {
+        setHomeContent(response.homeContent);
+      }
+    };
+
     const fetchData = async () => {
-      try {
+      const cityId = currentCity?._id || currentCity?.id;
+
+      // Stale-while-revalidate: show cached data instantly (no full-page loader),
+      // then refresh silently in the background.
+      const cached = publicCatalogService.peekHomeData(cityId, coords);
+      if (cached) {
+        applyHomeResponse(cached);
+        setLoading(false);
+      } else {
         setLoading(true);
-        const cityId = currentCity?._id || currentCity?.id;
+      }
 
-        const response = await publicCatalogService.getHomeData(cityId, coords);
-
-        if (response.success) {
-          if (response.categories) {
-            const mappedCategories = response.categories.map(cat => ({
-              id: cat.id,
-              title: cat.title,
-              slug: cat.slug,
-              icon: toAssetUrl(cat.icon),
-              hasSaleBadge: cat.hasSaleBadge,
-              badge: cat.badge,
-              description: cat.description,
-              offeringType: cat.offeringType || 'SERVICE'
-            }));
-            setCategories(mappedCategories);
-          }
-
-          if (response.homeContent) {
-            setHomeContent(response.homeContent);
-          }
-        }
-
-        setLoading(false);
+      try {
+        const response = await publicCatalogService.getHomeData(cityId, coords, { force: !!cached });
+        if (!cancelled) applyHomeResponse(response);
       } catch (error) {
-        setLoading(false);
+        // keep showing cached/previous data on failure
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
@@ -342,7 +351,11 @@ const Home = () => {
 
     fetchData();
     fetchBanners();
-  }, [currentCity, coords]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCity, coords, cityLoading]);
 
   // Split categories for display
   const { serviceCategories, productCategories } = React.useMemo(() => {

@@ -1481,14 +1481,13 @@ const startSelfJob = async (req, res) => {
       userId: booking.userId,
       type: 'worker_started',
       title: 'Vendor Started Journey',
-      message: `Vendor is on the way! OTP for verification: ${otp}.`,
+      message: `Vendor is on the way! Open the app to view your site visit verification OTP.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
       pushData: {
         type: 'journey_started',
         bookingId: booking._id.toString(),
-        visitOtp: otp,
         link: `/user/booking/${booking._id}`
       }
     });
@@ -1542,14 +1541,13 @@ const vendorReachedLocation = async (req, res) => {
       userId: booking.userId,
       type: 'vendor_reached',
       title: 'Vendor has Reached!',
-      message: `Vendor has reached your location. Please share this OTP: ${otp}`,
+      message: `Vendor has reached your location. Please share the OTP shown in the app.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
       pushData: {
         type: 'vendor_reached',
         bookingId: booking._id.toString(),
-        visitOtp: otp,
         link: `/user/booking/${booking._id}`
       }
     });
@@ -1577,8 +1575,8 @@ const verifySelfVisit = async (req, res) => {
     if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
     if (booking.status !== BOOKING_STATUS.JOURNEY_STARTED) return res.status(400).json({ success: false, message: 'Journey not started' });
     
-    // Allow master OTP 1234 for testing or skip if not provided (Simplified Flow)
-    if (otp && booking.visitOtp !== otp && otp !== '1234') return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    // Skip if not provided (Simplified Flow)
+    if (otp && booking.visitOtp !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
 
     booking.status = BOOKING_STATUS.VISITED;
     booking.visitedAt = new Date();
@@ -1957,7 +1955,7 @@ const collectSelfCash = async (req, res) => {
     if (booking.status !== BOOKING_STATUS.WORK_DONE && booking.status !== BOOKING_STATUS.CONFIRMED) return res.status(400).json({ success: false, message: 'Work not done yet' });
     
     // Skip OTP check if not provided (Simplified Flow)
-    if (otp && booking.paymentOtp !== otp && otp !== '1234') return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    if (otp && booking.paymentOtp !== otp) return res.status(400).json({ success: false, message: 'Invalid OTP' });
 
     // ── Fetch the VendorBill (single source of truth) ──
     const VendorBill = require('../../models/VendorBill');

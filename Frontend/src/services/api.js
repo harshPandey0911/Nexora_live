@@ -86,8 +86,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Credential-based auth endpoints return 401 for wrong credentials, not an expired token.
+    // Let the caller show the validation error instead of trying a token refresh / logout.
+    const isAuthCredentialRequest = /\/auth\/(login|verify-login|register|send-otp|verify-otp|check-exists|forgot-password|reset-password|refresh-token)/.test(originalRequest?.url || '');
+
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthCredentialRequest) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -110,6 +114,8 @@ api.interceptors.response.use(
 
       if (!refreshToken) {
         // No refresh token, logout
+        isRefreshing = false;
+        processQueue(error, null);
         handleLogout(role);
         return Promise.reject(error);
       }

@@ -280,6 +280,14 @@ class BookingScheduler {
             // Only process if this booking's wave timer has expired
             if (waveConfig.duration === 0 || waveElapsed < waveConfig.duration) return;
 
+            // Broadcast mode: if every potential vendor was already notified, there is no next wave.
+            // Skip so vendors aren't re-notified; the expiry check above escalates on timeout.
+            const notifiedSet = new Set((booking.notifiedVendors || []).map(v => String(v)));
+            const allAlreadyNotified = booking.potentialVendors.every(
+              pv => notifiedSet.has(String(pv.vendorId?._id || pv.vendorId || pv))
+            );
+            if (allAlreadyNotified) return;
+
             const nextWave = currentWave + 1;
             const { start, end } = getVendorRange(nextWave);
 

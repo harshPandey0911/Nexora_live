@@ -10,6 +10,7 @@ import Logo from '../../../../components/common/Logo';
 import { themeColors } from '../../../../theme';
 import { useCart } from '../../../../context/CartContext';
 import { useAuth } from '../../../../context/AuthContext';
+import { useCity } from '../../../../context/CityContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import AddressSelectionModal from '../../pages/Checkout/components/AddressSelectionModal';
@@ -27,6 +28,8 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
   const routerLocation = useLocation();
   const { cartCount } = useCart();
   const { user } = useAuth();
+  const { cities, selectCity } = useCity();
+  const [savedAddress, setSavedAddress] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [houseNumber, setHouseNumber] = useState('');
@@ -65,6 +68,7 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
     if (locationObj) {
       const newAddress = locationObj.address;
       localStorage.setItem('currentAddress', newAddress);
+      setSavedAddress(newAddress);
 
       const components = locationObj.components || locationObj.address_components;
       let city = '';
@@ -80,6 +84,13 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
 
       if (city) {
         localStorage.setItem('currentCity', city);
+        // Update global city so city-dependent pages refetch without a full reload
+        const lc = city.toLowerCase();
+        const matched = cities?.find(c => {
+          const n = c.name.toLowerCase();
+          return n === lc || n.includes(lc) || lc.includes(n);
+        });
+        selectCity(matched || null);
       }
       if (locationObj.lat && locationObj.lng) {
         const newCoords = { lat: locationObj.lat, lng: locationObj.lng };
@@ -87,9 +98,6 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
       }
 
       toast.success(city ? `Location set to ${city}` : 'Location updated');
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
     }
     setHouseNumber(savedHouseNumber);
     setIsAddressModalOpen(false);
@@ -198,7 +206,7 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
               >
                 <FiMapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                 <span className="text-[11px] font-bold text-gray-800 truncate max-w-[180px]">
-                  {address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Select Location')}
+                  {savedAddress || (address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Select Location'))}
                 </span>
               </div>
 
@@ -331,7 +339,7 @@ const Header = ({ location: address, onLocationClick, navLinks: dynamicNavLinks,
                       <div className="flex flex-col min-w-0 flex-1">
                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Your Location</span>
                         <span className="text-xs font-bold text-gray-800 truncate">
-                          {address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Select Location')}
+                          {savedAddress || (address && address !== '...' ? address : (localStorage.getItem('currentAddress') || 'Select Location'))}
                         </span>
                       </div>
                     </div>

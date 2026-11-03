@@ -331,12 +331,24 @@ export const publicCatalogService = {
   },
 
   // Get consolidated home data (cached for 2 minutes if no coords)
-  getHomeData: async (cityId, coords = null) => {
-    // Skip cache if we have specific coordinates for distance filtering
-    const useCache = !coords;
-    const cacheKey = `public:homeData:${cityId || 'default'}`;
-    
-    if (useCache) {
+  // Cache key includes city and (rounded ~100m) coords so distance-filtered data is cached too
+  homeDataKey: (cityId, coords = null) => {
+    const c = coords?.lat && coords?.lng
+      ? `${Number(coords.lat).toFixed(3)},${Number(coords.lng).toFixed(3)}`
+      : 'nocoords';
+    return `public:homeData:${cityId || 'default'}:${c}`;
+  },
+
+  // Synchronously read cached home data (null if missing/expired) - lets pages render instantly
+  peekHomeData: (cityId, coords = null) => {
+    return apiCache.get(publicCatalogService.homeDataKey(cityId, coords));
+  },
+
+  // `force` skips reading the cache (used for background revalidation) but still refreshes it
+  getHomeData: async (cityId, coords = null, { force = false } = {}) => {
+    const cacheKey = publicCatalogService.homeDataKey(cityId, coords);
+
+    if (!force) {
       const cached = apiCache.get(cacheKey);
       if (cached) return cached;
     }
@@ -349,11 +361,9 @@ export const publicCatalogService = {
     const query = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
     const response = await api.get(`/public/home-data${query}`);
     
-    /*
-    if (response.data.success && useCache) {
+    if (response.data.success) {
       apiCache.set(cacheKey, response.data, 120); // 2 minutes
     }
-    */
     return response.data;
   },
 

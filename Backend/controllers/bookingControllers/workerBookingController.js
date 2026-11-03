@@ -298,14 +298,13 @@ const startJob = async (req, res) => {
       userId: booking.userId,
       type: 'worker_started',
       title: 'Worker Started Journey',
-      message: `Worker is on the way! specific OTP for site visit verification is: ${otp}. Please share this with worker upon arrival.`,
+      message: `Worker is on the way! Open the app to view your site visit verification OTP and share it with the worker upon arrival.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
       pushData: {
         type: 'journey_started',
         bookingId: booking._id.toString(),
-        visitOtp: otp,
         link: `/user/booking/${booking._id}`
       }
     });
@@ -379,14 +378,13 @@ const workerReachedLocation = async (req, res) => {
       userId: booking.userId,
       type: 'vendor_reached',
       title: 'Professional has Reached!',
-      message: `Professional has reached your location. Please share this OTP: ${otp}`,
+      message: `Professional has reached your location. Please share the OTP shown in the app.`,
       relatedId: booking._id,
       relatedType: 'booking',
       priority: 'high',
       pushData: {
         type: 'vendor_reached',
         bookingId: booking._id.toString(),
-        visitOtp: otp,
         link: `/user/booking/${booking._id}`
       }
     });

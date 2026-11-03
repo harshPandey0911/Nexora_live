@@ -183,7 +183,7 @@ export default function BookingDetails() {
 
           if (isPaymentSuccess) {
             toast.success('Online Payment Received!');
-            setTimeout(() => window.location.reload(), 1500);
+            loadBooking();
           }
         }
       };
@@ -405,7 +405,7 @@ export default function BookingDetails() {
       const res = await vendorWalletService.confirmCashCollection(id, amount, code, extras);
       if (res.success) {
         toast.success('Payment verified successfully!');
-        window.location.reload();
+        loadBooking();
       }
       return res;
     } catch (error) {
@@ -471,8 +471,8 @@ export default function BookingDetails() {
           const response = await assignWorkerApi(id, 'SELF');
           if (response && response.success) {
             toast.success('Assigned to yourself successfully');
+            // vendorJobsUpdated triggers loadBooking() via the listener above
             window.dispatchEvent(new Event('vendorJobsUpdated'));
-            window.location.reload();
           } else {
             throw new Error(response?.message || 'Failed to assign');
           }
@@ -541,7 +541,7 @@ export default function BookingDetails() {
       await completeSelfJob(id, { workPhotos: photos || [], extraHours: extraHours || 0 });
       toast.success('Work marked done');
       setIsWorkDoneModalOpen(false);
-      window.location.reload();
+      loadBooking();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to complete job');
     } finally {
@@ -561,7 +561,7 @@ export default function BookingDetails() {
           await updateBookingStatus(id, 'completed');
           window.dispatchEvent(new Event('vendorJobsUpdated'));
           toast.success('Work Approved! You can now pay the worker.');
-          window.location.reload();
+          // vendorJobsUpdated (dispatched above) triggers loadBooking()
         } catch (error) {
           console.error('Error approving work:', error);
           toast.error('Failed to approve work');
